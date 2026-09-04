@@ -1,0 +1,24 @@
+{
+  "updated": "2026-09-04",
+  "events": [
+    {"when":"2026-09-06","time":"9:00a","title":"Sunday School","where":"Fellowship Building","tag":"Weekly"},
+    {"when":"2026-09-06","time":"10:15a","title":"Sunday Worship","where":"Sanctuary","tag":"Weekly"},
+    {"when":"2026-09-06","time":"5:30p","title":"Youth discipleship","where":"Fellowship Building","tag":"Weekly"},
+    {"when":"2026-09-06","time":"6:00p","title":"Evening service","where":"Sanctuary","tag":"Weekly"},
+    {"when":"2026-09-07","time":"6:30p","title":"Women’s Bible study","where":"Contact church office for location","tag":"Weekly"},
+    {"when":"2026-09-08","time":"5:00p","title":"Yoga @ the Creek","where":"Fellowship Building","tag":"Weekly"},
+    {"when":"2026-09-09","time":"6:00p","title":"Prayer meeting","where":"Sanctuary","tag":"Weekly"},
+    {"when":"2026-09-09","time":"6:00p","title":"Youth @ the Creek — MDWK","where":"Fellowship Building","tag":"Weekly"},
+    {"when":"2026-09-10","time":"5:00p","title":"Yoga @ the Creek","where":"Fellowship Building","tag":"Weekly"},
+    {"when":"2026-09-13","time":"9:00a","title":"Sunday School","where":"Fellowship Building","tag":"Weekly"},
+    {"when":"2026-09-13","time":"10:15a","title":"Sunday Worship","where":"Sanctuary","tag":"Weekly"},
+    {"when":"2026-09-13","time":"5:30p","title":"Youth discipleship","where":"Fellowship Building","tag":"Weekly"},
+    {"when":"2026-09-13","time":"6:00p","title":"Evening service","where":"Sanctuary","tag":"Weekly"},
+    {"when":"2026-09-14","time":"6:30p","title":"Women’s Bible study","where":"Contact church office for location","tag":"Weekly"},
+    {"when":"2026-09-15","time":"5:00p","title":"Yoga @ the Creek","where":"Fellowship Building","tag":"Weekly"},
+    {"when":"2026-09-15","time":"6:00p","title":"WMU","where":"Fellowship Hall","tag":"Monthly"},
+    {"when":"2026-09-16","time":"6:00p","title":"Prayer meeting","where":"Sanctuary","tag":"Weekly"},
+    {"when":"2026-09-16","time":"6:00p","title":"Youth @ the Creek — MDWK","where":"Fellowship Building","tag":"Weekly"},
+    {"when":"2026-09-17","time":"5:00p","title":"Yoga @ the Creek","where":"Fellowship Building","tag":"Weekly"}
+  ]
+}
