@@ -450,16 +450,16 @@ var CONFIG = {
   ],
   WEEKLY: "Sunday School 9:00a (all ages) · Worship 10:15a · Youth discipleship 5:30p · Evening service 6:00p · Wednesday: prayer 6:00p & Youth @ the Creek 6:00–8:00p · Women's study Monday 6:30p · Yoga @ the Creek Tue/Thu 5:00p · WMU 3rd Tuesday 6:00p.",
   VERSE: {text:"\"But as for me and my house, we will serve the LORD.\"", ref:"Joshua 24:15"},
-  EVENTS: [                    // ← keep this list current (month is shown from 'when')
-    {when:"2026-09-10", d:"Wed", n:"10", title:"Youth @ the Creek", sub:"6:00p · Fellowship Building", tag:"Weekly"},
-    {when:"2026-09-14", d:"Sun", n:"14", title:"Sunday Worship", sub:"10:15a · Sanctuary"},
-    {when:"2026-09-14", d:"Sun", n:"14", title:"Deacons' meeting", sub:"Afternoon · Office", tag:"Monthly"},
-    {when:"2026-09-16", d:"Tue", n:"16", title:"WMU", sub:"6:00p · Fellowship Hall", tag:"Monthly"},
-    {when:"2026-09-17", d:"Wed", n:"17", title:"Youth @ the Creek", sub:"6:00p · Fellowship Building", tag:"Weekly"},
-    {when:"2026-09-21", d:"Sun", n:"21", title:"Sunday Worship", sub:"10:15a · Sanctuary"},
-    {when:"2026-09-28", d:"Sun", n:"28", title:"Fifth Sunday fellowship", sub:"After worship · Dinner on the grounds", tag:"Special"},
-    {when:"2026-10-05", d:"Oct", n:"05", title:"The Lord's Supper", sub:"10:15a · Sanctuary"},
-    {when:"2026-10-07", d:"Wed", n:"07", title:"Youth @ the Creek", sub:"6:00p · Fellowship Building", tag:"Weekly"}
+  EVENTS: [                    // offline fallback; events.json is the live source
+    {when:"2026-09-06", time:"9:00a", title:"Sunday School", where:"Fellowship Building", tag:"Weekly"},
+    {when:"2026-09-06", time:"10:15a", title:"Sunday Worship", where:"Sanctuary", tag:"Weekly"},
+    {when:"2026-09-06", time:"5:30p", title:"Youth discipleship", where:"Fellowship Building", tag:"Weekly"},
+    {when:"2026-09-06", time:"6:00p", title:"Evening service", where:"Sanctuary", tag:"Weekly"},
+    {when:"2026-09-07", time:"6:30p", title:"Women’s Bible study", where:"Contact church office for location", tag:"Weekly"},
+    {when:"2026-09-08", time:"5:00p", title:"Yoga @ the Creek", where:"Fellowship Building", tag:"Weekly"},
+    {when:"2026-09-09", time:"6:00p", title:"Prayer meeting", where:"Sanctuary", tag:"Weekly"},
+    {when:"2026-09-09", time:"6:00p", title:"Youth @ the Creek — MDWK", where:"Fellowship Building", tag:"Weekly"},
+    {when:"2026-09-10", time:"5:00p", title:"Yoga @ the Creek", where:"Fellowship Building", tag:"Weekly"}
   ],
   PRAYER_WALL: [               // shared, non-personal items only
     {b:"Traveling mercies", t:"for our folks on the road this week."},
@@ -487,11 +487,13 @@ var CONFIG = {
   $('#times').innerHTML=CONFIG.TIMES.map(function(t){return '<div class="t"><small>'+t.label+'</small><b>'+t.time+'</b></div>'}).join('');
   $('#weeklyRhythm').textContent=CONFIG.WEEKLY;
   $('#verseText').textContent=CONFIG.VERSE.text; $('#verseRef').textContent=CONFIG.VERSE.ref;
-  function ev(e){return '<div class="ev"><div class="cal"><small>'+e.d+'</small><b>'+e.n+'</b></div><div class="m"><b>'+e.title+'</b><span>'+e.sub+'</span></div>'+(e.tag?'<span class="chip'+(e.tag==='Special'?' gold':e.tag==='Monthly'?' blue':'')+'">'+e.tag+'</span>':'')+'</div>'}
+  function esc(s){var d=document.createElement('div');d.textContent=String(s||'');return d.innerHTML}
+  function ev(e){var dt=new Date(e.when+'T12:00:00');var day=dt.toLocaleDateString('en-US',{weekday:'short'});var n=String(dt.getDate()).padStart(2,'0');var sub=[e.time,e.where].filter(Boolean).join(' · ');return '<div class="ev"><div class="cal"><small>'+esc(day)+'</small><b>'+esc(n)+'</b></div><div class="m"><b>'+esc(e.title)+'</b><span>'+esc(sub)+'</span></div>'+(e.tag?'<span class="chip'+(e.tag==='Special'?' gold':e.tag==='Monthly'?' blue':'')+'">'+esc(e.tag)+'</span>':'')+'</div>'}
   var today=new Date(); today.setHours(0,0,0,0);
-  var upcoming=CONFIG.EVENTS.filter(function(e){return new Date(e.when+'T12:00:00')>=today});
-  $('#thisweek').innerHTML=(upcoming.slice(0,3).length?upcoming.slice(0,3):CONFIG.EVENTS.slice(0,3)).map(ev).join('');
-  $('#calendarList').innerHTML=(upcoming.length?upcoming:CONFIG.EVENTS).map(ev).join('');
+  function validEvent(e){return e&&/^\d{4}-\d{2}-\d{2}$/.test(e.when)&&e.time&&e.title&&e.where&&['Weekly','Monthly','Special'].indexOf(e.tag)>-1}
+  function renderEvents(events){var clean=events.filter(validEvent).sort(function(a,b){return a.when.localeCompare(b.when)});var upcoming=clean.filter(function(e){return new Date(e.when+'T12:00:00')>=today});var shown=upcoming.length?upcoming:clean;$('#thisweek').innerHTML=shown.slice(0,3).map(ev).join('');$('#calendarList').innerHTML=shown.map(ev).join('')}
+  renderEvents(CONFIG.EVENTS);
+  fetch('./events.json',{cache:'no-cache'}).then(function(r){if(!r.ok)throw new Error('Events feed unavailable');return r.json()}).then(function(data){if(!data||!Array.isArray(data.events))throw new Error('Events feed invalid');renderEvents(data.events)}).catch(function(){/* offline fallback already rendered */});
   $('#prayerWall').innerHTML=CONFIG.PRAYER_WALL.map(function(p){return '<div class="pitem"><b>'+p.b+'</b> '+p.t+'</div>'}).join('');
   var pc=CONFIG.PRAYER_COUNT; try{pc+=(JSON.parse(localStorage.getItem('creek_prayer')||'[]')).length}catch(e){} $('#prayN').textContent=pc;
 
