@@ -288,7 +288,7 @@
       <span class="creek divider" aria-hidden="true"></span>
       <div class="sec"><div class="word"><div class="eye">Every week</div>
         <blockquote style="font-style:normal;font-size:15px" id="weeklyRhythm"></blockquote>
-        <cite>6:30 on the 63 — Wednesday nights.</cite></div></div>
+        <cite>6 on the 63 — Wednesday nights.</cite></div></div>
     </section>
 
     <!-- GIVE -->
@@ -367,9 +367,9 @@
       <h2 class="page">Ministries @ the Creek</h2>
       <p class="lead">One church, one family — every ministry is the Creek.</p>
       <div class="mins">
-        <div class="min"><div class="lock">Worship <span class="at">@</span> the Creek</div><span class="creek" style="--c:var(--wheat)"></span><p>Sunday morning and evening worship, music, and the Lord's Supper together as one body.</p></div>
+        <div class="min"><div class="lock">Worship <span class="at">@</span> the Creek</div><span class="creek" style="--c:var(--wheat)"></span><p>Sunday worship at 10:15a and 6:00p — theologically rich hymns, prayer, a word for the kids, and expositional preaching.</p></div>
         <div class="min"><div class="lock">Kidz <span class="at">@</span> the Creek</div><span class="creek" style="--c:var(--moss)"></span><p>Nursery through 5th grade — Sunday School, VBS, Kidz @ The Creek, and a safe, loving place every week.</p></div>
-        <div class="min"><div class="lock">Youth <span class="at">@</span> the Creek</div><span class="creek" style="--c:var(--creekblue)"></span><p>6th–12th grade. Wednesday nights, camp, DNOW, and discipleship — <b>6:30 on the 63</b>.</p></div>
+        <div class="min"><div class="lock">Youth <span class="at">@</span> the Creek</div><span class="creek" style="--c:var(--creekblue)"></span><p>6th–12th grade. Wednesday nights, camp, DNOW, and discipleship — <b>6 on the 63</b>.</p></div>
         <div class="min"><div class="lock">Missions <span class="at">@</span> the Creek</div><span class="creek" style="--c:var(--clay)"></span><p>Church-wide missions through the year, our association and Louisiana Baptists, and care for neighbors in need.</p></div>
         <div class="min"><div class="lock">Sunday School <span class="at">@</span> the Creek</div><span class="creek" style="--c:var(--pine)"></span><p>Classes for every age — preschool, children, youth, young adults, families, and adults. Find one that fits.</p></div>
       </div>
@@ -442,22 +442,24 @@ var CONFIG = {
   RECURRING_URL: "",           // optional recurring-giving link
   WATCH_URL: "https://www.youtube.com/@bluffcreekbaptistchurch",
   FORM_ENDPOINT: "",           // optional: a form/webhook URL (Zapier, Google Apps Script) — auto-captures submissions
-  TIMES: [                     // ← confirm these
-    {label:"Sun · Sunday School", time:"9:45a"},
-    {label:"Sun · Worship",       time:"11:00a"},
-    {label:"Wed · Family night",  time:"6:30p"}
+  TIMES: [                     // real schedule (from bluffcreekbaptistchurch.org, 2026-09-04)
+    {label:"Sun · Sunday School", time:"9:00a"},
+    {label:"Sun · Worship",       time:"10:15a"},
+    {label:"Sun · Evening",       time:"6:00p"},
+    {label:"Wed · Youth & Prayer",time:"6:00p"}
   ],
-  WEEKLY: "Sunday School 9:45a · Worship 11:00a · Wednesday family night 6:30p — Youth @ the Creek, Kidz @ the Creek, and adult Bible study.",
+  WEEKLY: "Sunday School 9:00a (all ages) · Worship 10:15a · Youth discipleship 5:30p · Evening service 6:00p · Wednesday: prayer 6:00p & Youth @ the Creek 6:00–8:00p · Women's study Monday 6:30p · Yoga @ the Creek Tue/Thu 5:00p · WMU 3rd Tuesday 6:00p.",
   VERSE: {text:"\"But as for me and my house, we will serve the LORD.\"", ref:"Joshua 24:15"},
   EVENTS: [                    // ← keep this list current (month is shown from 'when')
-    {when:"2026-09-10", d:"Wed", n:"10", title:"Youth @ the Creek", sub:"6:30p · Fellowship Hall", tag:"Weekly"},
-    {when:"2026-09-14", d:"Sun", n:"14", title:"Sunday Worship", sub:"11:00a · Sanctuary"},
+    {when:"2026-09-10", d:"Wed", n:"10", title:"Youth @ the Creek", sub:"6:00p · Fellowship Building", tag:"Weekly"},
+    {when:"2026-09-14", d:"Sun", n:"14", title:"Sunday Worship", sub:"10:15a · Sanctuary"},
     {when:"2026-09-14", d:"Sun", n:"14", title:"Deacons' meeting", sub:"Afternoon · Office", tag:"Monthly"},
-    {when:"2026-09-17", d:"Wed", n:"17", title:"Youth @ the Creek", sub:"6:30p · Fellowship Hall", tag:"Weekly"},
-    {when:"2026-09-21", d:"Sun", n:"21", title:"Sunday Worship", sub:"11:00a · Sanctuary"},
+    {when:"2026-09-16", d:"Tue", n:"16", title:"WMU", sub:"6:00p · Fellowship Hall", tag:"Monthly"},
+    {when:"2026-09-17", d:"Wed", n:"17", title:"Youth @ the Creek", sub:"6:00p · Fellowship Building", tag:"Weekly"},
+    {when:"2026-09-21", d:"Sun", n:"21", title:"Sunday Worship", sub:"10:15a · Sanctuary"},
     {when:"2026-09-28", d:"Sun", n:"28", title:"Fifth Sunday fellowship", sub:"After worship · Dinner on the grounds", tag:"Special"},
-    {when:"2026-10-05", d:"Oct", n:"05", title:"The Lord's Supper", sub:"11:00a · Sanctuary"},
-    {when:"2026-10-07", d:"Wed", n:"07", title:"Youth @ the Creek", sub:"6:30p · Fellowship Hall", tag:"Weekly"}
+    {when:"2026-10-05", d:"Oct", n:"05", title:"The Lord's Supper", sub:"10:15a · Sanctuary"},
+    {when:"2026-10-07", d:"Wed", n:"07", title:"Youth @ the Creek", sub:"6:00p · Fellowship Building", tag:"Weekly"}
   ],
   PRAYER_WALL: [               // shared, non-personal items only
     {b:"Traveling mercies", t:"for our folks on the road this week."},
