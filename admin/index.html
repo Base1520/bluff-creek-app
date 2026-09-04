@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Creek Office — Bluff Creek Baptist Church</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:wght@500;600;700&family=Nunito+Sans:wght@400;600;700;800&display=swap">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <main id="setup" class="center hidden">
+    <section class="auth-card">
+      <img src="../assets/logo.png" alt="Bluff Creek Baptist Church">
+      <p class="eyebrow">Creek Office</p>
+      <h1>Connect the church workspace.</h1>
+      <p>The secure backend has not been connected yet. Copy <code>config.example.js</code> to <code>config.js</code> and add the project's public URL and publishable key.</p>
+    </section>
+  </main>
+
+  <main id="login" class="center hidden">
+    <section class="auth-card">
+      <img src="../assets/logo.png" alt="Bluff Creek Baptist Church">
+      <p class="eyebrow">Creek Office</p>
+      <h1>Sign in to serve.</h1>
+      <p>Church staff and approved ministry leaders only.</p>
+      <form id="login-form">
+        <label>Email<input id="email" type="email" autocomplete="email" required></label>
+        <label>Password<input id="password" type="password" autocomplete="current-password" required></label>
+        <button type="submit">Sign in</button>
+        <p id="login-error" class="error" role="alert"></p>
+      </form>
+    </section>
+  </main>
+
+  <div id="workspace" class="shell hidden">
+    <aside>
+      <a class="office-brand" href="#dashboard"><img src="../assets/logo.png" alt=""><span>Creek Office<small>Church operations</small></span></a>
+      <nav aria-label="Workspace">
+        <a href="#dashboard" data-view="dashboard">Overview</a>
+        <a href="#calendar" data-view="calendar">Calendar</a>
+        <a href="#people" data-view="people">People</a>
+        <a href="#documents" data-view="documents">Documents</a>
+        <a href="#activity" data-view="activity">Activity</a>
+      </nav>
+      <div class="account"><span id="user-label"></span><span id="role-label"></span><button id="logout" class="quiet">Sign out</button></div>
+    </aside>
+
+    <section class="content">
+      <header><button id="menu" class="menu" aria-label="Open menu">☰</button><div><p class="eyebrow">Bluff Creek Baptist Church</p><h1 id="page-title">Overview</h1></div><button id="primary-action">Add</button></header>
+      <p id="notice" class="notice hidden" role="status"></p>
+
+      <section id="dashboard-view" class="view">
+        <div class="metrics">
+          <article><span>Upcoming events</span><b id="event-count">—</b></article>
+          <article><span>People records</span><b id="people-count">—</b></article>
+          <article><span>Documents</span><b id="document-count">—</b></article>
+        </div>
+        <div class="panel"><div class="panel-head"><div><p class="eyebrow">Coming up</p><h2>Next events</h2></div><a href="#calendar">Open calendar →</a></div><div id="dashboard-events" class="rows"></div></div>
+      </section>
+
+      <section id="calendar-view" class="view hidden">
+        <div class="toolbar"><input id="event-search" type="search" placeholder="Search calendar"><select id="event-filter"><option value="">All types</option><option>Weekly</option><option>Monthly</option><option>Special</option></select></div>
+        <div class="panel"><div id="events-list" class="rows"></div></div>
+      </section>
+
+      <section id="people-view" class="view hidden">
+        <div class="toolbar"><input id="people-search" type="search" placeholder="Search people"><select id="people-filter"><option value="">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="visitor">Visitor</option></select></div>
+        <div class="panel table-wrap"><table><thead><tr><th>Name</th><th>Status</th><th>Household</th><th>Updated</th><th></th></tr></thead><tbody id="people-list"></tbody></table></div>
+      </section>
+
+      <section id="documents-view" class="view hidden">
+        <div class="toolbar"><input id="document-search" type="search" placeholder="Search documents"><select id="document-filter"><option value="">All categories</option><option value="policy">Policies</option><option value="spreadsheet">Spreadsheets</option><option value="form">Forms</option><option value="minutes">Minutes</option><option value="ministry">Ministry</option><option value="other">Other</option></select></div>
+        <div class="panel table-wrap"><table><thead><tr><th>Document</th><th>Category</th><th>Updated</th><th></th></tr></thead><tbody id="documents-list"></tbody></table></div>
+      </section>
+
+      <section id="activity-view" class="view hidden"><div class="panel"><div id="activity-list" class="rows"></div></div></section>
+    </section>
+  </div>
+
+  <dialog id="editor"><form id="editor-form"><header><div><p class="eyebrow" id="editor-kicker"></p><h2 id="editor-title"></h2></div><button class="icon" type="button" data-close-editor aria-label="Close">×</button></header><div id="editor-fields"></div><footer><button class="quiet" type="button" data-close-editor>Cancel</button><button id="save" type="submit">Save</button></footer><p id="editor-error" class="error" role="alert"></p></form></dialog>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 /* Bluff Creek app — service worker: cache the shell so the app opens instantly and offline. */
-const CACHE = 'creek-v1';
+const CACHE = 'creek-v2';
 const SHELL = [
   './', './index.html', './manifest.webmanifest',
   './assets/logo.png', './assets/creek.png', './assets/la63.svg',
@@ -14,6 +14,8 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
+  // Creek Office contains private data and must never enter the public app shell cache.
+  if (new URL(req.url).pathname.includes('/admin/')) return;
   // network-first for the page (so updates land), cache-first for assets/fonts
   if (req.mode === 'navigate') {
     e.respondWith(fetch(req).then(r => { const copy = r.clone(); caches.open(CACHE).then(c => c.put('./index.html', copy)); return r; })
