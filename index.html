@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>the Creek — Bluff Creek Baptist Church</title>
+<meta name="description" content="Home @ the Creek — Bluff Creek Baptist Church, 1706 Highway 63, Clinton, Louisiana. Connect, pray, see what's happening, give.">
+<meta name="theme-color" content="#3C5A45">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="the Creek">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,500;0,600;0,700;1,500&family=Nunito+Sans:wght@400;600;700;800&display=swap">
+<style>
+  :root{
+    --ivory:#F5EFE3;--surface:#FFFFFF;--surface2:#FBF6EC;--ink:#221F1A;--ink2:#5E574C;--ink3:#938a79;
+    --pine:#3C5A45;--pine-deep:#2E4636;--pine-tint:#EAF0EA;--wheat:#B08636;--wheat-tint:#F6EED9;--clay:#A8573E;
+    --moss:#6B8F5E;--creekblue:#557A82;--line:#E4DAC8;--line2:#EFE7D7;
+    --shadow:0 1px 2px rgba(40,33,20,.05),0 8px 24px rgba(40,33,20,.06);
+    --sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--ivory);color:var(--ink);font-family:"Nunito Sans",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;overscroll-behavior-y:none}
+  .app{max-width:520px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;background:var(--ivory)}
+
+  /* header */
+  header{position:sticky;top:0;z-index:20;background:rgba(245,239,227,.94);backdrop-filter:saturate(1.3) blur(10px);
+    padding:calc(12px + var(--sat)) 18px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line2)}
+  header .brand img{height:26px;width:auto;display:block}
+  header .brand{display:flex;align-items:center;gap:10px;text-decoration:none}
+  .la63{display:block;width:30px;height:auto}
+  .byline{display:flex;align-items:center;gap:8px;font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)}
+  .byline .la63{width:20px}
+
+  main{flex:1 1 auto;padding:16px 18px calc(96px + var(--sab))}
+  .screen{display:none;animation:rise .3s ease both}
+  .screen.on{display:block}
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.screen,.screen.on{animation:none}}
+
+  .creek{display:block;background:var(--c,var(--wheat));-webkit-mask:url("assets/creek.png") no-repeat left center/contain;mask:url("assets/creek.png") no-repeat left center/contain}
+  .divider{width:96px;height:22px;margin:22px 0 4px;opacity:.85}
+
+  /* hero */
+  .hero{background:linear-gradient(160deg,var(--pine-deep),var(--pine) 88%);color:#f4efe2;border-radius:22px;padding:22px 20px 20px;position:relative;overflow:hidden;box-shadow:var(--shadow)}
+  .hero .wm{position:absolute;right:-14px;top:-30px;font-family:"Bitter",serif;font-weight:700;font-size:170px;line-height:1;color:#f4efe2;opacity:.06;letter-spacing:-.04em;pointer-events:none}
+  .hero .eye{font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#d9c896;position:relative}
+  .hero h1{font-family:"Bitter",serif;font-weight:600;font-size:30px;line-height:1.06;margin:8px 0 6px;text-wrap:balance;position:relative}
+  .hero p{margin:0;font-size:14px;line-height:1.5;color:#e6ddc7;max-width:30ch;position:relative}
+  .hero .creek{position:absolute;left:-6px;bottom:-6px;width:230px;height:52px;--c:#fff;opacity:.16}
+  .times{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;position:relative}
+  .t{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.16);border-radius:11px;padding:8px 11px;flex:1 1 auto;min-width:88px}
+  .t small{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#cdbf98;font-weight:800}
+  .t b{font-family:"Bitter",serif;font-weight:600;font-size:15px;color:#fff;font-variant-numeric:tabular-nums}
+
+  .sec{margin-top:22px}
+  .sec-h{display:flex;align-items:center;justify-content:space-between;margin:0 2px 10px}
+  .sec-h h2{font-family:"Bitter",serif;font-weight:600;font-size:17px;margin:0}
+  .sec-h a,.link{font-size:12.5px;font-weight:800;color:var(--pine);text-decoration:none;cursor:pointer;background:none;border:0;font-family:inherit;padding:0}
+  h2.page{font-family:"Bitter",serif;font-weight:600;font-size:26px;line-height:1.06;margin:4px 0 8px;text-wrap:balance}
+  h3{font-family:"Bitter",serif;font-weight:600;font-size:17px;margin:20px 0 8px}
+  p.lead{font-size:14.5px;line-height:1.6;color:var(--ink2);margin:0 0 12px}
+  .back{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;color:var(--pine);background:none;border:0;font-family:inherit;padding:0 0 10px;cursor:pointer}
+
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+  .qa{appearance:none;border:1px solid var(--line);background:var(--surface);border-radius:16px;padding:12px 6px 10px;display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;color:var(--ink);font-family:inherit;box-shadow:var(--shadow);transition:transform .15s ease,border-color .15s ease}
+  .qa:active{transform:scale(.97)} .qa:focus-visible{outline:2px solid var(--pine);outline-offset:2px}
+  .qa .ic{width:34px;height:34px;display:grid;place-items:center;border-radius:11px;background:var(--pine-tint);color:var(--pine)}
+  .qa.gold .ic{background:var(--wheat-tint);color:var(--wheat)}
+  .qa.blue .ic{background:#E7EFEF;color:var(--creekblue)}
+  .qa span{font-size:11.5px;font-weight:700}
+  .qa svg{width:19px;height:19px}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:15px;box-shadow:var(--shadow)}
+  .card.tight{padding:6px 12px}
+  .ev{display:flex;gap:13px;align-items:center;padding:11px 4px}
+  .ev + .ev{border-top:1px solid var(--line2)}
+  .cal{flex:0 0 auto;width:50px;text-align:center;background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:6px 4px}
+  .cal small{display:block;font-size:9.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--wheat)}
+  .cal b{font-family:"Bitter",serif;font-size:20px;line-height:1}
+  .ev .m{flex:1 1 auto;min-width:0}
+  .ev .m b{display:block;font-size:14.5px;font-weight:800}
+  .ev .m span{font-size:12.5px;color:var(--ink2)}
+  .chip{font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--pine);background:var(--pine-tint);border-radius:20px;padding:4px 9px;white-space:nowrap}
+  .chip.gold{color:var(--wheat);background:var(--wheat-tint)}
+  .chip.blue{color:var(--creekblue);background:#E7EFEF}
+  .chip.moss{color:#3f5f33;background:#E9F0E4}
+
+  .word{background:linear-gradient(180deg,var(--surface),var(--surface2));border:1px solid var(--line);border-radius:18px;padding:17px;box-shadow:var(--shadow)}
+  .word .eye{font-size:10.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--wheat)}
+  .word blockquote{margin:9px 0 8px;font-family:"Bitter",serif;font-weight:500;font-style:italic;font-size:16px;line-height:1.42}
+  .word cite{font-style:normal;font-size:12.5px;color:var(--ink2);font-weight:700}
+
+  .panel{background:var(--pine-deep);color:#f2ecdd;border-radius:20px;padding:18px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .panel .eye{font-size:10.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#d9c896}
+  .panel h3{font-family:"Bitter",serif;font-weight:600;font-size:19px;margin:6px 0 4px;color:#fff}
+  .panel p{margin:0 0 13px;font-size:13px;color:#e2d9c3;line-height:1.5}
+  .panel .sign{position:absolute;right:-18px;bottom:-26px;width:150px;opacity:.08;pointer-events:none}
+
+  .field{margin-bottom:9px}
+  .field label{display:block;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2);margin:0 0 5px 2px}
+  .panel .field label{color:#cdbf98}
+  .field input,.field textarea,.field select{width:100%;font-family:inherit;font-size:16px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:11px 12px}
+  .panel .field input,.panel .field textarea{background:rgba(255,255,255,.95);border-color:transparent}
+  .field textarea{resize:vertical;min-height:70px}
+  .field input:focus,.field textarea:focus{outline:2px solid var(--wheat);outline-offset:1px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+  .check{display:flex;align-items:center;gap:9px;font-size:13px;margin:2px 0 10px;color:#e2d9c3}
+  .card .check{color:var(--ink2)}
+  .check input{width:18px;height:18px;accent-color:var(--wheat)}
+  .btn{appearance:none;border:0;cursor:pointer;font-family:inherit;font-weight:800;font-size:15px;border-radius:13px;padding:13px 16px;width:100%;background:var(--wheat);color:#231a06;box-shadow:var(--shadow);text-align:center;text-decoration:none;display:block}
+  .btn:active{transform:translateY(1px)} .btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
+  .btn.pine{background:var(--pine);color:#f4efe2}
+  .btn.ghost{background:transparent;border:1.5px solid var(--line);color:var(--pine);box-shadow:none}
+  .btn + .btn{margin-top:9px}
+  .ok{display:none;text-align:center;padding:10px 4px 2px}
+  .ok.on{display:block;animation:rise .4s ease both}
+  .ok .badge{width:52px;height:52px;border-radius:50%;background:var(--wheat);color:#231a06;display:grid;place-items:center;margin:0 auto 10px}
+  .ok b{font-family:"Bitter",serif;font-size:18px;color:#fff;display:block}
+  .ok span{font-size:13px;color:#e2d9c3}
+  .note{font-size:12px;color:var(--ink3);line-height:1.5;margin:8px 2px 0}
+
+  .menu button{appearance:none;background:var(--surface);border:1px solid var(--line);border-bottom:0;padding:15px;display:flex;align-items:center;gap:13px;cursor:pointer;font-family:inherit;font-size:14.5px;font-weight:700;color:var(--ink);text-align:left;width:100%}
+  .menu button:first-child{border-radius:16px 16px 0 0}
+  .menu button:last-child{border-radius:0 0 16px 16px;border-bottom:1px solid var(--line)}
+  .menu button:active{background:var(--surface2)}
+  .menu .mi{width:34px;height:34px;border-radius:10px;background:var(--pine-tint);color:var(--pine);display:grid;place-items:center;flex:0 0 auto}
+  .menu .mi svg{width:18px;height:18px}
+  .menu .ch{margin-left:auto;color:var(--ink3)}
+
+  .lock{font-family:"Bitter",serif;font-weight:600;font-size:20px;line-height:1.1}
+  .lock .at{color:var(--wheat);font-style:italic;font-weight:500}
+  .mins{display:grid;grid-template-columns:1fr;gap:10px}
+  .min{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 15px;box-shadow:var(--shadow)}
+  .min .creek{width:110px;height:24px;margin:6px 0 8px}
+  .min p{margin:0;font-size:13.5px;color:var(--ink2);line-height:1.5}
+  .beliefs li,.plain li{margin:7px 0;font-size:14px;color:var(--ink2);line-height:1.55}
+  .plain ol,.plain ul{padding-left:20px;margin:6px 0}
+  .prayercount{display:flex;align-items:baseline;gap:8px;padding:2px 2px 6px}
+  .prayercount b{font-family:"Bitter",serif;font-size:30px;color:var(--pine)}
+  .prayercount span{font-size:13px;color:var(--ink2)}
+  .pitem{padding:11px 2px;font-size:13.5px;color:var(--ink2);line-height:1.45}
+  .pitem + .pitem{border-top:1px solid var(--line2)}
+  .pitem b{color:var(--ink)}
+
+  nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;max-width:520px;margin:0 auto;background:rgba(250,246,236,.96);backdrop-filter:saturate(1.3) blur(10px);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);padding:8px 8px calc(8px + var(--sab))}
+  nav.tabs button{appearance:none;background:none;border:0;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--ink3);border-radius:14px;padding:6px 0}
+  nav.tabs button svg{width:22px;height:22px}
+  nav.tabs button span{font-size:10px;font-weight:800}
+  nav.tabs button.on{color:var(--pine)}
+  nav.tabs button.on .give{color:var(--wheat)}
+
+  .toast{position:fixed;left:16px;right:16px;bottom:calc(88px + var(--sab));z-index:60;max-width:488px;margin:0 auto;background:var(--ink);color:#f4efe2;border-radius:14px;padding:13px 15px;font-size:13.5px;font-weight:700;box-shadow:0 20px 40px -18px rgba(0,0,0,.5);display:flex;gap:10px;align-items:center;opacity:0;visibility:hidden;transform:translateY(20px);transition:transform .3s ease,opacity .25s ease,visibility 0s .3s}
+  .toast.on{opacity:1;visibility:visible;transform:none;transition:transform .3s ease,opacity .25s ease}
+  .toast svg{color:var(--wheat);flex:0 0 auto}
+
+  .install{display:none;background:var(--wheat-tint);border:1px solid #ead9ad;border-radius:16px;padding:13px 15px;margin-top:14px;font-size:13px;color:var(--ink2);line-height:1.5}
+  .install.on{display:block}
+  .install b{color:var(--ink)}
+  .install .btn{margin-top:10px}
+  footer{padding:26px 18px calc(100px + var(--sab));text-align:center}
+  footer .byline{justify-content:center}
+  footer .creek{width:120px;height:26px;margin:14px auto 0;opacity:.7}
+  footer small{display:block;margin-top:10px;font-size:11.5px;color:var(--ink3);line-height:1.5}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <a class="brand" href="#home" data-go="home"><img src="assets/logo.png" alt="Bluff Creek Baptist Church"></a>
+    <img class="la63" src="assets/la63.svg" alt="Louisiana Highway 63" title="1706 Highway 63 · Clinton, LA">
+  </header>
+
+  <main>
+    <!-- HOME -->
+    <section class="screen on" data-screen="home">
+      <div class="hero">
+        <div class="wm" aria-hidden="true">63</div>
+        <div class="eye">Clinton, Louisiana</div>
+        <h1>Welcome home to the Creek.</h1>
+        <p>However you found us — come as you are. Here's everything happening at Bluff Creek, in your pocket.</p>
+        <div class="times" id="times"></div>
+        <span class="creek" aria-hidden="true"></span>
+      </div>
+
+      <div class="sec">
+        <div class="grid4">
+          <button class="qa" data-go="new"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span>I'm New</span></button>
+          <button class="qa" data-go="prayer"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.35-7-10a4 4 0 0 1 7-2.65A4 4 0 0 1 19 11c0 5.65-7 10-7 10z"/></svg></span><span>Prayer</span></button>
+          <button class="qa gold" data-go="give"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-7M2 8h20v4H2zM12 8v12M12 8S10.5 3 7.5 3 5 8 12 8zM12 8s1.5-5 4.5-5S19 8 12 8z"/></svg></span><span>Give</span></button>
+          <button class="qa blue" id="watchBtn"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></span><span>Watch</span></button>
+        </div>
+      </div>
+
+      <div class="sec">
+        <div class="sec-h"><h2>This week</h2><a href="#" data-go="calendar">Full calendar →</a></div>
+        <div class="card tight" id="thisweek"></div>
+      </div>
+
+      <span class="creek divider" aria-hidden="true"></span>
+
+      <div class="sec">
+        <div class="word"><div class="eye">A word this week</div>
+          <blockquote id="verseText">"But as for me and my house, we will serve the LORD."</blockquote>
+          <cite id="verseRef">Joshua 24:15</cite></div>
+      </div>
+
+      <div class="sec">
+        <div class="panel">
+          <img class="sign" src="assets/la63.svg" alt="" aria-hidden="true">
+          <div class="eye">Scan &amp; connect</div>
+          <h3>Get on the list.</h3>
+          <p>New here, or want <b>The 63</b> — our weekly update — plus prayer and announcements? Add your name. That's all it takes.</p>
+          <button class="btn" data-go="new">Sign me up</button>
+        </div>
+        <div class="install" id="installCard"></div>
+      </div>
+    </section>
+
+    <!-- I'M NEW / CONNECT -->
+    <section class="screen" data-screen="new">
+      <button class="back" data-go="home">‹ Home</button>
+      <div class="byline" style="margin-bottom:8px"><span>First stop on the 63</span></div>
+      <h2 class="page">Connect with us.</h2>
+      <p class="lead">Tell us who you are so we can welcome you well. Your info stays with our church office — we never share it.</p>
+      <div class="panel">
+        <form id="joinForm" novalidate>
+          <div class="row2">
+            <div class="field"><label for="jf">First name</label><input id="jf" name="first" required autocomplete="given-name"></div>
+            <div class="field"><label for="jl">Last name</label><input id="jl" name="last" autocomplete="family-name"></div>
+          </div>
+          <div class="field"><label for="je">Email</label><input id="je" name="email" type="email" required autocomplete="email" inputmode="email" placeholder="you@email.com"></div>
+          <div class="field"><label for="jp">Mobile (for text updates)</label><input id="jp" name="phone" type="tel" autocomplete="tel" inputmode="tel" placeholder="(225) 000-0000"></div>
+          <label class="check"><input type="checkbox" name="guest"> This was my first visit</label>
+          <label class="check"><input type="checkbox" name="texts" checked> Yes, text me church updates</label>
+          <label class="check"><input type="checkbox" name="the63" checked> Send me The 63 (weekly email)</label>
+          <div class="field"><label for="jq">Anything we can pray for? (optional)</label><textarea id="jq" name="prayer" placeholder="Share as much or as little as you'd like…"></textarea></div>
+          <button class="btn" type="submit">Join the Creek family</button>
+        </form>
+        <div class="ok" id="joinOk"><div class="badge"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div><b>You're in.</b><span>Welcome home. Someone from the church will reach out this week.</span></div>
+      </div>
+      <p class="note" id="joinNote"></p>
+      <h3>What to expect on Sunday</h3>
+      <div class="card plain">
+        <ul>
+          <li><b>Come as you are.</b> Jeans, boots, Sunday best — you'll fit right in.</li>
+          <li><b>Kidz @ the Creek</b> has a safe, loving place for your children and nursery for the littlest ones.</li>
+          <li><b>Park anywhere</b>, walk in, and somebody will find you and say hello. Sit wherever you like.</li>
+          <li><b>Stay after.</b> The best part of the Creek happens in the fellowship hall and the parking lot.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- PRAYER -->
+    <section class="screen" data-screen="prayer">
+      <h2 class="page">Prayer @ the Creek</h2>
+      <div class="card">
+        <div class="prayercount"><b id="prayN">—</b><span>prayers lifted with the Creek this month</span></div>
+        <p class="lead" style="margin:0">Send a request to our pastor and prayer team, or lift one another up. Personal requests go <b>privately</b> to the pastor and prayer team — never posted publicly.</p>
+      </div>
+      <div class="panel" style="margin-top:14px">
+        <div class="eye">Send a request</div>
+        <form id="prayForm" novalidate style="margin-top:8px">
+          <div class="field"><label for="pn">Your name (optional)</label><input id="pn" name="name" autocomplete="name" placeholder="Or leave blank to stay anonymous"></div>
+          <div class="field"><label for="pc">How can we reach you? (optional)</label><input id="pc" name="contact" placeholder="Phone or email"></div>
+          <div class="field"><label for="pr">How can we pray?</label><textarea id="pr" name="req" required placeholder="Share your request…"></textarea></div>
+          <label class="check"><input type="checkbox" name="private" checked> Keep this private to the pastor &amp; prayer team</label>
+          <button class="btn" type="submit">Send to the prayer team</button>
+        </form>
+        <div class="ok" id="prayOk"><div class="badge"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.35-7-10a4 4 0 0 1 7-2.65A4 4 0 0 1 19 11c0 5.65-7 10-7 10z"/></svg></div><b>We're praying.</b><span>Your request is with our team. You are not alone.</span></div>
+      </div>
+      <p class="note" id="prayNote"></p>
+      <div class="sec"><div class="sec-h"><h2 style="font-size:15px">Lifting up together</h2></div>
+        <div class="card" id="prayerWall"></div>
+      </div>
+    </section>
+
+    <!-- CALENDAR -->
+    <section class="screen" data-screen="calendar">
+      <h2 class="page">This month at the Creek</h2>
+      <div class="card tight" id="calendarList"></div>
+      <span class="creek divider" aria-hidden="true"></span>
+      <div class="sec"><div class="word"><div class="eye">Every week</div>
+        <blockquote style="font-style:normal;font-size:15px" id="weeklyRhythm"></blockquote>
+        <cite>6:30 on the 63 — Wednesday nights.</cite></div></div>
+    </section>
+
+    <!-- GIVE -->
+    <section class="screen" data-screen="give">
+      <h2 class="page">Give @ the Creek</h2>
+      <div class="hero" style="background:linear-gradient(160deg,#7c5f22,var(--wheat) 92%)">
+        <div class="eye" style="color:#fff5df">Cheerfully &amp; regularly</div>
+        <h1 style="font-size:26px">Support the Lord's work here.</h1>
+        <p style="color:#fbf3df">Your giving sustains worship, discipleship, missions, and the care of our people and our community.</p>
+      </div>
+      <div class="sec" id="giveActions"></div>
+      <div class="sec"><div class="sec-h"><h2 style="font-size:15px">Where it goes</h2></div>
+        <div class="card tight">
+          <div class="ev"><span class="chip">Local</span><div class="m"><b>Ministry &amp; operations</b><span>Worship, discipleship, facilities, care</span></div></div>
+          <div class="ev"><span class="chip gold">Missions</span><div class="m"><b>Home &amp; world missions</b><span>Our association · Louisiana Baptists · the nations</span></div></div>
+          <div class="ev"><span class="chip blue">Benevolence</span><div class="m"><b>Neighbors in need</b><span>Caring for our community in Jesus' name</span></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MORE -->
+    <section class="screen" data-screen="more">
+      <h2 class="page">Bluff Creek</h2>
+      <div class="word" style="margin-bottom:14px"><div class="eye">Who we are</div>
+        <blockquote style="font-style:normal;font-size:15px;line-height:1.5">A country church on Highway 63 in Clinton, Louisiana — rooted in the Word, sharing Christ with our community and the world, and walking together as one family in Him.</blockquote>
+        <cite>Southern Baptist · Baptist Faith &amp; Message 2000</cite></div>
+      <div class="menu">
+        <button data-go="new"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>I'm new — connect<span class="ch">›</span></button>
+        <button data-go="about"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 4.5-3.4 7.7-8 9-4.6-1.3-8-4.5-8-9V7z"/></svg></span>What we believe<span class="ch">›</span></button>
+        <button data-go="membership"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13A4 4 0 0 1 16 11"/></svg></span>Becoming a member<span class="ch">›</span></button>
+        <button data-go="ministries"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/></svg></span>Ministries @ the Creek<span class="ch">›</span></button>
+        <button data-go="policies"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></span>Policies &amp; safety<span class="ch">›</span></button>
+        <button data-go="contact"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>Find us · contact<span class="ch">›</span></button>
+      </div>
+      <div class="install" id="installCard2"></div>
+    </section>
+
+    <!-- ABOUT / BELIEFS -->
+    <section class="screen" data-screen="about">
+      <button class="back" data-go="more">‹ More</button>
+      <h2 class="page">What we believe</h2>
+      <p class="lead">We affirm the Holy Bible as the inspired Word of God and the basis for our beliefs. Bluff Creek subscribes to <b>The Baptist Faith &amp; Message (2000)</b> of the Southern Baptist Convention.</p>
+      <div class="card beliefs"><ul>
+        <li><b>Jesus is Lord.</b> We are a body of baptized believers who have received Jesus Christ as Savior and Lord, committed to sharing the good news of salvation with everyone.</li>
+        <li><b>The ordinances</b> are believer's baptism by immersion and the Lord's Supper.</li>
+        <li><b>The church</b> is a family under Christ, governed by its members, cooperating with the Louisiana Baptist Convention and the Southern Baptist Convention.</li>
+        <li><b>Our purpose:</b> to share Christ with as many people as possible in our church, community, and world; to worship; to grow together in the knowledge of God; and to minister unselfishly in Jesus' name.</li>
+      </ul></div>
+      <h3>Our covenant, in short</h3>
+      <div class="card"><p class="lead" style="margin:0">Having been led by the Spirit of God to receive the Lord Jesus Christ, we covenant to walk together in Christian love; to sustain the church's worship, ordinances, doctrine, and discipline; to give cheerfully and regularly; to raise our children in the faith; to seek the salvation of our family and neighbors; to watch over one another in brotherly love; and to be slow to take offense and always ready for reconciliation.</p></div>
+    </section>
+
+    <!-- MEMBERSHIP -->
+    <section class="screen" data-screen="membership">
+      <button class="back" data-go="more">‹ More</button>
+      <h2 class="page">Becoming a member</h2>
+      <p class="lead">Anyone may offer themselves for membership at any regular service. There are four ways home to the Creek:</p>
+      <div class="card plain"><ol>
+        <li><b>By profession of faith and baptism</b> — you've received Christ and want to follow Him in believer's baptism.</li>
+        <li><b>By letter</b> — you're coming from another Baptist church.</li>
+        <li><b>By statement</b> — you've been converted and baptized in a Baptist church but a letter isn't available.</li>
+        <li><b>By baptism</b> if you come from a non-Baptist background and haven't been baptized by immersion.</li>
+      </ol></div>
+      <h3>What membership means</h3>
+      <div class="card plain"><ul>
+        <li>Members 16 and older vote in church conference; members 18 and older may serve in elected offices.</li>
+        <li>Members commit to the church covenant, to growing in Christ, to serving, and to giving regularly — the tithe is our biblical starting point.</li>
+        <li>We're a family. When you move away, we'll help you find a church home there.</li>
+      </ul></div>
+      <button class="btn pine" data-go="new" style="margin-top:14px">I'd like to talk about membership</button>
+    </section>
+
+    <!-- MINISTRIES -->
+    <section class="screen" data-screen="ministries">
+      <button class="back" data-go="more">‹ More</button>
+      <h2 class="page">Ministries @ the Creek</h2>
+      <p class="lead">One church, one family — every ministry is the Creek.</p>
+      <div class="mins">
+        <div class="min"><div class="lock">Worship <span class="at">@</span> the Creek</div><span class="creek" style="--c:var(--wheat)"></span><p>Sunday morning and evening worship, music, and the Lord's Supper together as one body.</p></div>
+        <div class="min"><div class="lock">Kidz <span class="at">@</span> the Creek</div><span class="creek" style="--c:var(--moss)"></span><p>Nursery through 5th grade — Sunday School, VBS, Kidz @ The Creek, and a safe, loving place every week.</p></div>
+        <div class="min"><div class="lock">Youth <span class="at">@</span> the Creek</div><span class="creek" style="--c:var(--creekblue)"></span><p>6th–12th grade. Wednesday nights, camp, DNOW, and discipleship — <b>6:30 on the 63</b>.</p></div>
+        <div class="min"><div class="lock">Missions <span class="at">@</span> the Creek</div><span class="creek" style="--c:var(--clay)"></span><p>Church-wide missions through the year, our association and Louisiana Baptists, and care for neighbors in need.</p></div>
+        <div class="min"><div class="lock">Sunday School <span class="at">@</span> the Creek</div><span class="creek" style="--c:var(--pine)"></span><p>Classes for every age — preschool, children, youth, young adults, families, and adults. Find one that fits.</p></div>
+      </div>
+      <p class="note">Want to serve? Tell us on the Connect screen and we'll find you a place.</p>
+    </section>
+
+    <!-- POLICIES -->
+    <section class="screen" data-screen="policies">
+      <button class="back" data-go="more">‹ More</button>
+      <h2 class="page">Policies &amp; safety</h2>
+      <p class="lead">Your children's safety is not optional here. These are the standards we hold every leader to.</p>
+      <div class="card plain"><ul>
+        <li><b>Two adults, always.</b> No child is ever alone with a single adult.</li>
+        <li><b>Background checks</b> for every adult who serves with children or students, and child-protection training before serving.</li>
+        <li><b>Nursery &amp; Kidz check-in</b> — children are released only to the adult who checked them in.</li>
+        <li><b>Youth safety</b> — the same standards apply on trips, at camp, and on Wednesday nights.</li>
+      </ul></div>
+      <h3>Church documents</h3>
+      <div class="card plain"><ul>
+        <li>Constitution &amp; Bylaws — available from the church office.</li>
+        <li>Committee guidelines and the church operations manual — kept in the church office and available to any member.</li>
+        <li>Business meetings are held on a designated Sunday night; special meetings are announced one week ahead.</li>
+      </ul></div>
+      <p class="note">Questions about any policy? Contact the church office — we'd rather you ask.</p>
+    </section>
+
+    <!-- CONTACT -->
+    <section class="screen" data-screen="contact">
+      <button class="back" data-go="more">‹ More</button>
+      <h2 class="page">Find us on the 63.</h2>
+      <div class="card">
+        <div style="display:flex;gap:14px;align-items:center">
+          <img src="assets/la63.svg" alt="Louisiana Highway 63" style="width:64px">
+          <div><b style="font-family:'Bitter',serif;font-size:18px">Bluff Creek Baptist Church</b><div style="font-size:14px;color:var(--ink2);margin-top:4px">1706 Highway 63<br>Clinton, Louisiana 70722</div></div>
+        </div>
+        <a class="btn pine" style="margin-top:14px" href="https://maps.apple.com/?q=1706+Highway+63,+Clinton,+LA+70722" target="_blank" rel="noopener">Directions</a>
+        <div id="contactActions"></div>
+      </div>
+      <h3>Our pastor</h3>
+      <div class="card"><b style="font-family:'Bitter',serif;font-size:17px">Cole Permenter</b><div style="font-size:13.5px;color:var(--ink2);margin-top:4px;line-height:1.5">Pastor. Reach out any time — about faith, about the church, or just to talk.</div></div>
+      <div class="card" style="margin-top:12px"><b style="font-family:'Bitter',serif;font-size:15px">We're praying for our next youth minister.</b><div style="font-size:13.5px;color:var(--ink2);margin-top:4px;line-height:1.5">Bluff Creek is searching for the leader God has for Youth @ the Creek. If that's you — or someone you know — we'd love to hear from you on the Connect screen.</div></div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="byline"><img class="la63" src="assets/la63.svg" alt=""><span>1706 · LA 63 · Clinton</span></div>
+    <span class="creek" aria-hidden="true"></span>
+    <small>Bluff Creek Baptist Church · Clinton, Louisiana<br>Home @ the Creek</small>
+  </footer>
+
+  <div class="toast" id="toast"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><span id="toastMsg">Saved</span></div>
+
+  <nav class="tabs" aria-label="Primary">
+    <button class="on" data-tab="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg><span>Home</span></button>
+    <button data-tab="prayer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.35-7-10a4 4 0 0 1 7-2.65A4 4 0 0 1 19 11c0 5.65-7 10-7 10z"/></svg><span>Prayer</span></button>
+    <button data-tab="calendar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>Calendar</span></button>
+    <button data-tab="give"><svg class="give" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-7M2 8h20v4H2zM12 8v12M12 8S10.5 3 7.5 3 5 8 12 8zM12 8s1.5-5 4.5-5S19 8 12 8z"/></svg><span>Give</span></button>
+    <button data-tab="more"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>More</span></button>
+  </nav>
+</div>
+
+<script>
+/* =========================================================================
+   CONFIG — the only things you need to edit. Everything else is built.
+   ========================================================================= */
+var CONFIG = {
+  CHURCH_EMAIL: "",            // e.g. "office@bluffcreekbc.org" — sign-ups & prayer requests are emailed here
+  CHURCH_PHONE: "",            // e.g. "(225) 683-0000" — shows a Call button when set
+  GIVE_URL: "",                // your online-giving link — shows the Give button when set
+  RECURRING_URL: "",           // optional recurring-giving link
+  WATCH_URL: "https://www.youtube.com/@bluffcreekbaptistchurch",
+  FORM_ENDPOINT: "",           // optional: a form/webhook URL (Zapier, Google Apps Script) — auto-captures submissions
+  TIMES: [                     // ← confirm these
+    {label:"Sun · Sunday School", time:"9:45a"},
+    {label:"Sun · Worship",       time:"11:00a"},
+    {label:"Wed · Family night",  time:"6:30p"}
+  ],
+  WEEKLY: "Sunday School 9:45a · Worship 11:00a · Wednesday family night 6:30p — Youth @ the Creek, Kidz @ the Creek, and adult Bible study.",
+  VERSE: {text:"\"But as for me and my house, we will serve the LORD.\"", ref:"Joshua 24:15"},
+  EVENTS: [                    // ← keep this list current (month is shown from 'when')
+    {when:"2026-09-10", d:"Wed", n:"10", title:"Youth @ the Creek", sub:"6:30p · Fellowship Hall", tag:"Weekly"},
+    {when:"2026-09-14", d:"Sun", n:"14", title:"Sunday Worship", sub:"11:00a · Sanctuary"},
+    {when:"2026-09-14", d:"Sun", n:"14", title:"Deacons' meeting", sub:"Afternoon · Office", tag:"Monthly"},
+    {when:"2026-09-17", d:"Wed", n:"17", title:"Youth @ the Creek", sub:"6:30p · Fellowship Hall", tag:"Weekly"},
+    {when:"2026-09-21", d:"Sun", n:"21", title:"Sunday Worship", sub:"11:00a · Sanctuary"},
+    {when:"2026-09-28", d:"Sun", n:"28", title:"Fifth Sunday fellowship", sub:"After worship · Dinner on the grounds", tag:"Special"},
+    {when:"2026-10-05", d:"Oct", n:"05", title:"The Lord's Supper", sub:"11:00a · Sanctuary"},
+    {when:"2026-10-07", d:"Wed", n:"07", title:"Youth @ the Creek", sub:"6:30p · Fellowship Hall", tag:"Weekly"}
+  ],
+  PRAYER_WALL: [               // shared, non-personal items only
+    {b:"Traveling mercies", t:"for our folks on the road this week."},
+    {b:"Our next youth minister", t:"— that God would bring the right leader to Youth @ the Creek."},
+    {b:"Thanksgiving", t:"for every family that calls the Creek home."}
+  ],
+  PRAYER_COUNT: 148
+};
+
+(function(){
+  var $=function(s,r){return (r||document).querySelector(s)}, $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+  var screens=$$('.screen'), tabs=$$('nav.tabs button');
+  var tabFor={home:'home',prayer:'prayer',calendar:'calendar',give:'give',more:'more',new:'more',about:'more',membership:'more',ministries:'more',policies:'more',contact:'more'};
+  function show(name){
+    screens.forEach(function(s){s.classList.toggle('on',s.dataset.screen===name)});
+    tabs.forEach(function(t){t.classList.toggle('on',t.dataset.tab===(tabFor[name]||'home'))});
+    window.scrollTo({top:0,behavior:'instant' in window ? 'instant':'auto'});
+    try{history.replaceState(null,'','#'+name)}catch(e){}
+  }
+  tabs.forEach(function(t){t.addEventListener('click',function(){show(t.dataset.tab)})});
+  $$('[data-go]').forEach(function(b){b.addEventListener('click',function(e){e.preventDefault();show(b.dataset.go)})});
+  var start=(location.hash||'#home').slice(1); if(!document.querySelector('.screen[data-screen="'+start+'"]')) start='home'; show(start);
+
+  // content
+  $('#times').innerHTML=CONFIG.TIMES.map(function(t){return '<div class="t"><small>'+t.label+'</small><b>'+t.time+'</b></div>'}).join('');
+  $('#weeklyRhythm').textContent=CONFIG.WEEKLY;
+  $('#verseText').textContent=CONFIG.VERSE.text; $('#verseRef').textContent=CONFIG.VERSE.ref;
+  function ev(e){return '<div class="ev"><div class="cal"><small>'+e.d+'</small><b>'+e.n+'</b></div><div class="m"><b>'+e.title+'</b><span>'+e.sub+'</span></div>'+(e.tag?'<span class="chip'+(e.tag==='Special'?' gold':e.tag==='Monthly'?' blue':'')+'">'+e.tag+'</span>':'')+'</div>'}
+  var today=new Date(); today.setHours(0,0,0,0);
+  var upcoming=CONFIG.EVENTS.filter(function(e){return new Date(e.when+'T12:00:00')>=today});
+  $('#thisweek').innerHTML=(upcoming.slice(0,3).length?upcoming.slice(0,3):CONFIG.EVENTS.slice(0,3)).map(ev).join('');
+  $('#calendarList').innerHTML=(upcoming.length?upcoming:CONFIG.EVENTS).map(ev).join('');
+  $('#prayerWall').innerHTML=CONFIG.PRAYER_WALL.map(function(p){return '<div class="pitem"><b>'+p.b+'</b> '+p.t+'</div>'}).join('');
+  var pc=CONFIG.PRAYER_COUNT; try{pc+=(JSON.parse(localStorage.getItem('creek_prayer')||'[]')).length}catch(e){} $('#prayN').textContent=pc;
+
+  // watch / give / contact actions from config
+  $('#watchBtn').addEventListener('click',function(){ if(CONFIG.WATCH_URL) window.open(CONFIG.WATCH_URL,'_blank','noopener'); else ping('Live stream link coming soon'); });
+  var ga=$('#giveActions');
+  ga.innerHTML = CONFIG.GIVE_URL
+    ? '<a class="btn pine" href="'+CONFIG.GIVE_URL+'" target="_blank" rel="noopener">Give online securely</a>'+(CONFIG.RECURRING_URL?'<a class="btn ghost" href="'+CONFIG.RECURRING_URL+'" target="_blank" rel="noopener">Set up recurring giving</a>':'')+'<div class="card" style="margin-top:14px"><p class="lead" style="margin:0">You can also give by check on Sunday or by mail to the church. Every gift is recorded by the church treasurer for your year-end statement.</p></div>'
+    : '<div class="card"><b style="font-family:Bitter,serif;font-size:16px">Online giving is coming soon.</b><p class="lead" style="margin:6px 0 0">For now, give by check or cash on Sunday, or by mail to the church at 1706 Highway 63, Clinton, LA 70722. Every gift is recorded by the church treasurer for your year-end statement.</p></div>';
+  var ca=$('#contactActions'), acts='';
+  if(CONFIG.CHURCH_PHONE) acts+='<a class="btn ghost" href="tel:'+CONFIG.CHURCH_PHONE.replace(/[^0-9+]/g,'')+'">Call the office · '+CONFIG.CHURCH_PHONE+'</a>';
+  if(CONFIG.CHURCH_EMAIL) acts+='<a class="btn ghost" href="mailto:'+CONFIG.CHURCH_EMAIL+'">Email the office</a>';
+  ca.innerHTML=acts;
+
+  // toast
+  var toast=$('#toast'),tm=$('#toastMsg'),tt; function ping(m){tm.textContent=m;toast.classList.add('on');clearTimeout(tt);tt=setTimeout(function(){toast.classList.remove('on')},2600)}
+
+  // submissions: endpoint (auto) → email handoff → local backup. Always confirm.
+  function keep(key,obj){try{var a=JSON.parse(localStorage.getItem(key)||'[]');a.push(obj);localStorage.setItem(key,JSON.stringify(a))}catch(e){}}
+  function deliver(kind,data,subject,body){
+    keep('creek_'+kind,data);
+    if(CONFIG.FORM_ENDPOINT){ try{ fetch(CONFIG.FORM_ENDPOINT,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({kind:kind,when:new Date().toISOString()},data))}); }catch(e){} return 'sent'; }
+    if(CONFIG.CHURCH_EMAIL){ var href='mailto:'+CONFIG.CHURCH_EMAIL+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body); setTimeout(function(){location.href=href},350); return 'mail'; }
+    return 'local';
+  }
+  var joinForm=$('#joinForm');
+  joinForm.addEventListener('submit',function(e){
+    e.preventDefault(); var f=joinForm;
+    if(!f.first.value.trim()||!f.email.value.trim()){ping('Add your name and email');return}
+    var d={first:f.first.value.trim(),last:f.last.value.trim(),email:f.email.value.trim(),phone:f.phone.value.trim(),guest:f.guest.checked,texts:f.texts.checked,the63:f.the63.checked,prayer:f.prayer.value.trim()};
+    var body='New connection from the Creek app\n\nName: '+d.first+' '+d.last+'\nEmail: '+d.email+'\nPhone: '+d.phone+'\nFirst visit: '+(d.guest?'yes':'no')+'\nText updates: '+(d.texts?'yes':'no')+'\nThe 63 weekly: '+(d.the63?'yes':'no')+'\nPrayer: '+d.prayer;
+    var how=deliver('join',d,'Connect @ the Creek — '+d.first+' '+d.last,body);
+    joinForm.style.display='none'; $('#joinOk').classList.add('on');
+    $('#joinNote').textContent = how==='mail' ? 'If your email app opened, just tap Send — that’s how it reaches our office.' : '';
+    ping('Welcome to the Creek 🌾');
+  });
+  var prayForm=$('#prayForm');
+  prayForm.addEventListener('submit',function(e){
+    e.preventDefault(); var f=prayForm;
+    if(!f.req.value.trim()){ping('Share your request first');return}
+    var d={name:f.name.value.trim()||'Anonymous',contact:f.contact.value.trim(),req:f.req.value.trim(),private:f.private.checked};
+    var body='Prayer request from the Creek app\n\nFrom: '+d.name+'\nContact: '+d.contact+'\nPrivate: '+(d.private?'yes':'no')+'\n\n'+d.req;
+    var how=deliver('prayer',d,'Prayer @ the Creek — '+d.name,body);
+    prayForm.style.display='none'; $('#prayOk').classList.add('on');
+    $('#prayN').textContent=(parseInt($('#prayN').textContent,10)||0)+1;
+    $('#prayNote').textContent = how==='mail' ? 'If your email app opened, tap Send to deliver it to the prayer team.' : '';
+    ping('Your request is with the team');
+  });
+
+  // install to home screen
+  var deferred=null, standalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+  var isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  function installCard(html){$('#installCard').innerHTML=html;$('#installCard').classList.add('on');$('#installCard2').innerHTML=html;$('#installCard2').classList.add('on')}
+  window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferred=e; if(!standalone) installCard('<b>Put the Creek on your home screen.</b> One tap, and it opens like an app.<button class="btn" id="installBtn">Install the Creek app</button>');
+    $$('#installBtn').forEach(function(b){b.addEventListener('click',function(){deferred.prompt()})});});
+  if(isIOS&&!standalone){ installCard('<b>Add the Creek to your home screen.</b> Tap the <b>Share</b> button below, then <b>Add to Home Screen</b>. It opens like an app.'); }
+  if('serviceWorker' in navigator){ window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})}); }
+})();
+</script>
+</body>
+</html>
