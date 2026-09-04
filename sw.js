@@ -1,7 +1,7 @@
 /* Bluff Creek app — service worker: cache the shell so the app opens instantly and offline. */
-const CACHE = 'creek-v1';
+const CACHE = 'creek-v2';
 const SHELL = [
-  './', './index.html', './manifest.webmanifest',
+  './', './index.html', './events.json', './manifest.webmanifest',
   './assets/logo.png', './assets/creek.png', './assets/la63.svg',
   './assets/icon-192.png', './assets/icon-512.png', './assets/apple-touch-icon.png', './assets/favicon-32.png'
 ];
