@@ -1,5 +1,5 @@
 /* Bluff Creek app — service worker: cache the shell so the app opens instantly and offline. */
-const CACHE = 'creek-v2';
+const CACHE = 'creek-v3';
 const SHELL = [
   './', './index.html', './events.json', './manifest.webmanifest',
   './assets/logo.png', './assets/creek.png', './assets/la63.svg',
@@ -18,6 +18,15 @@ self.addEventListener('fetch', e => {
   if (req.mode === 'navigate') {
     e.respondWith(fetch(req).then(r => { const copy = r.clone(); caches.open(CACHE).then(c => c.put('./index.html', copy)); return r; })
       .catch(() => caches.match('./index.html')));
+    return;
+  }
+  // The events feed must never be served stale: it is how the calendar reaches
+  // phones that already installed the app. Network first, cache only as a fallback.
+  if (req.url.includes('events.json')) {
+    e.respondWith(fetch(req).then(r => {
+      if (r.ok) { const copy = r.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
+      return r;
+    }).catch(() => caches.match(req).then(hit => hit || caches.match('./events.json'))));
     return;
   }
   e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(r => {
