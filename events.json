@@ -1,211 +1,762 @@
 {
+  "source": "icloud",
   "updated": "2026-09-06",
+  "synced_at": "2026-09-07T04:00:43.242Z",
+  "valid_until": "2026-12-04",
+  "recurring": [],
   "events": [
     {
-      "when": "2026-09-06",
-      "time": "9:00a",
-      "title": "Sunday School",
-      "where": "Fellowship Building",
-      "tag": "Weekly"
-    },
-    {
-      "when": "2026-09-06",
-      "time": "10:15a",
-      "title": "Sunday Worship",
-      "where": "Sanctuary",
-      "tag": "Weekly"
-    },
-    {
-      "when": "2026-09-06",
-      "time": "5:30p",
-      "title": "Youth discipleship",
-      "where": "Fellowship Building",
-      "tag": "Weekly"
-    },
-    {
-      "when": "2026-09-06",
-      "time": "6:00p",
-      "title": "Evening service",
-      "where": "Sanctuary",
-      "tag": "Weekly"
-    },
-    {
-      "when": "2026-09-07",
-      "time": "6:30p",
-      "title": "Women’s Bible study",
-      "where": "Contact church office for location",
-      "tag": "Weekly"
-    },
-    {
       "when": "2026-09-08",
-      "time": "5:00p",
+      "time": "3:45p",
       "title": "Yoga @ the Creek",
-      "where": "Fellowship Building",
-      "tag": "Weekly"
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-09-08T21:30:00.000Z"
     },
     {
       "when": "2026-09-09",
       "time": "6:00p",
       "title": "Prayer meeting",
-      "where": "Sanctuary",
-      "tag": "Weekly"
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-09-09T23:30:00.000Z"
     },
     {
       "when": "2026-09-09",
       "time": "6:00p",
-      "title": "Youth @ the Creek — MDWK",
-      "where": "Fellowship Building",
-      "tag": "Weekly"
+      "title": "Youth @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-09-10T01:00:00.000Z"
     },
     {
       "when": "2026-09-10",
-      "time": "5:00p",
+      "time": "3:45p",
       "title": "Yoga @ the Creek",
-      "where": "Fellowship Building",
-      "tag": "Weekly"
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-09-10T21:30:00.000Z"
+    },
+    {
+      "when": "2026-09-13",
+      "time": "8:00a",
+      "title": "Sunday morning prayer",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-09-13T14:00:00.000Z"
     },
     {
       "when": "2026-09-13",
       "time": "9:00a",
-      "title": "Sunday School",
-      "where": "Fellowship Building",
-      "tag": "Weekly"
-    },
-    {
-      "when": "2026-09-13",
-      "time": "10:15a",
-      "title": "Sunday Worship",
-      "where": "Sanctuary",
-      "tag": "Weekly"
-    },
-    {
-      "when": "2026-09-13",
-      "time": "5:30p",
-      "title": "Youth discipleship",
-      "where": "Fellowship Building",
-      "tag": "Weekly"
+      "title": "Sunday School & Morning Worship",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-09-13T16:30:00.000Z"
     },
     {
       "when": "2026-09-13",
       "time": "6:00p",
-      "title": "Evening service",
-      "where": "Sanctuary",
-      "tag": "Weekly"
+      "title": "Business meeting",
+      "where": "Check with the church for location",
+      "tag": "Monthly",
+      "endsAt": "2026-09-14T00:00:00.000Z"
     },
     {
-      "when": "2026-09-14",
-      "time": "6:30p",
-      "title": "Women’s Bible study",
-      "where": "Contact church office for location",
-      "tag": "Weekly"
+      "when": "2026-09-13",
+      "time": "6:00p",
+      "title": "Sunday evening discipleship",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-09-14T00:00:00.000Z"
+    },
+    {
+      "when": "2026-09-15",
+      "time": "3:45p",
+      "title": "Yoga @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-09-15T21:30:00.000Z"
     },
     {
       "when": "2026-09-15",
       "time": "5:00p",
-      "title": "Yoga @ the Creek",
-      "where": "Fellowship Building",
-      "tag": "Weekly"
-    },
-    {
-      "when": "2026-09-15",
-      "time": "6:00p",
-      "title": "WMU",
-      "where": "Fellowship Hall",
-      "tag": "Monthly"
-    },
-    {
-      "when": "2026-09-16",
-      "time": "6:00p",
-      "title": "Prayer meeting",
-      "where": "Sanctuary",
-      "tag": "Weekly"
-    },
-    {
-      "when": "2026-09-16",
-      "time": "6:00p",
-      "title": "Youth @ the Creek — MDWK",
-      "where": "Fellowship Building",
-      "tag": "Weekly"
-    },
-    {
-      "when": "2026-09-17",
-      "time": "5:00p",
-      "title": "Yoga @ the Creek",
-      "where": "Fellowship Building",
-      "tag": "Weekly"
-    }
-  ],
-  "recurring": [
-    {
-      "time": "9:00a",
-      "title": "Sunday School",
-      "where": "Fellowship Building",
-      "tag": "Weekly",
-      "weekday": 0
-    },
-    {
-      "time": "10:15a",
-      "title": "Sunday Worship",
-      "where": "Sanctuary",
-      "tag": "Weekly",
-      "weekday": 0
-    },
-    {
-      "time": "5:30p",
-      "title": "Youth discipleship",
-      "where": "Fellowship Building",
-      "tag": "Weekly",
-      "weekday": 0
-    },
-    {
-      "time": "6:00p",
-      "title": "Evening service",
-      "where": "Sanctuary",
-      "tag": "Weekly",
-      "weekday": 0
-    },
-    {
-      "time": "6:30p",
-      "title": "Women’s Bible study",
-      "where": "Contact church office for location",
-      "tag": "Weekly",
-      "weekday": 1
-    },
-    {
-      "time": "5:00p",
-      "title": "Yoga @ the Creek",
-      "where": "Fellowship Building",
-      "tag": "Weekly",
-      "weekday": 2
-    },
-    {
-      "time": "6:00p",
-      "title": "Prayer meeting",
-      "where": "Sanctuary",
-      "tag": "Weekly",
-      "weekday": 3
-    },
-    {
-      "time": "6:00p",
-      "title": "Youth @ the Creek — MDWK",
-      "where": "Fellowship Building",
-      "tag": "Weekly",
-      "weekday": 3
-    },
-    {
-      "time": "5:00p",
-      "title": "Yoga @ the Creek",
-      "where": "Fellowship Building",
-      "tag": "Weekly",
-      "weekday": 4
-    },
-    {
-      "time": "6:00p",
       "title": "WMU",
       "where": "Fellowship Hall",
       "tag": "Monthly",
-      "weekday": 2,
-      "ordinal": 3
+      "endsAt": "2026-09-16T00:00:00.000Z"
+    },
+    {
+      "when": "2026-09-16",
+      "time": "6:00p",
+      "title": "Prayer meeting",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-09-16T23:30:00.000Z"
+    },
+    {
+      "when": "2026-09-16",
+      "time": "6:00p",
+      "title": "Youth @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-09-17T01:00:00.000Z"
+    },
+    {
+      "when": "2026-09-17",
+      "time": "3:45p",
+      "title": "Yoga @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-09-17T21:30:00.000Z"
+    },
+    {
+      "when": "2026-09-20",
+      "time": "8:00a",
+      "title": "Sunday morning prayer",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-09-20T14:00:00.000Z"
+    },
+    {
+      "when": "2026-09-20",
+      "time": "9:00a",
+      "title": "Sunday School & Morning Worship",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-09-20T16:30:00.000Z"
+    },
+    {
+      "when": "2026-09-20",
+      "time": "6:00p",
+      "title": "Sunday evening discipleship",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-09-21T00:00:00.000Z"
+    },
+    {
+      "when": "2026-09-22",
+      "time": "3:45p",
+      "title": "Yoga @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-09-22T21:30:00.000Z"
+    },
+    {
+      "when": "2026-09-23",
+      "time": "6:00p",
+      "title": "Prayer meeting",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-09-23T23:30:00.000Z"
+    },
+    {
+      "when": "2026-09-23",
+      "time": "6:00p",
+      "title": "Youth @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-09-24T01:00:00.000Z"
+    },
+    {
+      "when": "2026-09-24",
+      "time": "3:45p",
+      "title": "Yoga @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-09-24T21:30:00.000Z"
+    },
+    {
+      "when": "2026-09-27",
+      "time": "8:00a",
+      "title": "Sunday morning prayer",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-09-27T14:00:00.000Z"
+    },
+    {
+      "when": "2026-09-27",
+      "time": "9:00a",
+      "title": "Sunday School & Morning Worship",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-09-27T16:30:00.000Z"
+    },
+    {
+      "when": "2026-09-27",
+      "time": "6:00p",
+      "title": "Sunday evening discipleship",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-09-28T00:00:00.000Z"
+    },
+    {
+      "when": "2026-09-29",
+      "time": "3:45p",
+      "title": "Yoga @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-09-29T21:30:00.000Z"
+    },
+    {
+      "when": "2026-09-30",
+      "time": "6:00p",
+      "title": "Prayer meeting",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-09-30T23:30:00.000Z"
+    },
+    {
+      "when": "2026-09-30",
+      "time": "6:00p",
+      "title": "Youth @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-10-01T01:00:00.000Z"
+    },
+    {
+      "when": "2026-10-01",
+      "time": "3:45p",
+      "title": "Yoga @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-10-01T21:30:00.000Z"
+    },
+    {
+      "when": "2026-10-04",
+      "time": "8:00a",
+      "title": "Sunday morning prayer",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-10-04T14:00:00.000Z"
+    },
+    {
+      "when": "2026-10-04",
+      "time": "9:00a",
+      "title": "Sunday School & Morning Worship",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-10-04T16:30:00.000Z"
+    },
+    {
+      "when": "2026-10-04",
+      "time": "6:00p",
+      "title": "Sunday evening discipleship",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-10-05T00:00:00.000Z"
+    },
+    {
+      "when": "2026-10-06",
+      "time": "3:45p",
+      "title": "Yoga @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-10-06T21:30:00.000Z"
+    },
+    {
+      "when": "2026-10-07",
+      "time": "6:00p",
+      "title": "Prayer meeting",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-10-07T23:30:00.000Z"
+    },
+    {
+      "when": "2026-10-07",
+      "time": "6:00p",
+      "title": "Youth @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-10-08T01:00:00.000Z"
+    },
+    {
+      "when": "2026-10-08",
+      "time": "3:45p",
+      "title": "Yoga @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-10-08T21:30:00.000Z"
+    },
+    {
+      "when": "2026-10-11",
+      "time": "8:00a",
+      "title": "Sunday morning prayer",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-10-11T14:00:00.000Z"
+    },
+    {
+      "when": "2026-10-11",
+      "time": "9:00a",
+      "title": "Sunday School & Morning Worship",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-10-11T16:30:00.000Z"
+    },
+    {
+      "when": "2026-10-11",
+      "time": "6:00p",
+      "title": "Business meeting",
+      "where": "Check with the church for location",
+      "tag": "Monthly",
+      "endsAt": "2026-10-12T00:00:00.000Z"
+    },
+    {
+      "when": "2026-10-11",
+      "time": "6:00p",
+      "title": "Sunday evening discipleship",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-10-12T00:00:00.000Z"
+    },
+    {
+      "when": "2026-10-13",
+      "time": "3:45p",
+      "title": "Yoga @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-10-13T21:30:00.000Z"
+    },
+    {
+      "when": "2026-10-14",
+      "time": "6:00p",
+      "title": "Prayer meeting",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-10-14T23:30:00.000Z"
+    },
+    {
+      "when": "2026-10-14",
+      "time": "6:00p",
+      "title": "Youth @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-10-15T01:00:00.000Z"
+    },
+    {
+      "when": "2026-10-15",
+      "time": "3:45p",
+      "title": "Yoga @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-10-15T21:30:00.000Z"
+    },
+    {
+      "when": "2026-10-18",
+      "time": "8:00a",
+      "title": "Sunday morning prayer",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-10-18T14:00:00.000Z"
+    },
+    {
+      "when": "2026-10-18",
+      "time": "9:00a",
+      "title": "Sunday School & Morning Worship",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-10-18T16:30:00.000Z"
+    },
+    {
+      "when": "2026-10-18",
+      "time": "6:00p",
+      "title": "Sunday evening discipleship",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-10-19T00:00:00.000Z"
+    },
+    {
+      "when": "2026-10-20",
+      "time": "3:45p",
+      "title": "Yoga @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-10-20T21:30:00.000Z"
+    },
+    {
+      "when": "2026-10-20",
+      "time": "5:00p",
+      "title": "WMU",
+      "where": "Fellowship Hall",
+      "tag": "Monthly",
+      "endsAt": "2026-10-21T00:00:00.000Z"
+    },
+    {
+      "when": "2026-10-21",
+      "time": "6:00p",
+      "title": "Prayer meeting",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-10-21T23:30:00.000Z"
+    },
+    {
+      "when": "2026-10-21",
+      "time": "6:00p",
+      "title": "Youth @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-10-22T01:00:00.000Z"
+    },
+    {
+      "when": "2026-10-22",
+      "time": "3:45p",
+      "title": "Yoga @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-10-22T21:30:00.000Z"
+    },
+    {
+      "when": "2026-10-25",
+      "time": "8:00a",
+      "title": "Sunday morning prayer",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-10-25T14:00:00.000Z"
+    },
+    {
+      "when": "2026-10-25",
+      "time": "9:00a",
+      "title": "Sunday School & Morning Worship",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-10-25T16:30:00.000Z"
+    },
+    {
+      "when": "2026-10-25",
+      "time": "6:00p",
+      "title": "Sunday evening discipleship",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-10-26T00:00:00.000Z"
+    },
+    {
+      "when": "2026-10-27",
+      "time": "3:45p",
+      "title": "Yoga @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-10-27T21:30:00.000Z"
+    },
+    {
+      "when": "2026-10-28",
+      "time": "6:00p",
+      "title": "Prayer meeting",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-10-28T23:30:00.000Z"
+    },
+    {
+      "when": "2026-10-28",
+      "time": "6:00p",
+      "title": "Youth @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-10-29T01:00:00.000Z"
+    },
+    {
+      "when": "2026-10-29",
+      "time": "3:45p",
+      "title": "Yoga @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-10-29T21:30:00.000Z"
+    },
+    {
+      "when": "2026-11-01",
+      "time": "8:00a",
+      "title": "Sunday morning prayer",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-11-01T15:00:00.000Z"
+    },
+    {
+      "when": "2026-11-01",
+      "time": "9:00a",
+      "title": "Sunday School & Morning Worship",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-11-01T17:30:00.000Z"
+    },
+    {
+      "when": "2026-11-01",
+      "time": "6:00p",
+      "title": "Sunday evening discipleship",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-11-02T01:00:00.000Z"
+    },
+    {
+      "when": "2026-11-03",
+      "time": "3:45p",
+      "title": "Yoga @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-11-03T22:30:00.000Z"
+    },
+    {
+      "when": "2026-11-04",
+      "time": "6:00p",
+      "title": "Prayer meeting",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-11-05T00:30:00.000Z"
+    },
+    {
+      "when": "2026-11-04",
+      "time": "6:00p",
+      "title": "Youth @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-11-05T02:00:00.000Z"
+    },
+    {
+      "when": "2026-11-05",
+      "time": "3:45p",
+      "title": "Yoga @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-11-05T22:30:00.000Z"
+    },
+    {
+      "when": "2026-11-08",
+      "time": "8:00a",
+      "title": "Sunday morning prayer",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-11-08T15:00:00.000Z"
+    },
+    {
+      "when": "2026-11-08",
+      "time": "9:00a",
+      "title": "Sunday School & Morning Worship",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-11-08T17:30:00.000Z"
+    },
+    {
+      "when": "2026-11-08",
+      "time": "6:00p",
+      "title": "Business meeting",
+      "where": "Check with the church for location",
+      "tag": "Monthly",
+      "endsAt": "2026-11-09T01:00:00.000Z"
+    },
+    {
+      "when": "2026-11-08",
+      "time": "6:00p",
+      "title": "Sunday evening discipleship",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-11-09T01:00:00.000Z"
+    },
+    {
+      "when": "2026-11-10",
+      "time": "3:45p",
+      "title": "Yoga @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-11-10T22:30:00.000Z"
+    },
+    {
+      "when": "2026-11-11",
+      "time": "6:00p",
+      "title": "Prayer meeting",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-11-12T00:30:00.000Z"
+    },
+    {
+      "when": "2026-11-11",
+      "time": "6:00p",
+      "title": "Youth @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-11-12T02:00:00.000Z"
+    },
+    {
+      "when": "2026-11-12",
+      "time": "3:45p",
+      "title": "Yoga @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-11-12T22:30:00.000Z"
+    },
+    {
+      "when": "2026-11-15",
+      "time": "8:00a",
+      "title": "Sunday morning prayer",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-11-15T15:00:00.000Z"
+    },
+    {
+      "when": "2026-11-15",
+      "time": "9:00a",
+      "title": "Sunday School & Morning Worship",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-11-15T17:30:00.000Z"
+    },
+    {
+      "when": "2026-11-15",
+      "time": "6:00p",
+      "title": "Sunday evening discipleship",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-11-16T01:00:00.000Z"
+    },
+    {
+      "when": "2026-11-17",
+      "time": "3:45p",
+      "title": "Yoga @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-11-17T22:30:00.000Z"
+    },
+    {
+      "when": "2026-11-17",
+      "time": "5:00p",
+      "title": "WMU",
+      "where": "Fellowship Hall",
+      "tag": "Monthly",
+      "endsAt": "2026-11-18T01:00:00.000Z"
+    },
+    {
+      "when": "2026-11-18",
+      "time": "6:00p",
+      "title": "Prayer meeting",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-11-19T00:30:00.000Z"
+    },
+    {
+      "when": "2026-11-18",
+      "time": "6:00p",
+      "title": "Youth Friendsgiving potluck",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-11-19T02:00:00.000Z"
+    },
+    {
+      "when": "2026-11-19",
+      "time": "3:45p",
+      "title": "Yoga @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-11-19T22:30:00.000Z"
+    },
+    {
+      "when": "2026-11-22",
+      "time": "All day",
+      "title": "Youth YEC",
+      "where": "Check with the church for location",
+      "tag": "Special",
+      "allDay": true,
+      "endsAt": "2026-11-24"
+    },
+    {
+      "when": "2026-11-22",
+      "time": "8:00a",
+      "title": "Sunday morning prayer",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-11-22T15:00:00.000Z"
+    },
+    {
+      "when": "2026-11-22",
+      "time": "9:00a",
+      "title": "Sunday School & Morning Worship",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-11-22T17:30:00.000Z"
+    },
+    {
+      "when": "2026-11-22",
+      "time": "6:00p",
+      "title": "Sunday evening discipleship",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-11-23T01:00:00.000Z"
+    },
+    {
+      "when": "2026-11-24",
+      "time": "3:45p",
+      "title": "Yoga @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-11-24T22:30:00.000Z"
+    },
+    {
+      "when": "2026-11-25",
+      "time": "6:00p",
+      "title": "Prayer meeting",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-11-26T00:30:00.000Z"
+    },
+    {
+      "when": "2026-11-26",
+      "time": "3:45p",
+      "title": "Yoga @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-11-26T22:30:00.000Z"
+    },
+    {
+      "when": "2026-11-29",
+      "time": "8:00a",
+      "title": "Sunday morning prayer",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-11-29T15:00:00.000Z"
+    },
+    {
+      "when": "2026-11-29",
+      "time": "9:00a",
+      "title": "Sunday School & Morning Worship",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-11-29T17:30:00.000Z"
+    },
+    {
+      "when": "2026-11-29",
+      "time": "6:00p",
+      "title": "Sunday evening discipleship",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-11-30T01:00:00.000Z"
+    },
+    {
+      "when": "2026-12-01",
+      "time": "3:45p",
+      "title": "Yoga @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-12-01T22:30:00.000Z"
+    },
+    {
+      "when": "2026-12-02",
+      "time": "6:00p",
+      "title": "Prayer meeting",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-12-03T00:30:00.000Z"
+    },
+    {
+      "when": "2026-12-02",
+      "time": "6:00p",
+      "title": "Youth @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-12-03T02:00:00.000Z"
+    },
+    {
+      "when": "2026-12-03",
+      "time": "3:45p",
+      "title": "Yoga @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-12-03T22:30:00.000Z"
     }
   ]
 }

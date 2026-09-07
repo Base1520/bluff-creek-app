@@ -5,3 +5,4 @@
 .document-sheet{padding:26px}.document-sheet p{color:var(--muted)}.document-sheet a,.calendar-note a{color:var(--pine);font-weight:800}.document-sheet button{margin-top:20px}button:disabled{opacity:.6;cursor:wait}
 
 @media(max-width:760px){aside{visibility:hidden}aside.open{visibility:visible}.content>header{flex-wrap:wrap;gap:10px}.content>header #primary-action{margin-left:0}.auth-card{padding:26px}}
+.calendar-guide{padding:24px;margin-bottom:30px}.calendar-guide h2{margin-top:8px}.calendar-guide p{max-width:70ch;line-height:1.65}.calendar-guide summary{cursor:pointer;font-weight:800;color:var(--pine,#3C5A45)}.calendar-guide details{padding:12px 0}.calendar-guide .calendar-note{margin-bottom:0}

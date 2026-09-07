@@ -16,6 +16,8 @@ if (process.argv[2]) {
   fs.mkdirSync(path.join(website, 'js'), {recursive: true});
   fs.mkdirSync(path.join(website, 'data'), {recursive: true});
   fs.writeFileSync(path.join(website, 'js/calendar-feed.js'), updated);
+  fs.copyFileSync(path.join(root, 'js/calendar-config.js'), path.join(website, 'js/calendar-config.js'));
   fs.copyFileSync(source, path.join(website, 'data/events-fallback.json'));
+  if (fs.existsSync(path.join(root, 'calendar.ics'))) fs.copyFileSync(path.join(root, 'calendar.ics'), path.join(website, 'calendar.ics'));
 }
 console.log('Verified public calendar fallback synchronized. Rebuild the website before committing.');

@@ -149,7 +149,7 @@
     document.querySelectorAll(".view").forEach(function (node) { node.classList.toggle("hidden", node.id !== view + "-view"); });
     document.querySelectorAll("aside nav a").forEach(function (node) { node.classList.toggle("active", node.dataset.view === view); });
     el("page-title").textContent = titles[view];
-    var labels = { calendar: "Add event", people: "Add person", documents: "Upload document" };
+    var labels = { calendar: "Add staff event", people: "Add person", documents: "Upload document" };
     el("primary-action").textContent = labels[view] || "Add";
     el("primary-action").classList.toggle("hidden", !labels[view] || !canEdit());
     render();

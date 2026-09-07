@@ -6,7 +6,7 @@ const vm = require('node:vm');
 
 const workerSource = fs.readFileSync(path.join(__dirname, '..', 'sw.js'), 'utf8');
 
-function harness(scope = 'https://app.example.test/') {
+function harness(scope = 'https://app.example.test/', endpoint = '') {
   const handlers = {};
   const stores = new Map();
   const calls = [];
@@ -31,8 +31,10 @@ function harness(scope = 'https://app.example.test/') {
   const context = {
     URL, Headers, Request, Response,
     importScripts: url => {
-      assert.equal(url, new URL('js/calendar-feed.js', scope).href);
-      vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js', 'calendar-feed.js'), 'utf8'), context);
+      const file = url === new URL('js/calendar-config.js', scope).href ? 'calendar-config.js' : 'calendar-feed.js';
+      assert.equal(url, new URL('js/' + file, scope).href);
+      vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js', file), 'utf8'), context);
+      if (file === 'calendar-config.js') context.CREEK_PUBLIC_CALENDAR.endpoint = endpoint;
     },
     self: {
       registration: { scope },
@@ -69,6 +71,20 @@ function harness(scope = 'https://app.example.test/') {
 const html = text => new Response(text, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
 const feed = value => new Response(JSON.stringify(value), { headers: { 'Content-Type': 'application/json' } });
 const csv = value => new Response(value, { headers: { 'Content-Type': 'text/csv' } });
+
+test('only the exact configured public iCloud adapter is cached, preserving the last valid sanitized feed', async () => {
+  const endpoint='https://church.example.test/functions/v1/public-calendar';
+  const worker=harness('https://app.example.test/',endpoint);
+  for (const url of ['https://church.example.test/rest/v1/contacts','https://church.example.test/auth/v1/user',endpoint+'?url=private',endpoint+'/extra']) assert.equal(worker.dispatch(url).handled,false);
+  const current={source:'icloud',updated:'2026-09-13',synced_at:'2026-09-13T14:00:00.000Z',valid_until:'2026-12-11',events:[],recurring:[]};
+  worker.fetch=async()=>feed(current);
+  assert.deepEqual(await(await worker.dispatch(endpoint).response).json(),current);
+  worker.fetch=async()=>feed({events:[]});
+  const cached=await worker.dispatch(endpoint).response;
+  assert.equal(cached.headers.get('X-Creek-Cache'),'offline');
+  assert.deepEqual(await cached.json(),current);
+  assert.equal(worker.dispatch(endpoint,{mode:'navigate'}).handled,false);
+});
 
 for (const scope of ['https://app.example.test/', 'http://localhost:8080/church/']) {
   test(`route isolation and installation paths: ${scope}`, async () => {
@@ -234,7 +250,7 @@ test('activation only deletes old Creek caches and does not claim open clients',
   await worker.seed('index.html', html('New'));
   await worker.seed('unrelated', new Response('Keep'), 'other-application');
   await worker.lifecycle('activate');
-  assert.deepEqual([...worker.stores.keys()].sort(), ['creek-v4', 'other-application']);
+  assert.deepEqual([...worker.stores.keys()].sort(), [worker.cacheName, 'other-application'].sort());
   assert.equal(worker.claimed, 0);
 });
 

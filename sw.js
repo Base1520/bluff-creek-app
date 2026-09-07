@@ -1,15 +1,17 @@
 /* Cache only the public Creek app. Private and unrelated routes use the network. */
 const CACHE_PREFIX = 'creek-';
-const CACHE = 'creek-v4';
+const CACHE = 'creek-v5';
 const SCOPE = new URL(self.registration.scope);
 importScripts(new URL('./js/calendar-feed.js', SCOPE).href);
+importScripts(new URL('./js/calendar-config.js', SCOPE).href);
 const APP_URL = new URL('./index.html', SCOPE).href;
 const EVENTS_URL = new URL('./events.json', SCOPE).href;
 const ADMIN_PATH = new URL('./admin', SCOPE).pathname;
 const PUBLIC_CALENDAR_URL = CreekCalendar.CSV_URL;
+const ICLOUD_ENDPOINT = CREEK_PUBLIC_CALENDAR.endpoint || '';
 const SHELL = [
   './index.html', './manifest.webmanifest',
-  './js/calendar-feed.js', './js/app-forms.js', './css/fonts.css',
+  './js/calendar-feed.js', './js/calendar-config.js', './js/app-forms.js', './css/fonts.css',
   './assets/fonts/bitter-latin-normal-v42.woff2',
   './assets/fonts/bitter-latin-italic-500-v42.woff2',
   './assets/fonts/nunito-sans-latin-normal-v19.woff2',
@@ -120,6 +122,13 @@ self.addEventListener('fetch', event => {
   const request = event.request;
   if (request.method !== 'GET') return;
   const url = new URL(request.url);
+  if (ICLOUD_ENDPOINT && url.href === ICLOUD_ENDPOINT && request.mode !== 'navigate') {
+    event.respondWith(networkFirst(request, ICLOUD_ENDPOINT, async response => {
+      if (!response.ok) return false;
+      try { return CreekCalendar.validSnapshot(await response.clone().json()); } catch (_) { return false; }
+    }));
+    return;
+  }
   if (url.href === PUBLIC_CALENDAR_URL && request.mode !== 'navigate') {
     event.respondWith(networkFirst(request, PUBLIC_CALENDAR_URL, validCSV));
     return;

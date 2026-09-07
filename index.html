@@ -295,7 +295,8 @@
       <h2 class="page">Coming up at the Creek</h2>
       <p class="note" id="calendarStatus" role="status" aria-live="polite">Loading the church calendar…</p>
       <p><a class="btn pine" id="submitEvent" target="_blank" rel="noopener" hidden>Submit an event for approval</a></p>
-      <p class="note">Event requests are reviewed before they appear. Submitting a request does not publish it.</p>
+      <p class="note">Requests go to the church for review. Approved changes are added to the church calendar.</p>
+      <p class="note"><a id="calendarDownload" href="calendar.ics" download="bluff-creek-calendar.ics">Download calendar</a> · A copy of the dates currently listed.</p>
       <div class="card tight" id="calendarList"></div>
       <span class="creek divider" aria-hidden="true"></span>
       <div class="sec"><div class="word"><div class="eye">Every week</div>
@@ -445,6 +446,7 @@
   </nav>
 </div>
 
+<script src="js/calendar-config.js"></script>
 <script src="js/calendar-feed.js"></script>
 <script src="js/app-forms.js"></script>
 <script>
@@ -467,7 +469,7 @@ var CONFIG = {
     {label:"Sun · Evening",       time:"6:00p"},
     {label:"Wed · Youth & Prayer",time:"6:00p"}
   ],
-  WEEKLY: "Sunday School 9:00a (all ages) · Worship 10:15a · Youth discipleship 5:30p · Evening service 6:00p · Wednesday: prayer 6:00p & Youth @ the Creek 6:00–8:00p · Women's study Monday 6:30p · Yoga @ the Creek Tue/Thu 5:00p · WMU 3rd Tuesday 6:00p.",
+  WEEKLY: "Sunday School 9:00a (all ages) · Worship 10:15a · Youth discipleship 5:30p · Evening service 6:00p · Wednesday: prayer 6:00p & Youth @ the Creek 6:00–8:00p · Women's study Monday 6:30p · Yoga @ the Creek Tue/Thu 3:45p · WMU 3rd Tuesday 5:00p.",
   VERSE: {text:"\"But as for me and my house, we will serve the LORD.\"", ref:"Joshua 24:15"},
   PRAYER_WALL: [               // shared, non-personal items only
     {b:"Traveling mercies", t:"for our folks on the road this week."},
@@ -506,7 +508,7 @@ var CONFIG = {
     var month=date.toLocaleDateString('en-US',{month:'short',timeZone:'UTC'});
     var number=String(date.getUTCDate()).padStart(2,'0');
     var details=event.details?'<span class="event-details">'+esc(event.details)+'</span>':'';
-    return '<div class="ev"><div class="cal"><small>'+esc(day)+'</small><b>'+esc(number)+'</b><small>'+esc(month)+'</small></div><div class="m"><b>'+esc(event.title)+'</b><span>'+esc([event.time,event.where].filter(Boolean).join(' · '))+'</span>'+details+'</div>'+(event.tag?'<span class="chip'+(event.tag==='Special'?' gold':event.tag==='Monthly'?' blue':'')+'">'+esc(event.tag)+'</span>':'')+'</div>';
+    return '<div class="ev"><div class="cal"><small>'+esc(day)+'</small><b>'+esc(number)+'</b><small>'+esc(month)+'</small></div><div class="m"><b>'+esc(event.title)+'</b><span>'+esc([CreekCalendar.eventTimeLabel(event),event.where].filter(Boolean).join(' · '))+'</span>'+details+'</div>'+(event.tag?'<span class="chip'+(event.tag==='Special'?' gold':event.tag==='Monthly'?' blue':'')+'">'+esc(event.tag)+'</span>':'')+'</div>';
   }
   function renderEvents(events){
     var empty='<div class="ev"><p>No dated events are listed. See the regular weekly gatherings below.</p></div>';
@@ -516,17 +518,17 @@ var CONFIG = {
   var calendarRequest=0;
   function refreshCalendar(){
     var request=++calendarRequest;
-    CreekCalendar.load({jsonUrl:CONFIG.EVENTS_URL,csvUrl:CONFIG.EVENTS_CSV_URL,fetcher:window.fetch.bind(window),now:new Date(),fallback:CreekCalendar.DEFAULT_FEED}).then(function(result){
+    CreekCalendar.load({jsonUrl:CONFIG.EVENTS_URL,csvUrl:CONFIG.EVENTS_CSV_URL,calendarUrl:(window.CREEK_PUBLIC_CALENDAR||{}).endpoint||'',fetcher:window.fetch.bind(window),now:new Date(),fallback:CreekCalendar.DEFAULT_FEED}).then(function(result){
       if(request!==calendarRequest)return;
       renderEvents(result.events);
-      var weekly=result.sources.weekly==='network'?'Weekly schedule refreshed.':result.sources.weekly==='cache'?'Saved weekly schedule shown.':'Regular weekly schedule shown.';
-      var community=result.sources.community==='network'?'Community calendar checked.':result.sources.community==='cache'?'Saved approved community events shown.':'Community events could not be refreshed.';
-      $('#calendarStatus').textContent=weekly+' '+community;
-      $('#homeCalendarStatus').textContent=weekly+' '+community;
+      $('#calendarStatus').textContent=CreekCalendar.statusText(result);
+      $('#homeCalendarStatus').textContent=CreekCalendar.statusText(result);
     }).catch(function(){if(request===calendarRequest){$('#calendarStatus').textContent='The calendar could not be refreshed. See the regular weekly gatherings below.';$('#homeCalendarStatus').textContent='The calendar could not be refreshed. Open the calendar for the regular weekly gatherings.'}});
   }
   renderEvents([]);
   $('#submitEvent').href=CreekCalendar.FORM_URL;$('#submitEvent').hidden=false;
+  var calendarEndpoint=(window.CREEK_PUBLIC_CALENDAR||{}).endpoint;
+  if(calendarEndpoint)$('#calendarDownload').href=calendarEndpoint+'?format=ics';
   refreshCalendar();
   document.addEventListener('visibilitychange',function(){if(!document.hidden)refreshCalendar()});
   $('#prayerWall').innerHTML=CONFIG.PRAYER_WALL.map(function(p){return '<div class="pitem"><b>'+p.b+'</b> '+p.t+'</div>'}).join('');

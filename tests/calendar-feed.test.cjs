@@ -1,6 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const calendar = require('../js/calendar-feed.js');
+const legacy = {events:[],recurring:[{weekday:0,time:'9:00a',title:'Sunday School',where:'Fellowship Building',tag:'Weekly'},{weekday:0,time:'10:15a',title:'Sunday Worship',where:'Sanctuary',tag:'Weekly'},{weekday:2,ordinal:3,time:'5:00p',title:'WMU',where:'Fellowship Hall',tag:'Monthly'}]};
+const loadLegacy = options => calendar.load({fallback:legacy,...options});
 const head = 'Title,Date,Start,End,Location,Details,Type,Note\r\n';
 const row = overrides => ({when:'2026-09-13',title:'Sunday Worship',time:'10:15a',where:'Sanctuary',tag:'Weekly',...overrides});
 const now = new Date('2026-09-13T13:00:00Z'); // Sunday 8am in Clinton.
@@ -45,11 +47,11 @@ test('later approved action wins and hostile values stay literal data', () => {
 });
 
 test('verified recurring rhythm stays current beyond seed dates and respects monthly ordinal', () => {
-  const events=calendar.expandFeed(calendar.DEFAULT_FEED,'2026-11-01');
+  const events=calendar.expandFeed(legacy,'2026-11-01');
   assert.ok(events.some(e=>e.when==='2026-11-01'&&e.title==='Sunday Worship'));
   assert.deepEqual(events.filter(e=>e.title==='WMU').map(e=>e.when),['2026-11-17']);
   assert.ok(events.every(e=>e.when>='2026-11-01'&&e.when<'2026-12-13'));
-  const sep=calendar.expandFeed(calendar.DEFAULT_FEED,'2026-09-13');
+  const sep=calendar.expandFeed(legacy,'2026-09-13');
   assert.equal(sep.filter(e=>e.when==='2026-09-13'&&e.title==='Sunday Worship').length,1);
 });
 
@@ -63,28 +65,28 @@ test('church day/minute follow Chicago at UTC midnight and across DST', () => {
 test('sources fail independently and expired fallback dates never reappear', async () => {
   const fallback={events:[row({when:'2026-09-01'})]};
   const fetcher=async url=>{if(url==='base')throw Error('offline');return response(head+'Special gathering,9/13/2026,6:00 PM,,Room,,Add a new event,');};
-  const result=await calendar.load({jsonUrl:'base',csvUrl:'csv',fetcher,now,fallback});
+  const result=await loadLegacy({jsonUrl:'base',csvUrl:'csv',fetcher,now,fallback});
   assert.deepEqual(result.events.map(e=>e.title),['Special gathering']);
   assert.deepEqual(result.sources,{weekly:'fallback',community:'network'});
 });
 
 test('valid empty data clears events; malformed data retains only verified fallback', async () => {
-  const empty=await calendar.load({jsonUrl:'base',csvUrl:'csv',now,fetcher:async url=>response(url==='base'?{events:[]}:head)});
+  const empty=await loadLegacy({jsonUrl:'base',csvUrl:'csv',now,fetcher:async url=>response(url==='base'?{events:[]}:head)});
   assert.deepEqual(empty.events,[]);
-  const failed=await calendar.load({jsonUrl:'base',csvUrl:'csv',now,fetcher:async url=>response(url==='base'?{unknown:[]}: '<html>Error</html>')});
+  const failed=await loadLegacy({jsonUrl:'base',csvUrl:'csv',now,fetcher:async url=>response(url==='base'?{unknown:[]}: '<html>Error</html>')});
   assert.equal(failed.events[0].title,'Sunday School');
   assert.deepEqual(failed.sources,{weekly:'fallback',community:'unavailable'});
 });
 
 test('elapsed starts leave upcoming list, unspecified times remain, and cache provenance is retained', async () => {
-  const result=await calendar.load({jsonUrl:'base',csvUrl:'csv',now:new Date('2026-09-13T17:00:00Z'),
+  const result=await loadLegacy({jsonUrl:'base',csvUrl:'csv',now:new Date('2026-09-13T17:00:00Z'),
     fetcher:async url=>response(url==='base'?{events:[row(),row({time:'6:00p'}),row({title:'Time pending',time:'Time to be confirmed'})]}:head,true)});
   assert.deepEqual(result.events.map(e=>e.time),['6:00p','Time to be confirmed']);
   assert.deepEqual(result.sources,{weekly:'cache',community:'cache'});
 });
 
 test('hung sources time out to the verified rhythm', async () => {
-  const result=await calendar.load({now,fetcher:()=>new Promise(()=>{}),timeoutMs:10});
+  const result=await loadLegacy({now,fetcher:()=>new Promise(()=>{}),timeoutMs:10});
   assert.equal(result.events[0].title,'Sunday School');
   assert.deepEqual(result.sources,{weekly:'fallback',community:'unavailable'});
 });

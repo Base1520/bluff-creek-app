@@ -1,32 +1,40 @@
-# One public calendar
+# The church calendar
 
-The app and website read the same sources: the app-owned `events.json` for the verified recurring rhythm and the published **Approved** Google Sheet for reviewed additions, changes, and cancellations. Their `js/calendar-feed.js` files are identical. The normal build does not need network access or a credential.
+The church’s iCloud calendar is the source of truth for public event dates. The owner supplies a view-only publication and separately invites approved editors through Apple Calendar sharing. Creek Office accounts do not grant Apple permissions. The user confirmed the iCloud times on September 6, 2026: **Yoga Tuesday/Thursday 3:45–4:30 p.m.; WMU third Tuesday at 5 p.m.**
 
-The calendar expands the verified weekly schedule and third-Tuesday WMU for the next 42 days. It also accepts dated rows for exceptions and older consumers. Duplicate date/title pairs appear once. Upcoming lists use America/Chicago, remove elapsed start times, and never restore old events when a feed expires. An event with an unspecified time says “Time to be confirmed.”
+## What visitors see
 
-## Reviewing public submissions
+The app and website consume identical curated JSON. Repeating events, exceptions, moved dates, cancellations and all-day spans come from iCloud; the former Google CSV no longer overlays that source. Upcoming lists use America/Chicago and retain an ongoing event until its end. A multi-day all-day event keeps its exclusive end date and displays the final included day.
 
-Members use the **Add an event** link in the app Calendar or website When We Meet page. The existing Google Form sends a request for review. Only rows with the exact Approved status in the private sheet reach the public feed.
+The current branch includes a **90-day snapshot**, its matching calendar download, and the date it was imported. It does not claim to refresh itself. The embedded fallback, app `events.json`, website `data/events-fallback.json`, and both `calendar.ics` files are synchronized. Stale/offline status is visible; expired dates are not restored from the former recurring seed. A newer embedded snapshot also outranks an older cached response.
 
-1. Check the title, date, time, and public location/details. Keep personal contact information and internal notes out of public event fields.
-2. Approve an addition to place it on both calendars. Publication may take a few minutes.
-3. A change with the same date and title replaces that occurrence's time/location/details. Date/title matching ignores letter case and repeated spaces.
-4. A cancellation removes the matching date/title from the public list, including a regular gathering. It does not cancel later weeks.
-5. To move an event to another date or rename it, approve a cancellation using the original date/title, then approve an addition using the new values. The current form has no stable event ID, so the consumer does not guess which differently named event to remove.
-6. If multiple approved requests affect the same date/title, the last row in the published feed wins. Remove or correct superseded requests in the approval sheet when needed.
+The original public iCloud response does not provide browser CORS headers and contains personal reminders/contact metadata. Its raw URL and contents are intentionally absent from public code and exports. The curated converter uses reviewed exact source titles, safe public labels and approved church-place matches. Unknown titles, personal reminders, private/confidential events, descriptions, organizer/attendees, contacts, raw identifiers, locations, URLs and attachments are not copied. An unreviewed location says to check with the church. Public ICS identifiers are generated from the public occurrence fields, not the original IDs.
 
-The consumer reads only Title, Date, Start, Location, Details, and Type. It never renders the Note column or the private submitter columns. An empty approved feed is valid; malformed responses do not become public events.
+## Adding or editing an event
 
-## Offline behavior
+1. The calendar owner invites each approved editor in Apple Calendar/iCloud and enables editing. Use Apple Calendar on iPhone, or iCloud Calendar on a tablet/computer. See [Apple’s sharing guide](https://support.apple.com/guide/icloud/share-a-calendar-mm6b1a9479/icloud).
+2. Make the change in the church’s iCloud calendar. Update or cancel the actual occurrence/series; do not create a duplicate calendar in Creek Office.
+3. Public community requests can still use the existing Google Form. Staff review those requests and enter approved changes in iCloud. Marking the former sheet’s Status as Approved alone no longer publishes an event.
+4. New event titles need a reviewed mapping in the converter before they appear publicly. This prevents a newly added personal reminder from automatically reaching the website. Review the public title and safe venue; keep the original raw record out of git.
+5. Refresh the public snapshot, or verify the live adapter after its separate activation. Calendar subscribers have their own refresh behavior, so changes are not guaranteed to appear instantly.
 
-The app fetches both feeds from the network first and can use their previously saved public responses offline. If community updates are unavailable, it keeps the verified regular rhythm and says that updates are unavailable. Offline phones can miss a recent cancellation until reconnecting; check the displayed status. No private staff pages, API responses, prayer requests, or connection cards belong in the public service-worker cache.
+Creek Office’s **Private staff planning** rows remain separate internal records. Its Calendar page explains the iCloud editing route and links to the request sheet. No invitations have been sent and no iCloud settings changed.
 
-## Changing the recurring rhythm
+## Refreshing the local snapshot
 
-Edit `events.json` only for a verified ongoing schedule change. The `recurring` entries use Sunday = 0 through Saturday = 6; an optional `ordinal` selects a week within the month. Keep the documented church times and public locations. Additions/cancellations for a specific day normally belong in the approval sheet.
+In the app repository, install the locked parser once with `npm --prefix tools/icloud-calendar ci --ignore-scripts`. Obtain a temporary local ICS copy through the authorized source without adding that raw file or its URL to a repository. Then run:
 
-Run `node tools/sync-calendar.cjs /path/to/local/website-checkout` to update the embedded offline fallback, identical website consumer, and website build data. Run the website's `python3 build.py`, then both repositories' calendar tests. This tool edits local files only; it does not publish anything.
+```sh
+node tools/icloud-calendar/cli.mjs --input /private/path/calendar.ics --output events.json --ics-output calendar.ics
+node tools/sync-calendar.cjs /path/to/local/website-checkout
+```
 
-## Creek Office
+The importer is local-only: it does not fetch a URL, log source data, change an account or publish. It reports counts and writes curated JSON/ICS. The source file must remain outside git and should be removed after the import. Run the website’s `python3 build.py`, both repositories’ public tests, and the importer tests; review the next events before committing the two feature branches. Never add the original publication URL to browser configuration.
 
-Creek Office's staff calendar is private planning data. It does not automatically publish database records to the public site. Staff use the approval-sheet link inside the workspace to review the public calendar. Keeping the Google approval workflow as the publication source avoids exposing private staff events or bypassing review.
+## Automatic refresh — prepared, not activated
+
+The app repository contains a read-only Supabase function at `supabase/functions/public-calendar/`. After the church-owned backend is separately approved, its operator stores the original URL as `CHURCH_CALENDAR_URL` in server-side environment configuration. The function serves only curated JSON and `?format=ics`; it has no iCloud write capability. Strict source-host validation, bounded fetch/parse work, limited caching, generic failure responses and synthetic tests are included.
+
+Set the approved public function URL in the shared `js/calendar-config.js` only after deployment and verification, then synchronize the website. No secret or original feed URL goes in that file. The app caches only this exact public endpoint, never arbitrary backend APIs. Until activation, the candidate uses the dated static snapshot. A live endpoint changes the calendar download to its freshly curated ICS response.
+
+Backend creation, editor invitations, deployment, DNS changes and the website cutover remain outside the current authorization. The prepared code is not evidence of a live connection.

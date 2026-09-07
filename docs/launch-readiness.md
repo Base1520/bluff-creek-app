@@ -4,17 +4,19 @@ This feature branch consolidates the public app work already on `main` with Cree
 
 ## Included behavior
 
-- The public app and website use identical `js/calendar-feed.js` consumers. The app owns `events.json`, including the verified ongoing schedule. Approved Google CSV additions, edits and cancellations overlay that schedule. Central time removes elapsed starts; missing community updates are described honestly. See [calendar maintenance](calendar-maintenance.md).
+- The public app and website use identical `js/calendar-feed.js` consumers of a curated iCloud calendar. The app owns the dated public JSON/ICS snapshot; recurring events, exceptions, cancellations, Central time and exclusive all-day spans are handled by the pinned parser. Personal metadata and unreviewed titles are excluded. The user confirmed Yoga at 3:45 p.m. and WMU at 5 p.m. Automatic refresh is prepared in a read-only server adapter but not activated. See [calendar maintenance](calendar-maintenance.md).
 - Connection and prayer forms validate locally and open email drafts. They retain values on the current page, never report receipt, and do not store or POST entries. A user can explicitly remove legacy app drafts without the code reading their contents.
-- The service worker caches only the known public shell and validated public feeds. Feeds use network-first responses and saved offline status. Admin paths, unrelated navigation and API responses are excluded. An update waits for old app windows to close so unfinished forms are not forcibly reloaded.
+- The service worker caches only the known public shell and validated public feeds. Feeds use network-first responses and saved offline status. Admin paths, unrelated navigation and private API responses are excluded. Only the exact configured public calendar endpoint may be cached after activation. An update waits for old app windows to close so unfinished forms are not forcibly reloaded.
 - Original fonts are served locally with their licenses. Phone routing, focus, text contrast and install-prompt behavior are reviewed.
-- Creek Office provides private staff planning, basic contact/member records, categorized uploaded files and an audit log. Its calendar does not publish records to the public website. The authenticated interface links to the existing public approval sheet.
+- Creek Office provides private staff planning, basic contact/member records, categorized uploaded files and an audit log. Its calendar does not publish records to the public website. The authenticated interface explains separate Apple calendar editor invitations and links to iCloud. The Google sheet remains request intake only; approved requests must be entered in iCloud.
 
 ## Reproducible local checks
 
 From the app root, run `node --test tests/*.test.cjs` for public forms, shared calendar and service worker regressions. From `admin/tests`, run `npm ci --ignore-scripts` then `npm test` for the PostgreSQL role matrix and client session regressions. The latter uses PGlite and synthetic Auth/Storage structures; it does not validate a hosted service. See [staff test documentation](../admin/tests/README.md).
 
-Browser checks use isolated local profiles and synthetic values where needed. Public drafts are never actually sent. Service-worker checks disable the browser network and verify a controlled reload, a reopened offline tab, validated saved JSON/CSV, local fonts/scripts and excluded admin/unrelated paths. A cached public calendar can miss a newly approved cancellation until reconnecting.
+Browser checks use isolated local profiles and synthetic values where needed. Public drafts are never actually sent. Service-worker checks disable the browser network and verify a controlled reload, a reopened offline tab, validated saved public calendar data, local fonts/scripts and excluded admin/unrelated paths. A cached public calendar can miss a newly approved cancellation until reconnecting.
+
+The iCloud converter has 17 synthetic tests; the HTTP adapter has 15, including real-converter integration. The current public client suite has 36 tests. The adapter Deno entry type-checks with its pinned parser. These checks did not contact or deploy a church backend.
 
 ## Required before staff activation
 
@@ -24,6 +26,6 @@ Uploaded spreadsheets are files to open/download; collaborative editing and vers
 
 ## Release order and rehearsal
 
-Review and release the consolidated app PR before the companion website PR because the app owns the canonical recurring feed. Old overlapping P1 proposals should not be merged as a second calendar implementation. A specific ship instruction is required before any deployment or DNS change; preserve existing Google mail/MX configuration.
+Review and release the consolidated app PR before the companion website PR because the app owns the canonical curated calendar snapshot. Old overlapping P1 proposals should not be merged as a second calendar implementation. A specific ship instruction is required before any deployment or DNS change; preserve existing Google mail/MX configuration.
 
-With approved church staff, rehearse event approval/cancellation, a non-sensitive private file, real phone installation/reopening, mail-app delivery, YouTube stream/audio and the approved giving destination. These external journeys have not been completed by local automated tests. Record the deployed app/site revisions and current DNS before cutover so prior artifacts can be restored. Do not delete staff data as a rollback procedure.
+After separate backend approval, configure and verify the prepared public calendar adapter, including JSON/ICS output and the original feed held only as a server-side secret. With approved church staff, rehearse iCloud editor access, event changes/cancellations, a non-sensitive private file, real phone installation/reopening, mail-app delivery, YouTube stream/audio and the approved giving destination. These external journeys have not been completed by local automated tests. Record the deployed app/site revisions and current DNS before cutover so prior artifacts can be restored. Do not delete staff data as a rollback procedure.

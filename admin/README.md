@@ -23,7 +23,7 @@ Sessions use this tab's `sessionStorage` under `creek-office-auth`; refreshing t
 
 ## Current scope
 
-- Private staff calendar CRUD with weekly/monthly/special labels. It does not publish events to the website or app. The authenticated workspace links to the approved church calendar sheet for public events; `is_public` is reserved metadata and defaults to false.
+- Private staff calendar CRUD with weekly/monthly/special labels. It does not publish events to the website or app. The workspace links to iCloud for the church calendar and explains separate Apple editor invitations. The request sheet is intake only; staff enter approved changes in iCloud. `is_public` is reserved metadata and defaults to false.
 - People records with household, status, contact fields, and notes.
 - Private uploads categorized as policies, spreadsheets, forms, minutes, ministry, or other.
 - Audit entries for database changes.

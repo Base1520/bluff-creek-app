@@ -1,0 +1,6 @@
+node_modules/
+*.ics
+*.ifb
+*.tmp
+imported*.json
+calendar*.json
