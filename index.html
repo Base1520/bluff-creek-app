@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>the Creek — Bluff Creek Baptist Church</title>
-<meta name="description" content="Home @ the Creek — Bluff Creek Baptist Church, 1706 Highway 63, Clinton, Louisiana. Connect, pray, see what's happening, give.">
+<meta name="description" content="Home @ the Creek — Bluff Creek Baptist Church, 1706 Highway 63, Clinton, Louisiana. Connect, pray, follow the sermon series, explore reading and music, see what's happening, and give.">
 <meta name="theme-color" content="#3C5A45">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -15,6 +15,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="preload" href="assets/fonts/bitter-latin-normal-v42.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/grow.css">
 <style>
   :root{
     --ivory:#F5EFE3;--surface:#FFFFFF;--surface2:#FBF6EC;--ink:#221F1A;--ink2:#5E574C;--ink3:#938a79;
@@ -207,6 +208,16 @@
       </div>
 
       <div class="sec">
+        <a class="grow-entry" href="#grow" data-go="grow">
+          <span class="eye">In the Word together</span>
+          <strong id="homeSeriesTitle">Habakkuk</strong>
+          <p>Find your place in the series. Discover the world behind the Word.</p>
+          <span class="grow-entry-link">Explore the series, music &amp; books →</span>
+          <span class="creek" aria-hidden="true"></span>
+        </a>
+      </div>
+
+      <div class="sec">
         <div class="sec-h"><h2>Coming up</h2><a href="#" data-go="calendar">Full calendar →</a></div>
         <div class="card tight" id="thisweek"></div>
         <p class="note" id="homeCalendarStatus" role="status" aria-live="polite">Refreshing the calendar…</p>
@@ -322,6 +333,58 @@
       </div>
     </section>
 
+    <!-- GROW -->
+    <section class="screen" data-screen="grow">
+      <div class="grow-intro"><span class="grow-eyebrow">Rooted in the Word</span><h2 class="page">Keep growing.</h2><p class="lead">A little deeper on Sunday. Something to carry through the week.</p></div>
+      <div class="grow-jump" aria-label="Explore Grow"><button type="button" data-grow-scroll="growStudy">The series</button><button type="button" data-grow-scroll="growListen">Listen</button><button type="button" data-grow-scroll="growRead">Books</button></div>
+
+      <div id="growStudy" style="scroll-margin-top:80px">
+        <div class="grow-cover">
+          <span class="grow-eyebrow">Our current series</span>
+          <h3 id="growSeriesTitle">Habakkuk</h3>
+          <p class="grow-subtitle" id="growSeriesSubtitle">Bringing our questions before God.</p>
+          <span class="creek" aria-hidden="true"></span>
+          <p id="growSeriesIntroduction">Over the coming months, we’re walking through Habakkuk—bringing honest questions to God and learning to trust Him as we wait.</p>
+          <p class="grow-cover-meta">Three chapters · An honest conversation with God</p>
+        </div>
+        <div class="grow-current" id="growCurrent" hidden><span class="grow-eyebrow">Where we are</span><b id="growCurrentReference"></b><p id="growCurrentDate"></p></div>
+        <aside class="grow-pause" id="growPause" hidden><b id="growPauseTitle"></b><p id="growPauseDescription"></p></aside>
+      </div>
+
+      <div class="grow-section">
+        <span class="grow-eyebrow">Before you read</span><h3>The world behind the words.</h3>
+        <p class="grow-lead">Habakkuk sees violence and injustice around him. He brings a hard question to God: how long will this continue?</p>
+        <div class="grow-facts" aria-label="Historical setting"><span>Judah</span><span>Babylon rising</span><span>Late 600s BC · approximate</span></div>
+        <details class="grow-details"><summary>A small kingdom in a changing world</summary><p>Habakkuk speaks from the troubled world of Judah, the southern kingdom. Assyria’s power is fading, and Babylon is rising. The Chaldeans named in Habakkuk 1:6 are the Babylonians.</p><p>Scholars commonly place the book near the end of the seventh century BC. The exact date is uncertain: Habakkuk names no year or reigning king. This historical placement is inferred from the setting. <a href="https://www.esv.org/resources/esv-global-study-bible/introduction-to-habakkuk/" target="_blank" rel="noopener noreferrer">Historical introduction ↗</a></p></details>
+        <details class="grow-details"><summary>Why God’s answer raises another question</summary><p>The prophet first asks about violence and distorted justice among his own people (1:2–4). God’s answer introduces Babylon (1:5–11), raising a new question: how can a holy God use such a violent nation in judgment (1:12–17)?</p><p>Babylon’s power will not excuse its wrongdoing. The judgments in chapter 2 confront plunder, unjust gain, bloodshed, humiliation, and idolatry. <a href="https://www.biblegateway.com/passage/?search=Habakkuk+1-2&amp;version=ESV" target="_blank" rel="noopener noreferrer">Read Habakkuk 1–2 ↗</a></p></details>
+        <details class="grow-details"><summary>What to listen for as we study</summary><p><b>Honest lament.</b> Habakkuk brings his grief into conversation with God and keeps listening.</p><p><b>Justice and accountability.</b> The book confronts wrongdoing among God’s people and powerful nations. It also invites us to examine our treatment of others.</p><p><b>Faith that perseveres.</b> Habakkuk 2:4 connects life with faith. The New Testament returns to this verse in Romans 1:17, Galatians 3:11, and Hebrews 10:38. Waiting on God belongs within a life of trust and obedience.</p></details>
+      </div>
+
+      <div class="grow-section"><span class="grow-eyebrow">The shape of the book</span><h3>From questions to trust.</h3><p>This is a reading guide for the whole book. Follow along at your own pace.</p>
+        <ol class="grow-chapters">
+          <li><span class="chapter-number" aria-hidden="true">01</span><div><h4>Chapter 1 · Bring the hard question</h4><p>Habakkuk asks about injustice. God answers, and the prophet wrestles with what he hears.</p><a href="https://www.biblegateway.com/passage/?search=Habakkuk+1&amp;version=ESV" target="_blank" rel="noopener noreferrer">Read chapter 1 ↗</a></div></li>
+          <li><span class="chapter-number" aria-hidden="true">02</span><div><h4>Chapter 2 · Listen and wait</h4><p>The prophet takes his place as a watchman. God’s answer calls for faith and exposes the abuse of power.</p><a href="https://www.biblegateway.com/passage/?search=Habakkuk+2&amp;version=ESV" target="_blank" rel="noopener noreferrer">Read chapter 2 ↗</a></div></li>
+          <li><span class="chapter-number" aria-hidden="true">03</span><div><h4>Chapter 3 · Worship through uncertainty</h4><p>A prayer remembers God’s saving power. Still trembling, Habakkuk resolves to rejoice in God even if crops and livestock fail.</p><a href="https://www.biblegateway.com/passage/?search=Habakkuk+3&amp;version=ESV" target="_blank" rel="noopener noreferrer">Read chapter 3 ↗</a></div></li>
+        </ol>
+        <div class="grow-reflection"><span class="grow-eyebrow">Take it into the week</span><h3>Read. Reflect. Talk together.</h3><ol class="grow-questions"><li>In 1:2–4, what troubles Habakkuk? What concern could you bring honestly to God?</li><li>How do 2:4 and 2:6–20 connect trust in God with the way we treat our neighbors?</li><li>In 3:17–19, what does Habakkuk choose when security is threatened? What might a faithful next step look like this week?</li></ol></div>
+        <details class="grow-details" style="margin-top:18px"><summary>Explore the sources</summary><ul class="grow-source-list"><li><a href="https://www.biblegateway.com/passage/?search=Habakkuk+1-3&amp;version=ESV" target="_blank" rel="noopener noreferrer">Read Habakkuk 1–3 (ESV)</a> — the biblical text behind this guide.</li><li><a href="https://www.esv.org/resources/esv-global-study-bible/introduction-to-habakkuk/" target="_blank" rel="noopener noreferrer">ESV Global Study Bible: Habakkuk</a> — historical setting, dating uncertainty, and themes.</li><li><a href="https://bibleproject.com/guides/book-of-habakkuk/" target="_blank" rel="noopener noreferrer">BibleProject: Habakkuk</a> — the movement of the book and its conversation with God.</li></ul></details>
+      </div>
+
+      <div class="grow-section" id="growListen"><div class="grow-resource">
+        <svg class="resource-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M19 34V12l21-5v22M19 20l21-5"/><ellipse cx="12" cy="35" rx="7" ry="5"/><ellipse cx="33" cy="30" rx="7" ry="5"/></svg>
+        <span class="grow-eyebrow">Listen through the week</span><h3 id="growSpotifyTitle">Carry Sunday into your week.</h3><p id="growSpotifyDescription">A place for the songs we’re singing and music to listen to between Sundays.</p>
+        <p class="resource-pending" id="growSpotifyPending">Our church Spotify playlist will be shared here soon.</p>
+        <div id="growSpotifyActions" hidden><button class="btn pine" id="growSpotifyLoad" type="button">Load Spotify player</button><a class="btn ghost" id="growSpotifyLink" target="_blank" rel="noopener noreferrer">Open in Spotify ↗</a><p class="spotify-status">Loading the player connects to Spotify. Listening needs an internet connection; availability is managed by Spotify.</p><div class="spotify-player" id="growSpotifyPlayer" hidden></div><button class="link" id="growSpotifyClose" type="button" hidden>Close player</button><p class="spotify-status" id="growSpotifyStatus" role="status" aria-live="polite"></p></div>
+      </div></div>
+
+      <div class="grow-section" id="growRead"><div class="grow-resource">
+        <svg class="resource-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M24 12C18 8 10 8 4 10v29c7-2 14-2 20 2 6-4 13-4 20-2V10c-6-2-14-2-20 2v29M10 17c3-1 6 0 9 1M29 18c3-1 6-2 9-1"/></svg>
+        <span class="grow-eyebrow">Pastor Cole recommends</span><h3>A good book. A deeper faith.</h3><p>Books to help us understand Scripture and follow Jesus in everyday life.</p>
+        <p class="resource-pending" id="growBooksPending">Pastor Cole’s reading list is coming soon. Each recommendation will include a note to help you choose where to start.</p><div class="grow-shelf" id="growBooks"></div>
+      </div></div>
+      <p class="note grow-footnote">The reading guide stays available in the installed app after it has loaded. Music and linked resources need an internet connection.</p>
+    </section>
+
     <!-- MORE -->
     <section class="screen" data-screen="more">
       <h2 class="page">Bluff Creek</h2>
@@ -329,6 +392,8 @@
         <blockquote style="font-style:normal;font-size:15px;line-height:1.5">A country church on Highway 63 in Clinton, Louisiana — rooted in the Word, sharing Christ with our community and the world, and walking together as one family in Him.</blockquote>
         <cite>Southern Baptist · Baptist Faith &amp; Message 2000</cite></div>
       <div class="menu">
+        <button data-go="grow"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 5C8 3 5 3 2 4v16c4-1 7-1 10 1 3-2 6-2 10-1V4c-3-1-6-1-10 1v16"/></svg></span>Grow — series, music &amp; books<span class="ch">›</span></button>
+        <button data-go="give"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 8h18v4H3zM5 12v8h14v-8M12 8v12M12 8C5 8 6 2 9 4zM12 8c7 0 6-6 3-4z"/></svg></span>Give to the church<span class="ch">›</span></button>
         <button data-go="new"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>I'm new — connect<span class="ch">›</span></button>
         <button data-go="about"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 4.5-3.4 7.7-8 9-4.6-1.3-8-4.5-8-9V7z"/></svg></span>What we believe<span class="ch">›</span></button>
         <button data-go="membership"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13A4 4 0 0 1 16 11"/></svg></span>Becoming a member<span class="ch">›</span></button>
@@ -441,7 +506,7 @@
     <button class="on" data-tab="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg><span>Home</span></button>
     <button data-tab="prayer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.35-7-10a4 4 0 0 1 7-2.65A4 4 0 0 1 19 11c0 5.65-7 10-7 10z"/></svg><span>Prayer</span></button>
     <button data-tab="calendar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>Calendar</span></button>
-    <button data-tab="give"><svg class="give" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-7M2 8h20v4H2zM12 8v12M12 8S10.5 3 7.5 3 5 8 12 8zM12 8s1.5-5 4.5-5S19 8 12 8z"/></svg><span>Give</span></button>
+    <button data-tab="grow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5C8 3 5 3 2 4v16c4-1 7-1 10 1 3-2 6-2 10-1V4c-3-1-6-1-10 1v16"/></svg><span>Grow</span></button>
     <button data-tab="more"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>More</span></button>
   </nav>
 </div>
@@ -449,6 +514,8 @@
 <script src="js/calendar-config.js"></script>
 <script src="js/calendar-feed.js"></script>
 <script src="js/app-forms.js"></script>
+<script src="js/grow-content.js"></script>
+<script src="js/grow.js"></script>
 <script>
 /* =========================================================================
    Public app settings. Shared calendar rules live in events.json.
@@ -481,7 +548,7 @@ var CONFIG = {
 (function(){
   var $=function(s,r){return (r||document).querySelector(s)}, $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
   var screens=$$('.screen'), tabs=$$('nav.tabs button');
-  var tabFor={home:'home',prayer:'prayer',calendar:'calendar',give:'give',more:'more',new:'more',about:'more',membership:'more',ministries:'more',policies:'more',contact:'more'};
+  var tabFor={home:'home',prayer:'prayer',calendar:'calendar',grow:'grow',give:'more',more:'more',new:'more',about:'more',membership:'more',ministries:'more',policies:'more',contact:'more'};
   function show(name,push,focusHeading){
     var target=screens.find(function(screen){return screen.dataset.screen===name});
     if(!target){name='home';target=screens[0]}
