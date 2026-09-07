@@ -21,8 +21,9 @@
     <section class="auth-card">
       <img src="../assets/logo.png" alt="Bluff Creek Baptist Church">
       <p class="eyebrow">Creek Office</p>
-      <h1>Connect the church workspace.</h1>
-      <p>The secure backend has not been connected yet. Copy <code>config.example.js</code> to <code>config.js</code> and add the project's public URL and publishable key.</p>
+      <h1>The office is not connected yet.</h1>
+      <a href="help.html#connection">Setup and recovery help →</a>
+      <p>A workspace administrator needs to finish connecting the secure church workspace before staff can sign in. Your information has not been submitted.</p>
     </section>
   </main>
 
@@ -65,6 +66,10 @@
     <section class="content">
       <header><button id="menu" class="menu" aria-label="Workspace menu" aria-controls="workspace-nav" aria-expanded="false">☰</button><div><p class="eyebrow">Bluff Creek Baptist Church</p><h1 id="page-title">Overview</h1></div><button id="primary-action">Add</button></header>
       <p id="notice" class="notice hidden" role="status"></p>
+      <section id="workspace-health" class="workspace-health hidden" aria-label="Workspace connection" role="status">
+        <div><p id="workspace-health-message"></p><p id="workspace-setup-help" class="hidden">Ask the workspace administrator to check the connection and required setup. <a href="help.html#connection">Read setup and recovery help →</a></p></div>
+        <button id="workspace-refresh" type="button" class="quiet">Refresh workspace</button>
+      </section>
 
       <section id="dashboard-view" class="view">
         <section class="panel personal-dashboard" data-private-module aria-labelledby="personal-dashboard-title">
@@ -79,12 +84,13 @@
           <article data-private-module><span>Signups to review</span><b id="signup-count">—</b><a class="signup-dashboard-link" href="#signups">Open signup queue →</a></article>
         </div>
         <div class="panel"><div class="panel-head"><div><p class="eyebrow">Coming up</p><h2>Next events</h2></div><a href="#calendar">Open calendar →</a></div><div id="dashboard-events" class="rows"></div></div>
+        <section class="panel office-help-card"><div><p class="eyebrow">A little help, right here</p><h2>Know what happens next.</h2><p>Find help with saving, recovering an interrupted task, and keeping church information current.</p></div><a href="help.html">Open the office guide →</a></section>
       </section>
 
       <section id="calendar-view" class="view hidden">
         <div class="panel calendar-guide"><p class="eyebrow">Church calendar</p><h2>Keep everyone on the same page.</h2><p>The church calendar is maintained in iCloud. Open Apple Calendar or iCloud Calendar with an account invited by the calendar owner to add or change church events.</p><p><a href="https://www.icloud.com/calendar/" target="_blank" rel="noopener">Open iCloud Calendar ↗</a></p><details><summary>How editor access works</summary><p>The calendar owner invites each editor through Apple Calendar sharing and enables editing. Creek Office access and iCloud permissions are separate. Use Apple Calendar on iPhone, or iCloud Calendar on a tablet or computer.</p><p><a href="https://support.apple.com/guide/icloud/share-a-calendar-mm6b1a9479/icloud" target="_blank" rel="noopener">Apple’s calendar-sharing instructions ↗</a></p></details><p class="calendar-note">Community requests are still collected in the <a href="https://docs.google.com/spreadsheets/d/13PVdvLzOd02hiL1My1cY0ZzGrwGxYdAaogNOwWRGe_c/edit" target="_blank" rel="noopener">event request sheet</a>. Review a request, then make the approved change in iCloud. The sheet alone does not update this calendar.</p></div>
         <h2>Private staff planning</h2><p class="calendar-note">Events below stay in Creek Office. They do not change iCloud or the public calendar.</p>
-        <div class="toolbar"><input id="event-search" aria-label="Search staff calendar" type="search" placeholder="Search calendar"><select id="event-filter" aria-label="Filter events by type"><option value="">All types</option><option>Weekly</option><option>Monthly</option><option>Special</option></select></div>
+        <div class="toolbar"><input id="event-search" aria-label="Search staff calendar" type="search" placeholder="Search calendar"><select id="event-filter" aria-label="Filter events by type"><option value="">All types</option><option>Weekly</option><option>Monthly</option><option>Special</option></select><select id="event-status-filter" aria-label="Filter archived events"><option value="active">Active events</option><option value="archived">Archived events</option><option value="all">All events</option></select></div>
         <div class="panel"><div id="events-list" class="rows"></div></div>
       </section>
 
@@ -115,7 +121,7 @@
     </section>
   </div>
 
-  <dialog id="editor" aria-labelledby="editor-title"><form id="editor-form"><header><div><p class="eyebrow" id="editor-kicker"></p><h2 id="editor-title"></h2></div><button class="icon" type="button" data-close-editor aria-label="Close">×</button></header><div id="editor-fields"></div><footer><button class="quiet" type="button" data-close-editor>Cancel</button><button id="save" type="submit">Save</button></footer><p id="editor-error" class="error" role="alert"></p></form></dialog>
+  <dialog id="editor" aria-labelledby="editor-title"><form id="editor-form"><header><div><p class="eyebrow" id="editor-kicker"></p><h2 id="editor-title"></h2></div><button class="icon" type="button" data-close-editor aria-label="Close">×</button></header><div id="editor-fields"></div><footer><button id="event-delete" class="quiet hidden" type="button">Archive event</button><button id="editor-refresh" class="quiet hidden" type="button">Refresh workspace</button><button class="quiet" type="button" data-close-editor>Cancel</button><button id="save" type="submit">Save</button></footer><p id="editor-error" class="error" role="alert"></p></form></dialog>
 
   <dialog id="document-dialog" aria-labelledby="document-title"><div class="document-sheet"><h2 id="document-title">Open document</h2><div id="document-result" role="status"></div><button id="close-document" class="quiet" type="button">Close</button></div></dialog>
 

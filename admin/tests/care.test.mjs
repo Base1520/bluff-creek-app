@@ -7,7 +7,7 @@ const require = createRequire(import.meta.url);
 const { dueFor, today, addMonths, coverageFor } = require('../care.js');
 const source = await readFile(new URL('../care.js', import.meta.url), 'utf8');
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
-const assignment = { id:'plan-synthetic', contact_id:'person-synthetic', started_on:'2026-03-01', cadence_days:28, paused:false };
+const assignment = { version:1, id:'plan-synthetic', contact_id:'person-synthetic', started_on:'2026-03-01', cadence_days:28, paused:false };
 const visit = (day, outcome='contacted', next=null) => ({ id:'visit-'+day, contact_id:assignment.contact_id, contacted_on:day, outcome, next_contact_on:next, created_at:day+'T12:00:00Z', visitor_name:'Test team', method:'call' });
 
 test('care dates use Central and date arithmetic crosses DST without shifting a day', () => {
@@ -29,27 +29,45 @@ test('attempts do not reset contact cadence; latest explicit date wins and pause
 
 function fixture(t, opts={}) {
   const dom = new JSDOM('<section id="care-view"></section>', {url:'https://office.example.invalid/admin/',runScripts:'outside-only'}), w=dom.window;
-  t.after(()=>w.close()); w.eval(source);
+  t.after(()=>w.close()); w.confirm=()=>true; w.eval(source);
   const host=w.document.querySelector('#care-view'), calls=[], notices=[];
-  let ctx={epoch:1,userId:'synthetic-user',canEdit:true,role:opts.role||'editor'}, module, refreshes=0;
+  let ctx={epoch:1,userId:'synthetic-user',canEdit:true,workspaceReady:true,role:opts.role||'editor'}, module, refreshes=0;
   const people=opts.people||[{id:'person-synthetic',first_name:'Sample',last_name:'Person',household_name:'Test household',status:'active'}];
-  const rows={care_assignments:opts.assignments||[],care_visits:opts.visits||[],guest_intakes:opts.guests||[],care_guidelines:opts.guidelines||null};
-  const controller={hold:null,error:null,emptySave:false};
+  const rows={care_assignments:(opts.assignments||[]).map(row=>({version:1,...row})),care_visits:opts.visits||[],guest_intakes:(opts.guests||[]).map(row=>({version:1,...row})),care_guidelines:opts.guidelines?{version:1,...opts.guidelines}:null};
+  const controller={hold:null,error:null,emptySave:false,ready:true,ensureReady:null,respond:null}, checks=[];
+  function execute(query) {
+    const all=query.table==='care_guidelines'?(rows[query.table]?[rows[query.table]]:[]):rows[query.table];
+    const matching=all.filter(row=>Object.entries(query.filters||{}).every(([key,value])=>row[key]===value));
+    if(query.op==='select')return{data:query.range?matching.slice(query.range[0],query.range[1]+1):query.single?matching[0]||null:matching,error:null};
+    if(controller.emptySave)return{data:null,error:null};
+    let record;
+    if(query.op==='insert') {
+      if(all.some(row=>row.id===query.data.id || query.table==='care_assignments'&&row.contact_id===query.data.contact_id&&(row.care_role||'deacon')===query.data.care_role || query.table==='guest_intakes'&&row.contact_id===query.data.contact_id))return{error:{code:'23505'}};
+      record={...query.data,created_by:ctx.userId,created_at:new Date().toISOString()};
+      if(query.table!=='care_visits')Object.assign(record,{version:1,updated_at:new Date().toISOString()});
+      if(query.table==='care_guidelines')rows[query.table]=record;else rows[query.table].push(record);
+    } else if(query.op==='update') {
+      const old=matching[0];if(!old)return{data:null,error:null};
+      record={...old,...query.data,version:old.version+1,updated_at:new Date().toISOString()};
+      if(query.table==='care_guidelines')rows[query.table]=record;else rows[query.table][rows[query.table].indexOf(old)]=record;
+    }
+    return{data:record,error:null};
+  }
   const db={from(table){
-    const query={table,op:'select'};
-    const chain={select(fields){query.fields=fields;return chain;},single(){query.single=true;return chain;},order(){return chain;},range(a,b){query.range=[a,b];return chain;},eq(){return chain;},maybeSingle(){return chain;},insert(data){query.op='insert';query.data=data;return chain;},upsert(data,options){query.op='upsert';query.data=data;query.options=options;return chain;},then(resolve,reject){
+    const query={table,op:'select',filters:{}};
+    const chain={select(fields){query.fields=fields;return chain;},single(){query.single=true;return chain;},order(){return chain;},range(a,b){query.range=[a,b];return chain;},eq(key,value){query.filters[key]=value;return chain;},maybeSingle(){query.single=true;return chain;},insert(data){query.op='insert';query.data={...data};return chain;},update(data){query.op='update';query.data={...data};return chain;},then(resolve,reject){
       calls.push(query);
       if(controller.hold)return controller.hold(query).then(resolve,reject);
-      if(controller.error)return Promise.resolve({error:{message:controller.error}}).then(resolve,reject);
-      const data=query.op==='select'?(query.range?rows[table].slice(query.range[0],query.range[1]+1):rows[table]):controller.emptySave?null:{id:'saved-synthetic'};
-      return Promise.resolve({data,error:null}).then(resolve,reject);
+      if(controller.error)return Promise.resolve({error:typeof controller.error==='string'?{message:controller.error}:controller.error}).then(resolve,reject);
+      const result=controller.respond?controller.respond(query,()=>execute(query)):execute(query);
+      return Promise.resolve(result).then(resolve,reject);
     }}; return chain;
   }};
-  module=w.CreekCare.create({root:host,db,getContext:()=>ctx,isCurrent:epoch=>!!ctx.userId&&ctx.epoch===epoch,people:()=>people,notice:(text,bad)=>notices.push({text,bad}),refresh:async()=>{refreshes++;await module.load(ctx.epoch);}});
+  module=w.CreekCare.create({root:host,db,requestTimeoutMs:opts.requestTimeoutMs,getContext:()=>ctx,isCurrent:epoch=>!!ctx.userId&&ctx.epoch===epoch,ensureReady:async epoch=>{checks.push(epoch);return controller.ensureReady?controller.ensureReady(epoch):controller.ready;},people:()=>people,notice:(text,bad)=>notices.push({text,bad}),refresh:async()=>{refreshes++;await module.load(ctx.epoch);}});
   const click=selector=>host.querySelector(selector).click();
   function set(name,value) { const el=host.querySelector('[name="'+name+'"]'); if(el.type==='checkbox')el.checked=value;else el.value=value;return el; }
   function submit() {host.querySelector('form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));}
-  return {w,host,module,calls,notices,rows,controller,click,set,submit,ctx,setContext:value=>ctx=value,refreshes:()=>refreshes};
+  return {w,host,module,calls,notices,rows,controller,checks,execute,click,set,submit,ctx,setContext:value=>ctx=value,refreshes:()=>refreshes};
 }
 test('viewer fails closed and clear removes notes, form values, filters, and late responses', async t => {
   const v=fixture(t,{role:'viewer'});assert.equal(await v.module.load(1),false);v.module.render();assert.equal(v.calls.length,0);assert.equal(v.host.textContent,'');
@@ -71,8 +89,8 @@ test('assignment write uses exact allowlisted fields and supplied cadence; notes
   const f=fixture(t);await f.module.load(1);f.click('[data-care-action="assignment"]');
   assert.equal(f.host.querySelector('[name="cadence_value"]').value,'3');assert.equal(f.host.querySelector('[name="cadence_unit"]').value,'months');
   f.set('contact_id','person-synthetic');f.set('cadence_unit','days').dispatchEvent(new f.w.Event('change',{bubbles:true}));f.set('cadence_value','21');f.set('assigned_to','Test team');f.set('paused',true);f.set('notes','<img src=x onerror=alert(1)>');f.submit();await tick();await tick();
-  const write=f.calls.find(q=>q.op==='upsert');assert.equal(write.table,'care_assignments');assert.equal(write.data.cadence_days,21);assert.equal(write.data.paused,true);
-  assert.deepEqual(Object.keys(write.data).sort(),['assigned_to','cadence_days','cadence_months','care_role','contact_id','first_due_on','notes','one_time','paused','started_on']);assert.equal(write.options.onConflict,'contact_id,care_role');assert.equal(write.data.care_role,'deacon');assert.equal(write.fields,'id');assert.equal(write.single,true);assert.equal(f.refreshes(),1);
+  const write=f.calls.find(q=>q.op==='insert');assert.equal(write.table,'care_assignments');assert.equal(write.data.cadence_days,21);assert.equal(write.data.paused,true);
+  assert.deepEqual(Object.keys(write.data).sort(),['assigned_to','cadence_days','cadence_months','care_role','contact_id','first_due_on','id','notes','one_time','paused','started_on']);assert.match(write.data.id,/^[0-9a-f-]{36}$/);assert.equal(write.data.care_role,'deacon');assert.equal(write.fields,'*');assert.equal(write.single,true);assert.equal(f.refreshes(),1);
   f.rows.care_assignments=[{...assignment,notes:write.data.notes}];await f.module.load(1);assert.equal(f.host.querySelector('img'),null);assert.match(f.host.textContent,/<img src=x/);
 });
 test('visits append outcomes and next dates without audit fields; stale save cannot repaint another account', async t => {
@@ -92,7 +110,7 @@ test('editors read guidelines; only admins can save the default record and empty
   const e=fixture(t,{guidelines:{id:'default',body:'Synthetic agreed guidance',updated_at:'2026-03-01T12:00:00Z'}});await e.module.load(1);
   assert.match(e.host.textContent,/Synthetic agreed guidance/);assert.equal(e.host.querySelector('[data-care-action="guidelines"]'),null);
   const a=fixture(t,{role:'admin'});await a.module.load(1);assert.match(a.host.textContent,/Proposed starting guidance/);a.click('[data-care-action="guidelines"]');a.set('body','Synthetic approved guidance');a.submit();await tick();await tick();
-  const write=a.calls.find(q=>q.op==='upsert');assert.equal(write.table,'care_guidelines');assert.equal(write.data.id,'default');assert.equal(write.options.onConflict,'id');
+  const write=a.calls.find(q=>q.op==='insert');assert.equal(write.table,'care_guidelines');assert.equal(write.data.id,'default');assert.equal(write.fields,'*');
 });
 test('private database errors stay out of the UI and failed saves preserve entries', async t => {
   const f=fixture(t);await f.module.load(1);f.click('[data-care-action="guest"]');f.set('contact_id','person-synthetic');f.set('notes','Synthetic guest note');f.controller.error='PRIVATE_ERROR_CANARY';f.submit();await tick();
@@ -159,7 +177,7 @@ test('role forms switch to separate plans and monthly presets without overwritin
   assert.equal(f.host.querySelector('[name="cadence_unit"]').value,'months');assert.equal(f.host.querySelector('[name="cadence_value"]').value,'1');
   assert.equal(f.host.querySelector('[name="contact_id"]').value,'person-synthetic');
   f.set('assigned_to','Sample teacher');f.submit();await tick();await tick();
-  const write=f.calls.find(q=>q.op==='upsert');assert.equal(write.data.care_role,'sunday_school');assert.equal(write.data.cadence_months,1);assert.equal(write.data.one_time,false);
+  const write=f.calls.find(q=>q.op==='insert');assert.equal(write.data.care_role,'sunday_school');assert.equal(write.data.cadence_months,1);assert.equal(write.data.one_time,false);
   assert.equal(f.rows.care_assignments[0].cadence_days,21);
 });
 
@@ -186,8 +204,8 @@ test('empty write acknowledgements preserve the draft and a verified retry saves
   assert.ok(f.host.querySelector('[name="first_due_on"]').value);
   f.controller.emptySave=true;f.submit();await tick();assert.equal(f.refreshes(),0);
   assert.match(f.host.querySelector('.care-form-error').textContent,/could not be saved/);assert.equal(f.host.querySelector('[name="notes"]').value,'Synthetic welcome note');
-  f.controller.emptySave=false;f.submit();await tick();await tick();assert.equal(f.refreshes(),1);
-  const writes=f.calls.filter(q=>q.op==='upsert');assert.equal(writes.length,2);assert.equal(writes[1].data.care_role,'welcome');assert.equal(writes[1].data.one_time,true);
+  f.controller.emptySave=false;await f.module.load(1);f.submit();await tick();await tick();assert.equal(f.refreshes(),1);
+  const writes=f.calls.filter(q=>q.op==='insert');assert.equal(writes.length,2);assert.equal(writes[1].data.care_role,'welcome');assert.equal(writes[1].data.one_time,true);
 });
 
 
@@ -211,6 +229,87 @@ test('switching person loads only that person and selected role before saving', 
   assert.equal(f.host.querySelector('[name="contact_id"]').disabled,true);
   assert.equal(f.host.querySelector('[name="care_role"]').value,'sunday_school');
   f.set('paused',true);f.submit();await tick();await tick();
-  const write=f.calls.find(q=>q.op==='upsert');assert.equal(write.data.contact_id,'other-synthetic');assert.equal(write.data.care_role,'sunday_school');assert.equal(write.data.paused,true);
+  const write=f.calls.find(q=>q.op==='update');assert.equal(write.filters.id,'other-teacher');assert.equal(write.filters.version,1);assert.equal(write.data.contact_id,'other-synthetic');assert.equal(write.data.care_role,'sunday_school');assert.equal(write.data.paused,true);
   assert.equal(f.rows.care_assignments[0].assigned_to,'First deacon');
+});
+
+
+test('stale care edits cannot overwrite a newer plan and keep the draft for reconciliation', async t => {
+  const f=fixture(t,{assignments:[assignment]});await f.module.load(1);
+  f.click('[data-care-list="assignments"] [data-care-action="assignment"]');f.set('notes','My unsaved changes');
+  f.rows.care_assignments[0]={...f.rows.care_assignments[0],version:2,notes:'Other staff saved this'};
+  f.submit();await tick();
+  const write=f.calls.find(q=>q.op==='update');assert.deepEqual(write.filters,{id:assignment.id,version:1});
+  assert.equal(f.rows.care_assignments[0].notes,'Other staff saved this');
+  assert.equal(f.host.querySelector('[name="notes"]').value,'My unsaved changes');
+  assert.equal(f.host.querySelector('[name="notes"]').disabled,true);
+  f.submit();await tick();assert.equal(f.calls.filter(q=>q.op==='update').length,1);
+  await f.module.load(1);assert.match(f.host.querySelector('.care-form-error').textContent,/changed after you opened/);
+  assert.equal(f.host.querySelector('[type="submit"]').disabled,true);
+});
+
+test('pending care writes freeze every field and controls and verify the submitted snapshot', async t => {
+  const f=fixture(t);await f.module.load(1);f.click('[data-care-action="visit"]');
+  f.set('contact_id','person-synthetic');f.set('visitor_name','Synthetic visitor');f.set('notes','Submitted note');
+  let release;f.controller.hold=q=>new Promise(resolve=>release=()=>resolve(f.execute(q)));
+  f.submit();await tick();
+  assert.equal(f.checks.length,1);
+  assert.ok([...f.host.querySelectorAll('[data-care-form] input,[data-care-form] textarea,[data-care-form] select,[data-care-form] button')].every(el=>el.disabled));
+  f.set('notes','Programmatic later change');f.submit();await tick();assert.equal(f.calls.filter(q=>q.op==='insert').length,1);
+  f.controller.hold=null;release();await tick();await tick();
+  assert.equal(f.rows.care_visits[0].notes,'Submitted note');assert.equal(f.host.querySelector('[data-care-form]'),null);
+});
+
+test('an uncertain committed visit is confirmed by its stable UUID without a duplicate insert', async t => {
+  const f=fixture(t);await f.module.load(1);f.click('[data-care-action="visit"]');
+  f.set('contact_id','person-synthetic');f.set('visitor_name','Synthetic visitor');f.set('notes','Synthetic contact note');
+  f.controller.respond=(q,execute)=>{if(q.op==='insert'){execute();return{error:{message:'Network interrupted'}};}return execute();};
+  f.submit();await tick();
+  assert.equal(f.rows.care_visits.length,1);assert.match(f.rows.care_visits[0].id,/^[0-9a-f-]{36}$/);
+  f.click('[data-care-action="cancel"]');assert.ok(f.host.querySelector('[data-care-form]'));
+  f.submit();await tick();assert.equal(f.calls.filter(q=>q.op==='insert').length,1);
+  f.controller.respond=null;await f.module.load(1);
+  assert.equal(f.host.querySelector('[data-care-form]'),null);assert.match(f.notices.at(-1).text,/confirmed after refresh/);
+  assert.equal(f.rows.care_visits.length,1);
+});
+
+test('uncommitted care creates retain a stable retry ID and never use upsert', async t => {
+  const f=fixture(t);await f.module.load(1);f.click('[data-care-action="guest"]');f.set('contact_id','person-synthetic');f.set('notes','Draft');
+  f.controller.emptySave=true;f.submit();await tick();const first=f.calls.find(q=>q.op==='insert');
+  assert.equal(f.rows.guest_intakes.length,0);f.controller.emptySave=false;await f.module.load(1);f.submit();await tick();await tick();
+  const writes=f.calls.filter(q=>q.op==='insert');assert.equal(writes.length,2);assert.equal(writes[1].data.id,first.data.id);
+  assert.equal(f.rows.guest_intakes.length,1);assert.equal(f.calls.some(q=>q.op==='upsert'),false);
+});
+
+test('readiness loss preserves same-user drafts while access revocation clears them', async t => {
+  const f=fixture(t);await f.module.load(1);f.click('[data-care-action="guest"]');f.set('contact_id','person-synthetic');f.set('notes','Retained draft');
+  f.ctx.workspaceReady=false;f.ctx.canEdit=false;f.module.render();
+  assert.equal(f.host.querySelector('[name="notes"]').value,'Retained draft');assert.equal(f.host.querySelector('[type="submit"]').disabled,true);
+  f.submit();await tick();assert.equal(f.calls.some(q=>q.op!=='select'),false);
+  f.ctx.workspaceReady=true;f.ctx.canEdit=true;f.controller.ready=false;f.module.render();f.submit();await tick();
+  assert.equal(f.checks.length,1);assert.equal(f.calls.some(q=>q.op!=='select'),false);
+  assert.equal(f.host.querySelector('[name="notes"]').value,'Retained draft');
+  f.ctx.role='viewer';f.ctx.workspaceReady=false;f.ctx.canEdit=false;f.module.render();assert.equal(f.host.textContent,'');
+});
+
+test('confirmed permission errors clear private care drafts instead of offering a write retry', async t => {
+  const f=fixture(t);await f.module.load(1);f.click('[data-care-action="guest"]');f.set('contact_id','person-synthetic');f.set('notes','Private draft');
+  f.controller.error={code:'42501',message:'PRIVATE_CANARY'};f.submit();await tick();
+  assert.equal(f.host.textContent,'');assert.doesNotMatch(JSON.stringify(f.notices),/PRIVATE_CANARY/);
+});
+
+test('discard confirmation protects changed care drafts; forced clear bypasses prompts', async t => {
+  const f=fixture(t);await f.module.load(1);f.click('[data-care-action="guest"]');f.set('notes','Unsaved draft');
+  let prompts=0;f.w.confirm=()=>{prompts++;return false;};f.click('[data-care-action="cancel"]');
+  assert.equal(prompts,1);assert.equal(f.host.querySelector('[name="notes"]').value,'Unsaved draft');
+  f.w.confirm=()=>{prompts++;return true;};f.click('[data-care-action="cancel"]');assert.equal(f.host.querySelector('[data-care-form]'),null);
+  f.click('[data-care-action="guest"]');f.set('notes','Another draft');f.module.clear();assert.equal(prompts,2);assert.equal(f.host.textContent,'');
+});
+
+test('bounded care writes stop waiting and require refresh before retrying an uncertain outcome', async t => {
+  const f=fixture(t,{requestTimeoutMs:5});await f.module.load(1);f.click('[data-care-action="guest"]');f.set('contact_id','person-synthetic');
+  f.controller.hold=()=>new Promise(()=>{});f.submit();await new Promise(resolve=>setTimeout(resolve,20));
+  assert.match(f.host.querySelector('.care-form-error').textContent,/Refresh care/);
+  assert.equal(f.host.querySelector('[type="submit"]').disabled,true);
+  assert.equal(f.host.querySelector('[data-care-action="retry"]').disabled,false);
 });

@@ -31,8 +31,14 @@
     var host = options.root, doc = host.ownerDocument, rows = [], contacts = [];
     var mounted = false, mountedEpoch = null, mountedOwner = null, ready = false, failed = false, request = 0, formToken = 0;
     var filter = 'due', role = '', search = '', dialog = null, draft = null, saving = false, returnFocus = null;
+    function deadline(request) {
+      var timer;
+      return Promise.race([Promise.resolve(request),new Promise(function(_resolve,reject){timer=doc.defaultView.setTimeout(function(){reject(new Error('The request timed out.'));},12000);})]).finally(function(){doc.defaultView.clearTimeout(timer);});
+    }
     function context() { return options.getContext() || {}; }
-    function current(epoch, owner) { var c = context(); return c.epoch === epoch && (!owner || c.userId === owner) && !!c.userId && c.canEdit === true && ['admin','editor'].includes(c.role) && options.isCurrent(epoch); }
+    function identity(epoch, owner) { var c = context(); return c.epoch === epoch && (!owner || c.userId === owner) && !!c.userId && ['admin','editor'].includes(c.role) && options.isCurrent(epoch); }
+    function current(epoch, owner) { return identity(epoch, owner) && context().canEdit === true && context().workspaceReady !== false; }
+    function unavailable() { rows=[]; contacts=[]; ready=false; failed=true; if(draft && draft.kind==='history')close(false); if(mounted){q('[data-followups-list]').replaceChildren();q('[data-followups-status]').textContent='The workspace connection is unavailable. Refresh to reconnect; your draft stays in this tab.';q('[data-followups-new]').disabled=true;} summary();syncDraft(); }
     function safe(value) { var e = doc.createElement('span'); e.textContent = value == null ? '' : String(value); return e.innerHTML.replace(/"/g,'&quot;'); }
     function labelDate(value) { return validDate(value) ? new Date(value + 'T12:00:00Z').toLocaleDateString('en-US',{timeZone:'UTC',month:'short',day:'numeric',year:'numeric'}) : 'Not recorded'; }
     function q(selector) { return host.querySelector(selector); }
@@ -71,7 +77,7 @@
       var conflict = ready && draft.id && Number(latest.version) !== draft.version;
       draft.conflict = !!conflict;
       var save = dialog.querySelector('[type="submit"]'); if (save) save.disabled = saving || !ready || !!conflict || !!draft.requiresRefresh;
-      dialog.querySelectorAll('input,select,textarea').forEach(function(node){node.disabled = saving || !!draft.requiresRefresh;});
+      dialog.querySelectorAll('input,select,textarea').forEach(function(node){node.disabled = saving || !ready || !current(draft.epoch,draft.owner) || !!draft.requiresRefresh;});
       var message = dialog.querySelector('[data-followups-error]');
       if (message && (!ready || conflict)) message.textContent = conflict ? 'This plan changed after you opened it. Your draft is retained. Close and reopen the plan to review the current version before saving.' : 'The connection was interrupted. Your draft is retained. Refresh follow-ups before saving.';
       if (message && ready && !conflict && !draft.requiresRefresh && message.dataset.loadError) { message.textContent = ''; delete message.dataset.loadError; }
@@ -79,7 +85,8 @@
     }
     function render() {
       var c = context();
-      if (!current(c.epoch)) { clear(); return; }
+      if (!identity(c.epoch)) { clear(); return; }
+      if (!current(c.epoch)) { unavailable(); return; }
       if (mounted && (mountedEpoch !== c.epoch || mountedOwner !== c.userId)) clear();
       mount(); q('[data-followups-new]').disabled = !ready;
       q('[data-followups-status]').textContent = failed ? 'Your follow-ups could not load. Refresh to try again.' : ready ? '' : 'Loading your follow-ups…';
@@ -100,7 +107,7 @@
     async function fetchRows(table, epoch, owner, token) {
       var all = [];
       for (var offset=0;;offset+=1000) {
-        var result = await options.db.from(table).select('*').eq('owner_id',owner).order('id',{ascending:true}).range(offset,offset+999);
+        var result = await deadline(options.db.from(table).select('*').eq('owner_id',owner).order('id',{ascending:true}).range(offset,offset+999));
         if (!current(epoch,owner) || token !== request) return null;
         if (result.error) throw result.error;
         var page = result.data || []; all = all.concat(page.filter(function(row){return row.owner_id === owner;}));
@@ -109,12 +116,13 @@
     }
     async function load(epoch) {
       var owner = context().userId;
-      if (!current(epoch,owner)) { clear(); return false; }
+      if (!identity(epoch,owner)) { clear(); return false; }
+      if (!current(epoch,owner)) { unavailable(); return false; }
       if (mounted && (mountedEpoch !== epoch || mountedOwner !== owner)) clear();
       mount(); var token=++request;
       try {
         var results=await Promise.all([fetchRows('leader_followups',epoch,owner,token),fetchRows('leader_followup_contacts',epoch,owner,token)]);
-        if (!current(epoch,owner) || token !== request) return false;
+        if (!current(epoch,owner) || token !== request) { if(identity(epoch,owner) && token===request)unavailable(); return false; }
         rows=results[0] || []; contacts=results[1] || []; ready=true; failed=false;
         if (draft && draft.requiresRefresh) {
           if (draft.newId && rows.some(function(row){return row.id === draft.newId && owns(row);})) { close(false); notify('This plan was saved. Open it to review the saved details.'); }
@@ -122,7 +130,7 @@
         }
         render(); return true;
       } catch(error) {
-        if (!current(epoch,owner) || token !== request) return false;
+        if (!current(epoch,owner) || token !== request) { if(identity(epoch,owner) && token===request)unavailable(); return false; }
         if (authError(error)) { clear(); notify('Access to your personal follow-ups could not be confirmed. Sign in again before opening them.',true); return false; }
         if (draft && draft.kind === 'history') close(false);
         rows=[]; contacts=[]; ready=false; failed=true; render(); return false;
@@ -178,14 +186,16 @@
       if(message){error.textContent=message;return;}
       saving=true;error.textContent='';dialog.querySelectorAll('input,select,textarea,button').forEach(function(node){node.disabled=true;});
       try {
+        if(options.ensureReady && !await options.ensureReady(state.epoch))throw new Error('readiness');
+        if(!current(state.epoch,state.owner) || token!==formToken)throw new Error('readiness');
         var result;
-        if(state.kind==='contact')result=await options.db.rpc('record_leader_contact',{p_id:state.id,p_version:state.version,p_contacted_on:value('contacted_on'),p_outcome:value('outcome'),p_method:value('method'),p_notes:value('notes') || null});
+        if(state.kind==='contact')result=await deadline(options.db.rpc('record_leader_contact',{p_id:state.id,p_version:state.version,p_contacted_on:value('contacted_on'),p_outcome:value('outcome'),p_method:value('method'),p_notes:value('notes') || null}));
         else {
           var query=options.db.from('leader_followups');
           query=state.id?query.update(payload).eq('id',state.id).eq('owner_id',state.owner).eq('version',state.version):query.insert(Object.assign({id:state.newId},payload));
-          result=await query.select('*').single();
+          result=await deadline(query.select('*').single());
         }
-        if(!current(state.epoch,state.owner) || token!==formToken)return;
+        if(!current(state.epoch,state.owner) || token!==formToken){if(identity(state.epoch,state.owner) && token===formToken){state.requiresRefresh=true;unavailable();}return;}
         if(result.error)throw result.error;
         var saved=result.data;
         if(!saved || typeof saved.id!=='string' || !saved.id || (saved.id!==(state.id || state.newId)) || !Number.isInteger(saved.version) || saved.version<1 || (!state.id && saved.version!==1) || (state.id && Number(saved.version)!==state.version+1) || (state.kind!=='contact' && saved.owner_id!==state.owner))throw new Error('unconfirmed');
@@ -196,11 +206,11 @@
         }
         close(false);await refresh();if(current(state.epoch,state.owner))notify(state.kind==='contact'?'Contact saved to your personal history.':'Your follow-up plan was saved.');
       } catch(failure) {
-        if(!current(state.epoch,state.owner) || token!==formToken)return;
+        if(!identity(state.epoch,state.owner) || token!==formToken)return;
         if(authError(failure)){clear();notify('Access to your personal follow-ups could not be confirmed. Sign in again before saving.',true);return;}
         state.requiresRefresh=true;
         error.textContent='The save could not be confirmed. Your submitted draft is retained and temporarily locked. Refresh follow-ups to check the saved version before editing or trying again.';
-      } finally { if(current(state.epoch,state.owner) && token===formToken){saving=false;if(dialog)dialog.querySelectorAll('input,select,textarea,button').forEach(function(node){node.disabled=false;});syncDraft();} }
+      } finally { if(identity(state.epoch,state.owner) && token===formToken){saving=false;if(dialog)dialog.querySelectorAll('input,select,textarea,button').forEach(function(node){node.disabled=false;});syncDraft();} }
     }
     host.addEventListener('click',function(event){var button=event.target.closest('button');if(!button || !host.contains(button) || !current(context().epoch))return;
       if(button.hasAttribute('data-followups-new'))open('edit');

@@ -63,12 +63,18 @@
   function create(options) {
     var host = options.root, doc = host.ownerDocument, db = options.db;
     var state = { assignments: [], visits: [], guests: [], guidelines: null };
-    var mounted = false, mountedEpoch = null, dataEpoch = null, request = 0, formVersion = 0, formEpoch = null;
+    var mounted = false, mountedEpoch = null, mountedOwner = null, dataEpoch = null, request = 0, formVersion = 0, formEpoch = null;
     var view = 'followup', search = '', deacon = '', careRole = '', ready = false, failed = false, saving = false;
-    var activeForm = null, returnFocus = null;
+    var activeForm = null, returnFocus = null, draft = null;
     function context() { return options.getContext() || {}; }
-    function allowed(ctx) { return !!ctx.userId && ctx.canEdit === true && ['admin', 'editor'].indexOf(ctx.role) !== -1 && options.isCurrent(ctx.epoch); }
-    function current(epoch) { var ctx = context(); return ctx.epoch === epoch && allowed(ctx); }
+    function allowed(ctx) { return !!ctx.userId && (ctx.canEdit === true || ctx.workspaceReady === false) && ['admin', 'editor'].indexOf(ctx.role) !== -1 && options.isCurrent(ctx.epoch); }
+    function current(epoch, owner) { var ctx = context(); return ctx.epoch === epoch && (!owner || ctx.userId === owner) && allowed(ctx); }
+    function writable() { var ctx = context(); return allowed(ctx) && ctx.canEdit === true && ctx.workspaceReady !== false; }
+    function bounded(operation) {
+      var timer;
+      return Promise.race([Promise.resolve(operation), new Promise(function (_, reject) { timer = doc.defaultView.setTimeout(function () { reject(new Error('timeout')); }, options.requestTimeoutMs || 12000); })]).finally(function () { doc.defaultView.clearTimeout(timer); });
+    }
+    function authError(error) { return error && (['42501', 'PGRST301', 'PGRST302'].indexOf(error.code) !== -1 || [401, 403].indexOf(error.status) !== -1); }
     function q(selector) { return host.querySelector(selector); }
     function safe(value) { var el = doc.createElement('span'); el.textContent = value == null ? '' : String(value); return el.innerHTML.replace(/"/g, '&quot;'); }
     function dateLabel(value) { return validDate(value) ? new Date(value + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : 'Not set'; }
@@ -91,7 +97,7 @@
         '<section data-care-panel="guests" aria-label="Guests" hidden><div class="care-section-head"><div><h3>Welcome into the life of the church.</h3><p>Choose an existing person to start a guest follow-up record. Add someone new in <a href="#people">People</a> with visitor status.</p></div>' + button('guest', 'Add guest follow-up') + '</div><div data-care-list="guests" class="care-list"></div></section>' +
         '<section data-care-panel="visitation" aria-label="Visitation" hidden><div class="care-section-head"><div><h3>A record of being there.</h3><p>Record the date, method, and outcome of a contact. Entries stay as recorded.</p></div>' + button('visit', 'Record a contact') + '</div><div data-care-list="visits" class="care-list"></div></section>' +
         '<section data-care-panel="guidelines" aria-label="Guidelines" hidden><div data-care-guidelines></div></section>';
-      mounted = true; mountedEpoch = context().epoch;
+      mounted = true; mountedEpoch = context().epoch; mountedOwner = context().userId;
     }
     function matching(contactId) {
       var person = people().find(function (item) { return item.id === contactId; }) || {};
@@ -142,10 +148,42 @@
       q('[data-care-guidelines]').innerHTML = '<div class="care-section-head"><div><h3>Guidelines for caring well.</h3><p>Keep the team’s agreed approach in one place. Only workspace administrators can edit this text.</p></div>' + (canWrite ? button('guidelines', record ? 'Edit guidelines' : 'Write guidelines') : '') + '</div>' +
         (record ? '<div class="panel care-guidelines-body"><p class="care-preserve">' + safe(record.body) + '</p><p class="care-small">Last updated · ' + dateLabel(String(record.updated_at || record.created_at || '').slice(0, 10)) + '</p></div>' : '<div class="panel care-guidelines-body"><span class="care-tag">Proposed starting guidance · not church policy</span><h4>No church guidelines have been saved yet.</h4><ul><li>Ask how and when each person would like to be contacted.</li><li>Choose an appropriate follow-up interval together.</li><li>Record a brief, useful note and the next agreed step.</li><li>Keep personal information within the authorized care team.</li></ul><p class="care-small">These suggestions are a draft for staff discussion. An administrator can replace them with the church’s agreed guidance.</p></div>');
     }
+    function formRows(kind) { return kind === 'assignment' ? state.assignments : kind === 'guest' ? state.guests : kind === 'visit' ? state.visits : state.guidelines ? [state.guidelines] : []; }
+    function payloadMatches(record, payload) { return !!record && !!payload && Object.keys(payload).every(function (key) { return record[key] === payload[key]; }); }
+    function syncDraft() {
+      var form = q('[data-care-form]');
+      if (!form || !draft) return;
+      var latest = formRows(activeForm).find(function (row) { return row.id === (draft.id || draft.newId); });
+      if (ready && draft.id) {
+        if (!latest) { closeEditor(false); tell('This care record is no longer available. Refresh the workspace.', true); return; }
+        draft.conflict = !Number.isInteger(draft.recordVersion) || Number(latest.version) !== draft.recordVersion;
+      }
+      var locked = saving || draft.requiresRefresh;
+      form.querySelectorAll('input,select,textarea').forEach(function (node) { node.disabled = locked || (node.name === 'contact_id' && !!draft.id && activeForm !== 'guidelines'); });
+      form.querySelectorAll('button').forEach(function (node) { node.disabled = saving; });
+      form.querySelector('[type="submit"]').disabled = saving || !ready || !writable() || draft.conflict || draft.requiresRefresh;
+      var message = form.querySelector('.care-form-error');
+      if (draft.conflict) message.textContent = 'This record changed after you opened it. Your draft is retained. Close and reopen the record to review the saved version before editing.';
+      else if (draft.requiresRefresh) message.textContent = 'This record could not be saved with confirmation. Your entries are retained. Refresh care to check whether it was saved before trying again.';
+      else if (!ready || !writable()) message.textContent = 'The workspace connection could not be confirmed. Your draft is retained. Refresh care before saving.';
+    }
+    function reconcileDraft() {
+      if (!draft || !draft.requiresRefresh) return;
+      var row = formRows(activeForm).find(function (item) { return item.id === (draft.id || draft.newId); });
+      if (row && payloadMatches(row, draft.submitted) && (activeForm === 'visit' || Number(row.version) === draft.expectedVersion)) {
+        closeEditor(false); tell('The saved care record was confirmed after refresh.'); return;
+      }
+      draft.requiresRefresh = false;
+      if (draft.id && row && Number(row.version) !== draft.recordVersion) draft.conflict = true;
+      else if (!draft.id && row) draft.conflict = true;
+      else if (!draft.id && activeForm !== 'visit' && draft.submitted) {
+        draft.conflict = formRows(activeForm).some(function (item) { return activeForm === 'guidelines' || item.contact_id === draft.submitted.contact_id && (activeForm !== 'assignment' || roleOf(item) === draft.submitted.care_role); });
+      }
+    }
     function render() {
       var ctx = context();
       if (!allowed(ctx)) { clear(); return; }
-      if (mounted && mountedEpoch !== ctx.epoch) clear();
+      if (mounted && (mountedEpoch !== ctx.epoch || mountedOwner !== ctx.userId)) clear();
       if (!mounted) mount();
       host.querySelectorAll('[data-care-panel]').forEach(function (node) { node.hidden = node.dataset.carePanel !== view; });
       host.querySelectorAll('[data-care-view]').forEach(function (node) { node.setAttribute('aria-pressed', String(node.dataset.careView === view)); });
@@ -155,19 +193,20 @@
       if (deacon && deacon !== '__unassigned' && names.indexOf(deacon) === -1) deacon = '';
       q('[data-care-deacon]').value = deacon;
       q('[data-care-role-filter]').value = careRole;
-      q('.care-load-status').textContent = failed ? 'Care records could not load. Use Refresh care to try again.' : !ready ? 'Loading care records…' : '';
-      var retry = q('[data-care-action="retry"]');
+      q('.care-load-status').textContent = context().workspaceReady === false ? 'Workspace connection unavailable. Drafts are retained; refresh before editing.' : failed ? 'Care records could not load. Use Refresh care to try again.' : !ready ? 'Loading care records…' : '';
+      var retry = q('.care-load-status + button[data-care-action="retry"]');
       if (failed && !retry) q('.care-load-status').insertAdjacentHTML('afterend', button('retry', 'Refresh care', null, true));
       if (!failed && retry) retry.remove();
       renderLists(); renderGuidelines();
-      host.querySelectorAll('.care-section-head button[data-care-action]').forEach(function (node) { node.disabled = !ready; });
+      host.querySelectorAll('.care-section-head button[data-care-action]').forEach(function (node) { node.disabled = !ready || !writable(); });
+      syncDraft();
     }
     async function allRows(table, epoch, token) {
       var rows = [], offset = 0;
       while (current(epoch) && token === request) {
-        var result = await db.from(table).select('*').order('id', { ascending: true }).range(offset, offset + 999);
+        var result = await bounded(db.from(table).select('*').order('id', { ascending: true }).range(offset, offset + 999));
         if (!current(epoch) || token !== request) return { data: [] };
-        if (result.error) return { error: true };
+        if (result.error) return { error: result.error };
         var page = result.data || []; rows = rows.concat(page);
         if (page.length < 1000) return { data: rows };
         offset += 1000;
@@ -175,20 +214,22 @@
       return { data: [] };
     }
     async function load(epoch) {
-      if (!current(epoch)) return false;
+      if (!current(epoch)) { if (!allowed(context())) clear(); return false; }
       if (mounted && mountedEpoch !== epoch) clear();
       var token = ++request;
       try {
         var results = await Promise.all([
           allRows('care_assignments', epoch, token), allRows('care_visits', epoch, token),
-          allRows('guest_intakes', epoch, token), db.from('care_guidelines').select('*').eq('id', 'default').maybeSingle()
+          allRows('guest_intakes', epoch, token), bounded(db.from('care_guidelines').select('*').eq('id', 'default').maybeSingle())
         ]);
         if (!current(epoch) || token !== request) return false;
-        if (results.some(function (result) { return result.error; })) throw new Error('load');
+        var failedResult = results.find(function (result) { return result.error; });
+        if (failedResult) throw failedResult.error;
         state = { assignments: results[0].data || [], visits: results[1].data || [], guests: results[2].data || [], guidelines: results[3].data || null };
-        dataEpoch = epoch; ready = true; failed = false; render(); return true;
-      } catch (_) {
+        dataEpoch = epoch; ready = true; failed = false; reconcileDraft(); render(); return true;
+      } catch (error) {
         if (!current(epoch) || token !== request) return false;
+        if (authError(error)) { clear(); tell('Care access could not be confirmed. Sign in again before opening these records.', true); return false; }
         state = { assignments: [], visits: [], guests: [], guidelines: null }; dataEpoch = epoch; ready = false; failed = true; render();
         tell('Care records could not load. Please try again.', true); return false;
       }
@@ -201,15 +242,24 @@
     function roleSelect(role) { return '<label>Care role<select name="care_role" required>' + ROLES.map(function (value) { return '<option value="' + value + '"' + (value === role ? ' selected' : '') + '>' + ROLE_LABELS[value] + '</option>'; }).join('') + '</select></label>'; }
     function area(name, label, value, max) { return '<label class="care-wide">' + safe(label) + '<textarea name="' + name + '" maxlength="' + (max || 4000) + '">' + safe(value || '') + '</textarea></label>'; }
     function closeEditor(focus) {
-      formVersion++; activeForm = null; formEpoch = null; saving = false;
+      formVersion++; activeForm = null; formEpoch = null; saving = false; draft = null;
       if (mounted) { q('.care-editor').replaceChildren(); q('.care-editor').hidden = true; }
       if (focus && returnFocus && returnFocus.isConnected) returnFocus.focus();
       else if (focus && mounted) q('[data-care-view="' + view + '"]').focus();
       returnFocus = null;
     }
-    function openEditor(kind, id, trigger, role) {
+    function mayDiscard(ignoreTarget) {
+      if (!draft) return true;
+      if (saving || draft.requiresRefresh) { syncDraft(); return false; }
+      var form = q('[data-care-form]'), before = Object.assign({}, draft.initial || {}), after = form ? values(form) : {};
+      if (ignoreTarget) { delete before.contact_id; delete before.care_role; delete after.contact_id; delete after.care_role; }
+      if (JSON.stringify(before) === JSON.stringify(after)) return true;
+      return doc.defaultView.confirm('Discard your unsaved care changes?');
+    }
+    function openEditor(kind, id, trigger, role, ignoreTarget) {
       var ctx = context();
-      if (!allowed(ctx) || !ready || dataEpoch !== ctx.epoch || (kind === 'guidelines' && ctx.role !== 'admin') || saving) return;
+      if (!allowed(ctx) || !writable() || !ready || dataEpoch !== ctx.epoch || (kind === 'guidelines' && ctx.role !== 'admin') || saving) return;
+      if (!mayDiscard(ignoreTarget)) return;
       closeEditor(false); activeForm = kind; formEpoch = ctx.epoch; returnFocus = trigger;
       var item = {}, fields = '', title = '';
       role = ROLES.indexOf(role) !== -1 ? role : 'deacon';
@@ -225,11 +275,14 @@
       } else if (kind === 'guest') {
         item = state.guests.find(function (row) { return row.contact_id === id; }) || {}; title = item.id ? 'Edit guest follow-up' : 'Add guest follow-up';
         fields = contactSelect(id) + input('first_visit_on', 'First visit date (optional)', 'date', item.first_visit_on || '', false) + select('status', 'Connection status', ['new', 'contacted', 'connected', 'closed'], item.status || 'new') + input('follow_up_on', 'Follow-up date (optional)', 'date', item.follow_up_on || '', false) + '<div></div>' + area('next_step', 'Next step', item.next_step, 1000) + area('notes', 'Guest notes', item.notes);
-      } else if (kind === 'guidelines') { title = 'Church care guidelines'; fields = area('body', 'Agreed guidance for the care team', state.guidelines ? state.guidelines.body : '', 12000); }
+      } else if (kind === 'guidelines') { item = state.guidelines || {}; title = 'Church care guidelines'; fields = area('body', 'Agreed guidance for the care team', state.guidelines ? state.guidelines.body : '', 12000); }
       else return;
-      q('.care-editor').innerHTML = '<form data-care-form><div class="care-form-head"><h3 tabindex="-1">' + title + '</h3>' + button('cancel', 'Cancel', null, true) + '</div><div class="care-form-grid">' + fields + '</div><p class="care-form-error error" role="alert"></p><div class="care-form-actions"><button type="submit">Save ' + (kind === 'visit' ? 'contact' : kind === 'guidelines' ? 'guidelines' : 'follow-up') + '</button></div></form>';
+      draft = { id: item.id || null, newId: kind === 'guidelines' ? 'default' : doc.defaultView.crypto.randomUUID(), recordVersion: item.id ? Number(item.version) : null, owner: ctx.userId, contactId: item.contact_id || null, careRole: item.care_role || 'deacon', requiresRefresh: false, conflict: false, submitted: null, expectedVersion: null };
+      q('.care-editor').innerHTML = '<form data-care-form><div class="care-form-head"><h3 tabindex="-1">' + title + '</h3>' + button('cancel', 'Cancel', null, true) + '</div><div class="care-form-grid">' + fields + '</div><p class="care-form-error error" role="alert"></p><div class="care-form-actions"><button type="button" class="quiet" data-care-action="retry">Refresh care</button><button type="submit">Save ' + (kind === 'visit' ? 'contact' : kind === 'guidelines' ? 'guidelines' : 'follow-up') + '</button></div></form>';
       q('.care-editor').hidden = false; q('.care-editor h3').focus();
       if (item.id && kind !== 'guidelines') q('[name="contact_id"]').disabled = true;
+      draft.initial = values(q('[data-care-form]'));
+      syncDraft();
     }
     function values(form) {
       var result = {};
@@ -239,8 +292,8 @@
     async function save(event) {
       event.preventDefault();
       var form = event.target, kind = activeForm, epoch = formEpoch, version = formVersion;
-      if (!form.matches('[data-care-form]') || saving || !current(epoch) || (kind === 'guidelines' && context().role !== 'admin')) return;
-      if (!ready || dataEpoch !== epoch) { q('.care-form-error').textContent = 'Refresh care records before saving.'; return; }
+      if (!form.matches('[data-care-form]') || !draft || saving || !current(epoch, draft.owner) || (kind === 'guidelines' && context().role !== 'admin')) return;
+      if (!ready || dataEpoch !== epoch || !writable() || draft.conflict || draft.requiresRefresh) { syncDraft(); return; }
       if (form.reportValidity && !form.reportValidity()) return;
       var row = values(form), table, payload, error = '';
       if (kind !== 'guidelines' && !people().some(function (person) { return person.id === row.contact_id; })) error = 'Choose an existing person.';
@@ -259,28 +312,43 @@
         table = 'guest_intakes'; payload = { contact_id: row.contact_id, first_visit_on: row.first_visit_on || null, next_step: row.next_step || null, status: row.status, follow_up_on: row.follow_up_on || null, notes: row.notes || null };
       } else if (kind === 'guidelines') { if (!row.body) error = 'Write the agreed guidance before saving.'; table = 'care_guidelines'; payload = { id: 'default', body: row.body }; }
       else return;
+      if (draft.id && kind !== 'guidelines' && (payload.contact_id !== draft.contactId || kind === 'assignment' && payload.care_role !== draft.careRole)) error = 'Keep this record linked to its original person and care role.';
+      if (draft.id && (!Number.isInteger(draft.recordVersion) || draft.recordVersion < 1)) error = 'Refresh this record before saving; its version is unavailable.';
       if (error) { q('.care-form-error').textContent = error; return; }
-      saving = true; q('.care-form-error').textContent = ''; form.querySelector('button[type="submit"]').disabled = true;
+      var submittedDraft = draft;
+      payload.id = draft.id || draft.newId;
+      draft.submitted = Object.assign({}, payload); draft.expectedVersion = draft.id ? draft.recordVersion + 1 : 1;
+      saving = true; q('.care-form-error').textContent = ''; syncDraft();
       var saved = false;
       try {
-        if (!current(epoch)) return;
-        var write = kind === 'visit' ? db.from(table).insert(payload) : db.from(table).upsert(payload, { onConflict: kind === 'guidelines' ? 'id' : kind === 'assignment' ? 'contact_id,care_role' : 'contact_id' });
-        var result = await write.select('id').single();
-        if (!current(epoch) || version !== formVersion) return;
-        if (result.error || !result.data || !result.data.id) throw new Error('save');
+        if (options.ensureReady && !await options.ensureReady(epoch)) throw new Error('readiness');
+        if (!current(epoch, submittedDraft.owner) || version !== formVersion || draft !== submittedDraft) return;
+        if (!writable()) throw new Error('readiness');
+        var write;
+        if (submittedDraft.id) {
+          var changes = Object.assign({}, payload); delete changes.id;
+          write = db.from(table).update(changes).eq('id', submittedDraft.id).eq('version', submittedDraft.recordVersion);
+        } else write = db.from(table).insert(payload);
+        var result = await bounded(write.select('*').single());
+        if (!current(epoch, submittedDraft.owner) || version !== formVersion || draft !== submittedDraft) return;
+        if (result.error) throw result.error;
+        if (!payloadMatches(result.data, payload) || kind !== 'visit' && Number(result.data.version) !== submittedDraft.expectedVersion) throw new Error('unconfirmed');
         saved = true; closeEditor(false); tell('Care record saved.');
         await options.refresh();
-      } catch (_) {
-        if (current(epoch) && saved) tell('Saved, but care records could not refresh. Please refresh the workspace.', true);
-        else if (current(epoch) && version === formVersion && q('.care-form-error')) q('.care-form-error').textContent = 'This record could not be saved. Your entries are still here; please try again.';
+      } catch (error) {
+        if (current(epoch, submittedDraft.owner) && authError(error)) { clear(); tell('Care access could not be confirmed. Sign in again before opening these records.', true); }
+        else if (current(epoch, submittedDraft.owner) && saved) tell('Saved, but care records could not refresh. Please refresh the workspace.', true);
+        else if (current(epoch, submittedDraft.owner) && version === formVersion && draft === submittedDraft) { draft.requiresRefresh = true; }
       } finally {
-        if (current(epoch) && version === formVersion && q('[data-care-form]')) { saving = false; q('[data-care-form] button[type="submit"]').disabled = false; }
+        if (current(epoch, submittedDraft.owner) && version === formVersion && draft === submittedDraft) { saving = false; syncDraft(); }
+        else if (!allowed(context())) clear();
       }
     }
+
     function clear() {
-      request++; formVersion++; activeForm = null; formEpoch = null; saving = false; returnFocus = null;
+      request++; formVersion++; activeForm = null; formEpoch = null; saving = false; draft = null; returnFocus = null;
       state = { assignments: [], visits: [], guests: [], guidelines: null };
-      view = 'followup'; search = ''; deacon = ''; careRole = ''; ready = false; failed = false; dataEpoch = null; mountedEpoch = null; mounted = false;
+      view = 'followup'; search = ''; deacon = ''; careRole = ''; ready = false; failed = false; dataEpoch = null; mountedEpoch = null; mountedOwner = null; mounted = false;
       host.replaceChildren();
     }
     host.addEventListener('click', function (event) {
@@ -290,20 +358,20 @@
         view = target.dataset.careView; render(); var heading = q('[data-care-panel="' + view + '"] h3');
         if (heading) { heading.tabIndex = -1; heading.focus(); }
       }
-      if (target.dataset.careAction === 'cancel') closeEditor(true);
-      else if (target.dataset.careAction === 'retry') options.refresh().catch(function () { tell('Care records could not load. Please try again.', true); });
-      else if (target.dataset.careAction) openEditor(target.dataset.careAction, target.dataset.contact, target, target.dataset.careRole);
+      if (target.dataset.careAction === 'cancel') { if (mayDiscard(false)) closeEditor(true); return; }
+      if (target.dataset.careAction === 'retry') { if (!saving) options.refresh().catch(function () { tell('Care records could not load. Please try again.', true); }); return; }
+      if (target.dataset.careAction) openEditor(target.dataset.careAction, target.dataset.contact, target, target.dataset.careRole);
     });
     host.addEventListener('input', function (event) { if (!allowed(context())) return; if (event.target.matches('[data-care-search]')) { search = event.target.value; renderLists(); } });
     host.addEventListener('change', function (event) {
-      if (!allowed(context())) return;
+      if (!allowed(context()) || saving || draft && draft.requiresRefresh) return;
       if (event.target.matches('[data-care-deacon]')) { deacon = event.target.value; renderLists(); }
       if (event.target.matches('[data-care-role-filter]')) { careRole = event.target.value; renderLists(); }
       if (event.target.matches('[name="cadence_unit"]')) q('[name="cadence_value"]').max = event.target.value === 'months' ? '12' : '365';
       if ((event.target.matches('[name="contact_id"]') || event.target.matches('[name="care_role"]')) && ['assignment', 'guest'].indexOf(activeForm) !== -1) {
         var id = q('[name="contact_id"]').value, role = q('[name="care_role"]') ? q('[name="care_role"]').value : null;
         var rows = activeForm === 'assignment' ? state.assignments : state.guests;
-        if (event.target.name === 'care_role' || rows.some(function (item) { return item.contact_id === id && (activeForm !== 'assignment' || roleOf(item) === role); })) openEditor(activeForm, id, returnFocus, role);
+        if (event.target.name === 'care_role' || rows.some(function (item) { return item.contact_id === id && (activeForm !== 'assignment' || roleOf(item) === role); })) openEditor(activeForm, id, returnFocus, role, true);
       }
     });
     host.addEventListener('submit', save);

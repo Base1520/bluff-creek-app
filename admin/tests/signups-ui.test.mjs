@@ -11,7 +11,7 @@ function fixture(t,opts={}){
  let ctx={epoch:1,userId:'sample-staff',role:opts.role||'editor',canEdit:opts.role!=='viewer'},rows=opts.rows||[{...row}],refreshes=0;
  const calls=[],notices=[],counts=[],control={peopleReady:true};const db={from(table){const q={table};const chain={select(){return chain},order(){return chain},range(a,b){q.range=[a,b];return chain},then(resolve,reject){calls.push(q);return (control.read?control.read():Promise.resolve({data:rows.slice(q.range?.[0]||0,q.range?q.range[1]+1:undefined)})).then(resolve,reject)}};return chain},rpc:async(name,args)=>{calls.push({name,args});if(control.write)return control.write();return{data:{id:row.id,version:row.version,contact_id:'sample-person',status:'reviewed'}}}};
  const host=w.document.getElementById('signups'),people=[{id:'sample-person',first_name:'Sample',last_name:'Person',email:'sample@example.invalid',status:'active'}];let api;
- api=w.CreekSignups.create({root:host,db,people:()=>people,peopleReady:()=>control.peopleReady,getContext:()=>ctx,isCurrent:e=>ctx.epoch===e&&!!ctx.userId,notice:m=>notices.push(m),onCount:n=>counts.push(n),refresh:async()=>{refreshes++;}});
+ api=w.CreekSignups.create({root:host,db,people:()=>people,peopleReady:()=>control.peopleReady,getContext:()=>ctx,ensureReady:async epoch=>control.ensure?await control.ensure(epoch):true,isCurrent:e=>ctx.epoch===e&&!!ctx.userId,notice:m=>notices.push(m),onCount:n=>counts.push(n),refresh:async()=>{refreshes++;}});
  const form=()=>w.document.querySelector('form');
  const submit=async()=>{form().dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await tick();await tick();};
  return{api,w,host,counts,calls,notices,control,form,submit,refreshes:()=>refreshes,setContext:n=>ctx=n};
@@ -62,9 +62,29 @@ test('identity review is blocked after People fails to load or becomes unavailab
 });
 test('concurrent review cannot silently confirm another identity and explicit repeats do not claim draft changes saved',async t=>{
  const f=fixture(t);await f.api.load(1);f.api.open(row.id);f.form().elements.contact_id.value='sample-person';f.form().elements.identity_checked.checked=true;f.control.write=()=>Promise.resolve({data:{id:row.id,version:1,contact_id:'different-person',status:'reviewed'}});await f.submit();assert.ok(f.form());assert.equal(f.notices.length,0);
- f.control.write=()=>Promise.resolve({data:{id:row.id,version:1,contact_id:'sample-person',status:'reviewed',already_reviewed:true}});await f.submit();assert.equal(f.form(),null);assert.match(f.notices[0],/draft changes were not applied/);
+ f.control.write=()=>Promise.resolve({data:{id:row.id,version:1,contact_id:'sample-person',status:'reviewed',already_reviewed:true}});await f.api.load(1);await f.submit();assert.equal(f.form(),null);assert.match(f.notices[0],/draft changes were not applied/);
 });
 
 test('confirmed permission loss clears an open review instead of retaining private draft details',async t=>{
  const f=fixture(t);await f.api.load(1);f.api.open(row.id);f.form().elements.staff_notes.value='Synthetic private review';f.control.read=()=>Promise.resolve({error:{code:'42501',message:'denied'}});await f.api.load(1);assert.equal(f.form(),null);assert.doesNotMatch(f.w.document.body.textContent,/Synthetic private review/);
+});
+
+test('signup reviews preserve drafts on workspace outage and check readiness before writing',async t=>{
+ const f=fixture(t);await f.api.load(1);f.api.open(row.id);f.form().elements.contact_id.value='__new';f.form().elements.identity_checked.checked=true;f.form().elements.staff_notes.value='Synthetic review draft';
+ f.setContext({epoch:1,userId:'staff',role:'editor',canEdit:false,workspaceReady:false});f.api.render();await f.api.load(1);assert.equal(f.form().elements.staff_notes.value,'Synthetic review draft');assert.equal(f.form().elements.staff_notes.disabled,true);assert.equal(f.host.querySelectorAll('.signup-row').length,0);
+ f.setContext({epoch:1,userId:'staff',role:'editor',canEdit:true,workspaceReady:true});await f.api.load(1);assert.equal(f.form().elements.staff_notes.disabled,false);
+ f.control.ensure=()=>false;await f.submit();assert.equal(f.calls.some(c=>c.name),false);assert.ok(f.form());assert.equal(f.form().querySelector('[type=submit]').disabled,true);
+});
+test('pending signup review freezes fields and close, snapshots the request, and requires refresh after uncertainty',async t=>{
+ const f=fixture(t);await f.api.load(1);f.api.open(row.id);f.form().elements.contact_id.value='sample-person';f.form().elements.identity_checked.checked=true;f.form().elements.staff_notes.value='Synthetic original notes';let finish;f.control.write=()=>new Promise(r=>finish=r);const saving=f.submit();await tick();
+ assert.equal(f.form().elements.staff_notes.disabled,true);assert.equal(f.form().elements.contact_id.disabled,true);f.w.document.querySelector('[data-signup-close]').click();f.w.document.querySelector('dialog').dispatchEvent(new f.w.Event('cancel',{cancelable:true}));assert.ok(f.form());
+ f.form().elements.staff_notes.value='Synthetic late mutation';assert.equal(f.calls.find(c=>c.name).args.p_staff_notes,'Synthetic original notes');finish({data:null});await saving;
+ assert.equal(f.form().querySelector('[type=submit]').disabled,true);await f.submit();assert.equal(f.calls.filter(c=>c.name).length,1);await f.api.load(1);assert.equal(f.form().querySelector('[type=submit]').disabled,false);
+});
+test('changed signup version during refresh preserves review draft and blocks stale identity decisions',async t=>{
+ const changed={...row};const f=fixture(t,{rows:[changed]});await f.api.load(1);f.api.open(row.id);f.form().elements.staff_notes.value='Synthetic review';changed.version=2;await f.api.load(1);assert.equal(f.form().elements.staff_notes.value,'Synthetic review');assert.equal(f.form().querySelector('[type=submit]').disabled,true);assert.match(f.form().textContent,/signup changed/);
+});
+
+test('a signup RPC timeout unlocks Close but requires refresh before another review request',async t=>{
+ const f=fixture(t);await f.api.load(1);f.api.open(row.id);f.form().elements.contact_id.value='__new';f.form().elements.identity_checked.checked=true;let expire,finish;const real=f.w.setTimeout.bind(f.w);f.w.setTimeout=(fn,ms)=>ms===12000?(expire=fn,9999):real(fn,ms);f.control.write=()=>new Promise(r=>finish=r);const saving=f.submit();await tick();expire();await saving;assert.equal(f.form().querySelector('[type=submit]').disabled,true);assert.equal(f.w.document.querySelector('[data-signup-close]').disabled,false);assert.match(f.form().textContent,/could not be confirmed/);finish({data:{id:row.id,version:1,status:'reviewed',contact_id:'sample-person'}});await tick();assert.ok(f.form());assert.equal(f.notices.length,0);
 });

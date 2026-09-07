@@ -32,11 +32,27 @@
     var roots = options.roots, first = Object.keys(views).map(function (view) { return roots[view]; }).find(Boolean);
     if (!first) throw new Error('Office content needs a root section.');
     var doc = first.ownerDocument, state = {}, filters = {}, ready = {}, failed = {}, mounted = {}, loadId = 0, mountedEpoch = null;
-    var dialog = null, formVersion = 0, dialogEpoch = null, dialogView = null, dialogRecord = null, returnFocus = null, saving = false;
+    var dialog = null, formVersion = 0, dialogEpoch = null, dialogView = null, dialogRecord = null, returnFocus = null, saving = false, draft = null;
     Object.keys(views).forEach(function (view) { state[view] = []; filters[view] = { search: '', status: 'current' }; ready[view] = false; failed[view] = false; });
+    function deadline(promise) {
+      var timer; return Promise.race([Promise.resolve(promise), new Promise(function (_resolve, reject) { timer = root.setTimeout(function () { reject(new Error('timeout')); }, 12000); })]).finally(function () { root.clearTimeout(timer); });
+    }
     function context() { return options.getContext() || {}; }
-    function allowed(ctx) { return !!ctx.userId && ctx.canEdit === true && ['admin', 'editor'].indexOf(ctx.role) !== -1 && options.isCurrent(ctx.epoch); }
-    function current(epoch) { var ctx = context(); return ctx.epoch === epoch && allowed(ctx); }
+    function staff(ctx) { return !!ctx.userId && ['admin', 'editor'].indexOf(ctx.role) !== -1 && options.isCurrent(ctx.epoch); }
+    function allowed(ctx) { return staff(ctx) && ctx.canEdit === true && ctx.workspaceReady !== false; }
+    function current(epoch) { var ctx = context(); return ctx.epoch === epoch && staff(ctx); }
+    function denied(error) { return error && (['42501', 'PGRST301', 'PGRST302'].includes(error.code) || [401, 403].includes(error.status)); }
+    async function ensure(epoch) { return (!options.ensureReady || await options.ensureReady(epoch)) && current(epoch) && allowed(context()); }
+    function freezeDialog() {
+      if (!dialog) return;
+      var locked = saving || (draft && (draft.uncertain || draft.conflict)) || !allowed(context());
+      dialog.querySelectorAll('input, select, textarea').forEach(function (node) { node.disabled = locked; });
+      if (!locked) updatePrayerApproval();
+      dialog.querySelector('[type="submit"]').disabled = locked;
+      dialog.querySelectorAll('[data-office-close]').forEach(function (node) { node.disabled = saving || !!(draft && draft.uncertain); });
+      var check = dialog.querySelector('[data-office-reconcile]');
+      check.hidden = !(draft && draft.uncertain); check.disabled = saving;
+    }
     function safe(value) { var node = doc.createElement('span'); node.textContent = value == null ? '' : String(value); return node.innerHTML.replace(/"/g, '&quot;'); }
     function capitalize(value) { return String(value || '').replace(/_/g, ' ').replace(/^./, function (letter) { return letter.toUpperCase(); }); }
     function dateLabel(value) { return validDate(value) ? new Date(value + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : ''; }
@@ -110,26 +126,28 @@
     }
     function render() {
       var ctx = context();
-      if (!allowed(ctx)) { clear(); return; }
+      if (!staff(ctx)) { clear(); return; }
+      if (!allowed(ctx)) { freezeDialog(); return; }
       if (mountedEpoch !== null && mountedEpoch !== ctx.epoch) clear();
       mountedEpoch = ctx.epoch;
-      Object.keys(views).forEach(renderView);
+      Object.keys(views).forEach(renderView); freezeDialog();
     }
     async function rowsFor(view, epoch, token) {
       var rows = [];
       try {
         for (var offset = 0; current(epoch) && token === loadId; offset += 1000) {
-          var result = await options.db.from(views[view].table).select('*').order('id', { ascending: true }).range(offset, offset + 999);
+          var result = await deadline(options.db.from(views[view].table).select('*').order('id', { ascending: true }).range(offset, offset + 999));
           if (!current(epoch) || token !== loadId) return null;
-          if (result.error) throw new Error('load');
+          if (result.error) throw result.error;
           var page = result.data || []; rows = rows.concat(page);
           if (page.length < 1000) return { rows: rows, failed: false };
         }
-      } catch (_) { if (current(epoch) && token === loadId) return { rows: [], failed: true }; }
+      } catch (error) { if (current(epoch) && token === loadId) { if (denied(error)) { clear(); return null; } return { rows: [], failed: true }; } }
       return null;
     }
     async function load(epoch) {
-      if (!current(epoch)) return false;
+      if (!current(epoch)) { clear(); return false; }
+      if (!allowed(context())) { freezeDialog(); return false; }
       if (mountedEpoch !== null && mountedEpoch !== epoch) clear();
       var token = ++loadId, names = Object.keys(views);
       var results = await Promise.all(names.map(function (view) { return roots[view] ? rowsFor(view, epoch, token) : Promise.resolve({ rows: [], failed: false }); }));
@@ -146,12 +164,15 @@
     function select(name, label, choices, selected) {
       return '<label>' + safe(label) + '<select name="' + name + '">' + choices.map(function (value) { return '<option value="' + value + '"' + (selected === value ? ' selected' : '') + '>' + capitalize(value) + '</option>'; }).join('') + '</select></label>';
     }
-    function closeDialog(restore) {
-      formVersion++; saving = false; dialogEpoch = null; dialogView = null; dialogRecord = null;
+    function closeDialog(restore, force) {
+      if (!force && (saving || (draft && draft.uncertain))) return false;
+      if (!force && dirty() && !root.confirm('Discard the unsaved changes in this draft?')) return false;
+      formVersion++; saving = false; draft = null; dialogEpoch = null; dialogView = null; dialogRecord = null;
       if (dialog) { var old = dialog; dialog = null; if (old.open) old.close(); old.remove(); }
       if (restore && returnFocus && returnFocus.isConnected) returnFocus.focus();
-      returnFocus = null;
+      returnFocus = null; return true;
     }
+    function dirty() { return !!(dialog && draft && draft.baseline && JSON.stringify(formValues(dialog.querySelector('form'))) !== draft.baseline); }
     function updatePrayerApproval(reset) {
       if (!dialog || dialogView !== 'prayers') return;
       var nonStaff = dialog.querySelector('[name="share_scope"]').value !== 'staff_only';
@@ -163,9 +184,9 @@
     }
     function openEditor(view, record, trigger) {
       var ctx = context(), config = views[view];
-      if (!config || !roots[view] || !allowed(ctx) || saving) return;
+      if (!config || !roots[view] || !allowed(ctx) || saving || (draft && draft.uncertain)) return;
       if (!ready[view]) { notice('Wait for these records to load, or refresh the workspace before editing.', true); return; }
-      closeDialog(false); dialogView = view; dialogEpoch = ctx.epoch; dialogRecord = record || null; returnFocus = trigger || doc.activeElement;
+      if (!closeDialog(false)) return; dialogView = view; dialogEpoch = ctx.epoch; dialogRecord = record ? Object.assign({}, record) : null; draft = { id: record ? record.id : root.crypto.randomUUID(), version: record ? record.version : null, uncertain: false, conflict: false, payload: null }; returnFocus = trigger || doc.activeElement;
       var row = record || {}, fields = '';
       if (view === 'announcements') fields = input('title', 'Title', row.title, 'text', true, 160, true) + textarea('body', 'Announcement text', row.body, true, 10000) + input('starts_on', 'Starts on (optional)', row.starts_on, 'date') + input('ends_on', 'Ends on (optional)', row.ends_on, 'date');
       if (view === 'committees') fields = input('committee_name', 'Committee', row.committee_name, 'text', true, 160) + input('contact_name', 'Contact name', row.contact_name, 'text', true, 160) + input('role_label', 'Role (optional)', row.role_label) + input('email', 'Email (optional)', row.email, 'email') + input('phone', 'Phone (optional)', row.phone, 'tel') + '<div></div>' + input('term_start', 'Term starts (optional)', row.term_start, 'date') + input('term_end', 'Term ends (optional)', row.term_end, 'date') + textarea('notes', 'Committee notes', row.notes);
@@ -178,12 +199,13 @@
       if (view === 'prayers') fields = input('display_name', 'Display name for this staff record', row.display_name, 'text', true, 160, true) + textarea('request_text', 'Prayer request', row.request_text, true, 10000) + textarea('care_notes', 'Staff care notes', row.care_notes) + select('share_scope', 'Recorded sharing scope', ['staff_only', 'prayer_team', 'church'], row.share_scope || 'staff_only') + '<label class="office-content-check"><input type="checkbox" name="sharing_approved"' + (row.sharing_approved ? ' checked' : '') + '>Approval for this sharing scope has been recorded</label><p class="office-content-wide office-content-note" data-office-sharing-help></p>';
       fields += select('status', 'Status', config.statuses, row.status || config.initial);
       dialog = doc.createElement('dialog'); dialog.className = 'office-content-dialog'; dialog.setAttribute('aria-labelledby', 'office-content-form-title'); dialog.setAttribute('aria-describedby', 'office-content-form-help');
-      dialog.innerHTML = '<form data-office-form><header><div><p class="eyebrow">Private staff record</p><h2 id="office-content-form-title">' + (record ? 'Edit ' : 'Add ') + config.singular + '</h2></div><button type="button" class="quiet" data-office-close>Close</button></header><div class="office-content-form-body"><p id="office-content-form-help" class="office-content-note">' + config.description + '</p><div class="office-content-form-grid">' + fields + '</div><p class="office-content-error error" role="alert"></p></div><footer><button type="button" class="quiet" data-office-close>Cancel</button><button type="submit">Save ' + config.singular + '</button></footer></form>';
+      dialog.innerHTML = '<form data-office-form><header><div><p class="eyebrow">Private staff record</p><h2 id="office-content-form-title">' + (record ? 'Edit ' : 'Add ') + config.singular + '</h2></div><button type="button" class="quiet" data-office-close>Close</button></header><div class="office-content-form-body"><p id="office-content-form-help" class="office-content-note">' + config.description + '</p><div class="office-content-form-grid">' + fields + '</div><p class="office-content-error error" role="alert"></p></div><footer><button type="button" class="quiet" data-office-reconcile hidden>Check saved progress</button><button type="button" class="quiet" data-office-close>Cancel</button><button type="submit">Save ' + config.singular + '</button></footer></form>';
       dialog.querySelectorAll('[data-office-close]').forEach(function (node) { node.onclick = function () { closeDialog(true); }; });
       dialog.addEventListener('cancel', function (event) { event.preventDefault(); closeDialog(true); });
       dialog.addEventListener('change', function (event) { if (event.target.name === 'share_scope') updatePrayerApproval(true); });
       dialog.querySelector('form').addEventListener('submit', save);
-      doc.body.appendChild(dialog); updatePrayerApproval(); dialog.showModal();
+      dialog.querySelector('[data-office-reconcile]').onclick = reconcile;
+      doc.body.appendChild(dialog); updatePrayerApproval(); draft.baseline = JSON.stringify(formValues(dialog.querySelector('form'))); dialog.showModal();
     }
     function formValues(form) {
       var values = {};
@@ -219,31 +241,75 @@
       if (view === 'prayers' && payload.share_scope === 'staff_only') payload.sharing_approved = false;
       return payload;
     }
+    function matches(row, payload) {
+      return row && Object.keys(payload).every(function (field) { return (row[field] == null ? null : row[field]) === (payload[field] == null ? null : payload[field]); });
+    }
+    async function finishSave(epoch, message) {
+      closeDialog(false, true); notice(message || 'Staff record saved.');
+      try { await options.refresh(); } catch (_) { if (current(epoch)) notice('Saved, but records could not refresh. Please refresh the workspace.', true); }
+    }
+    async function reconcile() {
+      if (!dialog || saving || !draft || !draft.uncertain) return;
+      var epoch = dialogEpoch, version = formVersion, view = dialogView, attempt = draft;
+      var errorNode = dialog.querySelector('.office-content-error');
+      saving = true; freezeDialog();
+      try {
+        if (!await ensure(epoch) || version !== formVersion) return;
+        var result = await deadline(options.db.from(views[view].table).select('*').eq('id', attempt.id).maybeSingle());
+        if (!current(epoch) || version !== formVersion) return;
+        if (result.error) throw result.error;
+        var row = result.data;
+        if (row && row.id === attempt.id && matches(row, attempt.payload) && Number.isInteger(row.version) && (attempt.version === null || row.version > attempt.version)) {
+          await finishSave(epoch, 'Saved record found. Your submission is confirmed.'); return;
+        }
+        attempt.uncertain = false;
+        if ((!row && attempt.version === null) || (row && row.id === attempt.id && row.version === attempt.version)) {
+          errorNode.textContent = 'Your changes were not found in the saved record. Your draft is still here; review it and save again.';
+        } else {
+          attempt.conflict = true;
+          errorNode.textContent = 'This record changed while your draft was open. Your draft has not replaced it. Keep any text you need, then close this draft and refresh records to review the latest version before editing again.';
+        }
+      } catch (error) {
+        if (current(epoch) && version === formVersion && dialog) {
+          if (denied(error)) { clear(); return; }
+          errorNode.textContent = 'Saved progress could not be checked. Keep this page open and try Check saved progress again when the connection returns.';
+        }
+      } finally { if (current(epoch) && version === formVersion && dialog) { saving = false; freezeDialog(); } }
+    }
     async function save(event) {
       event.preventDefault();
       var form = event.target, epoch = dialogEpoch, version = formVersion, view = dialogView, existing = dialogRecord;
-      if (!dialog || saving || !current(epoch) || !views[view]) return;
+      if (!dialog || saving || !draft || draft.uncertain || draft.conflict || !current(epoch) || !allowed(context()) || !views[view]) return;
       if (!ready[view]) { form.querySelector('.office-content-error').textContent = 'Refresh these records before saving.'; return; }
       if (form.reportValidity && !form.reportValidity()) return;
       var values = formValues(form), problem = validate(view, values, existing);
       if (problem) { form.querySelector('.office-content-error').textContent = problem; return; }
-      var payload = payloadFor(view, values), saved = false;
-      saving = true; form.querySelector('[type="submit"]').disabled = true; form.querySelector('.office-content-error').textContent = '';
+      if (existing && !Number.isInteger(draft.version)) { form.querySelector('.office-content-error').textContent = 'This record needs the latest workspace setup. Ask the administrator to finish setup, then refresh before editing.'; return; }
+      draft.payload = payloadFor(view, values);
+      var attempt = draft, submitted = false;
+      saving = true; freezeDialog(); form.querySelector('.office-content-error').textContent = '';
       try {
-        if (!current(epoch) || version !== formVersion) return;
+        if (!await ensure(epoch) || version !== formVersion) {
+          if (current(epoch) && version === formVersion) form.querySelector('.office-content-error').textContent = 'The workspace connection needs attention. Refresh the workspace before saving; your draft is still here.';
+          return;
+        }
         var query = options.db.from(views[view].table);
-        var result = existing ? await query.update(payload).eq('id', existing.id).select('id').single() : await query.insert(payload).select('id').single();
+        submitted = true;
+        var result = existing ? await deadline(query.update(attempt.payload).eq('id', attempt.id).eq('version', attempt.version).select('id,version').single()) : await deadline(query.insert(Object.assign({ id: attempt.id }, attempt.payload)).select('id,version').single());
         if (!current(epoch) || version !== formVersion) return;
-        if (result.error || !result.data || typeof result.data.id !== 'string' || !result.data.id || (existing && result.data.id !== existing.id)) throw new Error('save');
-        saved = true; closeDialog(false); notice('Staff record saved.');
-        await options.refresh();
-      } catch (_) {
-        if (current(epoch) && saved) notice('Saved, but records could not refresh. Please refresh the workspace.', true);
-        else if (current(epoch) && version === formVersion && dialog) form.querySelector('.office-content-error').textContent = 'This record could not be saved. Your entries are still here; please try again.';
-      } finally { if (current(epoch) && version === formVersion && dialog) { saving = false; form.querySelector('[type="submit"]').disabled = false; } }
+        if (result.error) throw result.error;
+        if (!result.data || result.data.id !== attempt.id || !Number.isInteger(result.data.version) || (existing && result.data.version <= attempt.version)) throw new Error('unconfirmed');
+        await finishSave(epoch);
+      } catch (error) {
+        if (current(epoch) && version === formVersion && dialog) {
+          if (denied(error)) { clear(); return; }
+          attempt.uncertain = submitted;
+          form.querySelector('.office-content-error').textContent = submitted ? 'This save could not be confirmed. Your draft is retained. Use Check saved progress before retrying so a completed save is not duplicated or overwritten.' : 'The connection could not be checked. Your draft is retained; refresh the workspace before saving.';
+        }
+      } finally { if (current(epoch) && version === formVersion && dialog) { saving = false; freezeDialog(); } }
     }
     function clear() {
-      loadId++; closeDialog(false); mountedEpoch = null;
+      loadId++; closeDialog(false, true); mountedEpoch = null;
       Object.keys(views).forEach(function (view) { state[view] = []; filters[view] = { search: '', status: 'current' }; ready[view] = false; failed[view] = false; mounted[view] = false; if (roots[view]) roots[view].replaceChildren(); });
     }
     Object.keys(views).forEach(function (view) {
@@ -260,6 +326,7 @@
         if (target.hasAttribute('data-office-refresh')) Promise.resolve(options.refresh()).catch(function () { if (current(epoch)) notice('These records could not load. Please try again.', true); });
       });
     });
+    root.addEventListener('beforeunload', function (event) { if (dirty() || saving || (draft && draft.uncertain)) { event.preventDefault(); event.returnValue = ''; } });
     return { load: load, render: render, clear: clear, open: function (view) { openEditor(view, null, doc.activeElement); } };
   }
   root.CreekOfficeContent = { create: create };

@@ -5,7 +5,7 @@ Creek Office is the private staff side of Home @ the Creek. It provides staff si
 ## Backend setup
 
 1. Create a church-owned Supabase project. Do not use a personal project.
-2. Run `supabase/schema.sql`, followed by `supabase/migrations/20260907_membership_care.sql`, `supabase/migrations/20260907_office_content.sql`, `supabase/migrations/20260907164733_app_connections_care_roles.sql`, then `supabase/migrations/20260907171014_leader_followups.sql`, in that explicit order in the project's SQL editor. See [signup/care setup](../docs/signup-care-maintenance.md) for migration-order and activation details.
+2. Run `supabase/schema.sql`, followed by `supabase/migrations/20260907_membership_care.sql`, `supabase/migrations/20260907_office_content.sql`, `supabase/migrations/20260907164733_app_connections_care_roles.sql`, `supabase/migrations/20260907171014_leader_followups.sql`, then `supabase/migrations/20260907174301_office_record_recovery.sql`, in that explicit order in the project's SQL editor. See [signup/care setup](../docs/signup-care-maintenance.md) for migration-order and activation details.
 3. In Supabase Auth, create the first staff user. Public sign-up is not exposed by Creek Office.
 4. Copy that user's UUID and run the final commented `insert into public.staff_roles` statement as `admin`.
 5. Copy `config.example.js` to `config.js`. Add the project URL and **publishable** key. Never put a secret or `service_role` key in this repository.
@@ -23,7 +23,7 @@ Sessions use this tab's `sessionStorage` under `creek-office-auth`; refreshing t
 
 ## Current scope
 
-- Private staff calendar CRUD with weekly/monthly/special labels. It does not publish events to the website or app. The workspace links to iCloud for the church calendar and explains separate Apple editor invitations. The request sheet is intake only; staff enter approved changes in iCloud. `is_public` is reserved metadata and defaults to false.
+- Private staff calendar creation/editing and recoverable archive/restore with weekly/monthly/special labels. Staff cannot permanently delete calendar events through the client. It does not publish events to the website or app. The workspace links to iCloud for the church calendar and explains separate Apple editor invitations. The request sheet is intake only; staff enter approved changes in iCloud. `is_public` is reserved metadata and defaults to false.
 - People records with household, status, contact fields, membership identifiers, historical date text and review flags; separate preserved history and source-page review.
 - Guest intake, assigned deacon, visit/contact logs, adjustable on-screen follow-up reminders and admin-maintained guidelines.
 - Announcements, committee contacts, a Sunday slide-deck library and editable private prayer requests. See [office content maintenance](../docs/office-content-maintenance.md) for planning statuses, sharing permissions and current publication limits.
@@ -46,3 +46,11 @@ The public `connection.html` flow is separate from staff sign-in. It verifies em
 ## My follow-ups
 
 Each admin/editor has a personal leadership contact list, visible only to that owner through the staff API. Recurring dates, snooze/pause and contact history appear in My follow-ups and on Overview. A generic weekly calendar file can be prepared and imported by the owner; no calendar notification is activated automatically. See [leadership follow-up maintenance](../docs/leadership-followups.md).
+
+## Safe saves and recovery
+
+The final recovery migration is required: the office checks the live staff role and expected schema declaration before enabling edits, then rechecks role/readiness before writes. Failed core reads pause editing and clear stale lists while preserving same-session drafts. Individual module load failures also block that module’s saves. A missing readiness function is a setup failure, not an empty new office. This check is not a substitute for the hosted role/storage/backup rehearsal.
+
+Events, People, document details, care plans/guest records/guidelines and office content use server-owned versions to reject stale edits. New drafts reuse stable IDs; source and document uploads preserve recovery state. An uncertain result requires checking saved progress before repeating the submission. No uncertain upload is automatically deleted. Staff events are archived and restored; prior history and visit entries remain append-only.
+
+Use the in-app [office guide](help.html) for the operator workflow and [reliability and recovery](../docs/office-reliability.md) for acceptance checks, backup responsibilities and remaining activation gates. Drafts are memory-only; do not treat the open browser as a backup.

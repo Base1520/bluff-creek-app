@@ -8,3 +8,8 @@
 .calendar-guide{padding:24px;margin-bottom:30px}.calendar-guide h2{margin-top:8px}.calendar-guide p{max-width:70ch;line-height:1.65}.calendar-guide summary{cursor:pointer;font-weight:800;color:var(--pine,#3C5A45)}.calendar-guide details{padding:12px 0}.calendar-guide .calendar-note{margin-bottom:0}
 
 aside{overflow:hidden}.office-brand,.account{flex-shrink:0}#workspace-nav{flex:1;min-height:0;overflow-y:auto;align-content:start;scrollbar-width:thin;scrollbar-color:#84927e transparent;padding:3px 4px 10px 0}.account{margin-top:16px}
+
+.workspace-health{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:18px 20px;margin:0 0 24px;border:1px solid #d9bb7a;border-left:4px solid var(--gold);border-radius:12px;background:#fff8e9}.workspace-health p{margin:0;max-width:75ch}.workspace-health p+p{margin-top:8px}.workspace-health button{flex-shrink:0}.workspace-health a,.office-help-card a{color:var(--pine);font-weight:800}.office-help-card{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:24px;margin-top:24px}.office-help-card p:last-child{max-width:60ch;margin-bottom:0;color:var(--muted)}.office-help-card a{flex-shrink:0}.toolbar{flex-wrap:wrap}.toolbar input{flex:1;min-width:160px}.toolbar select{flex:0 1 190px}dialog form>footer{flex-wrap:wrap}#event-delete{margin-right:auto}
+@media(max-width:760px){.workspace-health,.office-help-card{align-items:flex-start;flex-direction:column;gap:14px}.toolbar input{min-width:0}.toolbar select{width:100%}.office-help-card{padding:20px}}
+
+.workspace-health:not(.hidden)~.view .rows:empty:after{content:"Records are unavailable while the connection is being checked."}

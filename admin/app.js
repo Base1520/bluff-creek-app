@@ -10,27 +10,39 @@
   var MAX_FILE_BYTES = 52428800;
   var AUTH_STORAGE_KEY = "creek-office-auth", signedOut = false, manualSignInPending = false;
   var documentExpiryTimer;
-  var peopleReady = false;
+  var peopleReady = false, workspaceReady = false, readinessOK = false, refreshing = false;
+  var draft = null, readinessEpoch = 0;
+  var REQUIRED_REVISION = "20260907174301";
   var state = { events: [], people: [], documents: [], activity: [] };
   var titles = { dashboard: "Overview", followups: "My follow-ups", calendar: "Staff calendar", announcements: "Announcements", committees: "Committee contacts", slides: "Sunday slides", prayers: "Prayer requests", people: "People & membership", history: "Member history", care: "Guests & care", signups: "App signups", documents: "Documents", activity: "Activity" };
   var contentViews = ["announcements", "committees", "slides", "prayers"];
   var privateViews = ["history", "care", "signups", "followups"].concat(contentViews);
 
+  function deadline(request) {
+    var timer;
+    return Promise.race([Promise.resolve(request), new Promise(function (_resolve, reject) { timer = window.setTimeout(function () { reject(new Error("The request timed out.")); }, 12000); })]).finally(function () { window.clearTimeout(timer); });
+  }
+  function hidden(node, value) { if (node) { node.hidden = value; node.classList.toggle("hidden", value); } }
   function el(id) { return document.getElementById(id); }
   function show(id) { ["setup", "login", "loading", "workspace"].forEach(function (name) { el(name).classList.toggle("hidden", name !== id); }); }
   function safe(value) { var node = document.createElement("span"); node.textContent = value == null ? "" : String(value); return node.innerHTML.replace(/"/g, "&quot;"); }
   function dateLabel(value) { if (!value) return ""; return new Date(value + (value.length === 10 ? "T12:00:00" : "")).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); }
   function notice(message, bad) { els.notice.textContent = message; els.notice.classList.remove("hidden"); els.notice.style.borderColor = bad ? "#9b3f2c" : "#3C5A45"; window.clearTimeout(notice.timer); notice.timer = window.setTimeout(function () { els.notice.classList.add("hidden"); }, 4500); }
-  function fail(error) { console.error(error); notice(error.message || "Something went wrong.", true); }
-  function canEdit() { return role === "admin" || role === "editor"; }
+  function fail(error) { notice(error.message || "The request could not be confirmed. Refresh before trying again.", true); }
+  function hasEditRole() { return role === "admin" || role === "editor"; }
+  function canEdit() { return workspaceReady && readinessOK && hasEditRole(); }
   function current(epoch) { return epoch === authEpoch && !!session && !!role; }
   function requireCurrent(epoch) { if (!current(epoch)) throw new Error("Your session changed. Sign in again before saving."); }
-  function clearEditor() {
-    editorEpoch++;
+  function editorSnapshot() { return Array.from(el("editor-fields").querySelectorAll("input,select,textarea")).map(function (node) { return [node.name, node.type === "checkbox" ? node.checked : node.value]; }).map(function (value) { return JSON.stringify(value); }).join("|"); }
+  function clearEditor(force) {
+    if (draft && draft.busy && force !== true) return false;
+    if (draft && force !== true && (draft.requiresRefresh || draft.conflict || editorSnapshot() !== draft.initial) && !window.confirm("Close this draft and discard unsaved changes? If a save was uncertain, refresh and check the saved records before adding it again.")) return false;
+    draft = null; editorEpoch++;
     if (el("editor").open) el("editor").close();
     el("editor-fields").replaceChildren(); el("editor-form").reset();
     el("editor-form").dataset.id = ""; el("editor-form").dataset.kind = "";
-    el("editor-title").textContent = ""; el("editor-kicker").textContent = ""; el("editor-error").textContent = ""; el("save").disabled = false;
+    if (el("event-delete")) el("event-delete").hidden = true; if (el("editor-refresh")) el("editor-refresh").hidden = true;
+    el("editor-title").textContent = ""; el("editor-kicker").textContent = ""; el("editor-error").textContent = ""; el("save").disabled = false; return true;
   }
   function clearPrivate() {
     window.clearTimeout(documentExpiryTimer);
@@ -39,11 +51,13 @@
     if (followups) followups.clear(); if (reminderCalendar) reminderCalendar.clear();
     el("dashboard-followup-list").replaceChildren(); el("dashboard-followup-status").textContent = ""; el("followup-badge").textContent = ""; el("followup-badge").removeAttribute("aria-label");
     loadEpoch++; documentEpoch++; peopleReady = false; state = { events: [], people: [], documents: [], activity: [] };
-    clearEditor(); if (el("document-dialog").open) el("document-dialog").close(); el("document-result").replaceChildren();
+    workspaceReady = false; readinessOK = false; refreshing = false; readinessEpoch++;
+    clearEditor(true); if (el("document-dialog").open) el("document-dialog").close(); el("document-result").replaceChildren();
     ["dashboard-events", "events-list", "people-list", "documents-list", "activity-list", "user-label", "role-label"].forEach(function (id) { el(id).replaceChildren(); });
     ["event-count", "people-count", "document-count", "signup-count"].forEach(function (id) { el(id).textContent = "—"; });
     ["event-search", "people-search", "document-search", "event-filter", "people-filter", "document-filter", "email", "password"].forEach(function (id) { el(id).value = ""; });
     window.clearTimeout(notice.timer); els.notice.textContent = ""; els.notice.classList.add("hidden");
+    if (el("event-status-filter")) el("event-status-filter").value = "active";
     document.querySelector("aside").classList.remove("open"); el("menu").setAttribute("aria-expanded", "false");
   }
   // Keep database work outside the auth callback's lock. Invalidate immediately
@@ -54,7 +68,8 @@
     // known. Auth notifications still cannot unlock a signed-out workspace.
     if (next && signedOut) { if (!manualSignInPending) clearAuthStorage(); return; }
     if (next && session && next.user.id === session.user.id && role) {
-      session = next; el("user-label").textContent = next.user.email; return;
+      session = next; el("user-label").textContent = next.user.email;
+      window.setTimeout(function () { if (session === next) loadAll(authEpoch); }, 0); return;
     }
     var epoch = ++authEpoch; session = next; role = null; clearPrivate();
     el("login-error").textContent = ""; show(next ? "loading" : "login");
@@ -74,7 +89,7 @@
     if (!window.supabase || !window.supabase.createClient) { show("setup"); el("setup").querySelector("p:last-child").textContent = "The secure client could not load. Check the network connection and pinned client file."; return; }
     db = window.supabase.createClient(cfg.supabaseUrl, cfg.publishableKey, { auth: { storage: window.sessionStorage, storageKey: AUTH_STORAGE_KEY, persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
     bind();
-    var moduleOptions = { db: db, getContext: function () { return { epoch: authEpoch, userId: session && session.user.id, role: role, canEdit: canEdit() }; }, isCurrent: current, refresh: function () { return loadAll(authEpoch); }, notice: notice, people: function () { return state.people; }, peopleReady: function () { return peopleReady; }, documents: function () { return state.documents; } };
+    var moduleOptions = { db: db, getContext: function () { return { epoch: authEpoch, userId: session && session.user.id, role: role, canEdit: canEdit(), workspaceReady: workspaceReady }; }, isCurrent: current, ensureReady: ensureReady, refresh: function () { return loadAll(authEpoch); }, notice: notice, people: function () { return state.people; }, peopleReady: function () { return peopleReady; }, documents: function () { return state.documents; } };
     if (window.CreekMembership && el("history-view")) membership = window.CreekMembership.create(Object.assign({}, moduleOptions, { root: el("history-view"), sheetUrl: cfg.membershipSheetUrl || "" }));
     if (window.CreekCare && el("care-view")) care = window.CreekCare.create(Object.assign({}, moduleOptions, { root: el("care-view") }));
     if (window.CreekOfficeContent) officeContent = window.CreekOfficeContent.create(Object.assign({}, moduleOptions, {
@@ -89,8 +104,8 @@
     if (window.CreekReminderCalendar) reminderCalendar = window.CreekReminderCalendar.create({ button: el("weekly-reminder"), allowed: function () { return !!session && canEdit(); } });
     // Refresh these queues without replacing unsaved editors elsewhere.
     function refreshPersonalQueues() {
-      if (!canEdit() || !session || document.visibilityState !== "visible") return;
-      if (signups) signups.load(authEpoch); if (followups) followups.load(authEpoch);
+      if (!session || !role || refreshing || (draft && draft.busy) || document.visibilityState !== "visible") return;
+      loadAll(authEpoch);
     }
     window.setInterval(refreshPersonalQueues, 60000);
     document.addEventListener("visibilitychange", refreshPersonalQueues);
@@ -116,6 +131,10 @@
     el("document-dialog").addEventListener("close", function () { documentEpoch++; window.clearTimeout(documentExpiryTimer); el("document-result").replaceChildren(); });
     ["event-search", "event-filter", "people-search", "people-filter", "document-search", "document-filter"].forEach(function (id) { el(id).addEventListener("input", render); });
     el("editor-form").addEventListener("submit", saveEditor);
+    if (el("workspace-refresh")) el("workspace-refresh").addEventListener("click", function () { loadAll(authEpoch); });
+    if (el("editor-refresh")) el("editor-refresh").addEventListener("click", function () { loadAll(authEpoch); });
+    if (el("event-delete")) el("event-delete").addEventListener("click", archiveEvent);
+    if (el("event-status-filter")) el("event-status-filter").addEventListener("input", render);
   }
 
   async function login(event) {
@@ -141,16 +160,84 @@
     catch (error) { el("login-error").textContent = "The server could not confirm sign-out. This tab's saved session and workspace have been cleared."; }
     finally { clearAuthStorage(); el("login-submit").disabled = false; }
   }
+  function health(message, setup) {
+    var box = el("workspace-health"), text = el("workspace-health-message"), help = el("workspace-setup-help");
+    if (box) { box.hidden = !message; box.classList.toggle("hidden", !message); }
+    if (text) text.textContent = message || "";
+    hidden(help, !setup);
+    ["workspace-refresh", "editor-refresh"].forEach(function (id) { if (el(id)) el(id).disabled = refreshing || !!(draft && draft.busy); });
+  }
+  function freezeOtherDialogs(blocked) {
+    document.querySelectorAll("dialog[open]").forEach(function (dialog) {
+      if (dialog.id === "editor" || dialog.id === "document-dialog") return;
+      dialog.querySelectorAll("input,select,textarea,button[type=submit]").forEach(function (node) {
+        if (blocked && !node.hasAttribute("data-office-frozen")) { node.dataset.officeFrozen = String(node.disabled); node.disabled = true; }
+        else if (!blocked && node.hasAttribute("data-office-frozen")) { node.disabled = node.dataset.officeFrozen === "true"; delete node.dataset.officeFrozen; }
+      });
+    });
+  }
+  function syncEditor() {
+    if (!draft) return;
+    var frozen = draft.busy || draft.requiresRefresh || draft.conflict || !canEdit();
+    el("editor-fields").querySelectorAll("input,select,textarea").forEach(function (node) { node.disabled = frozen || (node.type === "file" && !!draft.file); });
+    el("save").disabled = frozen;
+    document.querySelectorAll("[data-close-editor]").forEach(function (node) { node.disabled = draft.busy; });
+    if (el("event-delete")) { hidden(el("event-delete"), draft.kind !== "event" || draft.isNew); el("event-delete").textContent = draft.archived ? "Restore event" : "Archive event"; el("event-delete").disabled = frozen; }
+    if (el("editor-refresh")) { hidden(el("editor-refresh"), !(draft.requiresRefresh || draft.conflict || !workspaceReady)); el("editor-refresh").disabled = refreshing || draft.busy; }
+  }
+  function blockWorkspace(message, setup) {
+    el("workspace").dataset.connection = "blocked";
+    workspaceReady = false; peopleReady = false; state = { events: [], people: [], documents: [], activity: [] };
+    documentEpoch++; window.clearTimeout(documentExpiryTimer); el("document-result").replaceChildren();
+    ["dashboard-events", "events-list", "people-list", "documents-list", "activity-list", "dashboard-followup-list"].forEach(function (id) { el(id).replaceChildren(); });
+    ["event-count", "people-count", "document-count", "signup-count"].forEach(function (id) { el(id).textContent = "—"; });
+    el("followup-badge").textContent = ""; el("followup-badge").removeAttribute("aria-label"); el("dashboard-followup-status").textContent = "Follow-ups are unavailable until the workspace refreshes.";
+    el("primary-action").disabled = true;
+    privateViews.forEach(function (name) { var view = el(name + "-view"); if (view) view.classList.add("hidden"); });
+    freezeOtherDialogs(true); syncEditor(); health(message, setup);
+  }
+  function authFailure(error) { return error && (error.status === 401 || ["PGRST301", "PGRST302", "PGRST303"].includes(error.code)); }
+  async function verifyReadiness(epoch) {
+    if (epoch !== authEpoch || !session) return false;
+    var request = ++readinessEpoch, userId = session.user.id;
+    try {
+      var staff = await deadline(db.from("staff_roles").select("role").eq("user_id", userId).maybeSingle());
+      if (epoch !== authEpoch || request !== readinessEpoch) return false;
+      if (staff.error) throw staff.error;
+      if (!staff.data || !["admin", "editor", "viewer"].includes(staff.data.role)) {
+        queueSession(null); el("login-error").textContent = "This account no longer has approved Creek Office access."; return false;
+      }
+      if (role && role !== staff.data.role) {
+        // A real role change invalidates module drafts and all previously loaded private data.
+        clearPrivate(); request = readinessEpoch;
+      }
+      role = staff.data.role; el("role-label").textContent = role;
+      var result = await deadline(db.rpc("office_readiness"));
+      if (epoch !== authEpoch || request !== readinessEpoch || !session || session.user.id !== userId) return false;
+      if (result.error) throw result.error;
+      var ready = result.data;
+      if (!ready || ready.staff_role !== role || String(ready.schema_revision || "") < REQUIRED_REVISION || !Array.isArray(ready.supported_modules) || (hasEditRole() ? ["events", "contacts", "documents", "activity", "membership", "care", "office_content", "app_signups", "leader_followups"] : ["events", "contacts", "documents", "activity"]).some(function (name) { return !ready.supported_modules.includes(name); })) {
+        throw { code: "OFFICE_SETUP" };
+      }
+      readinessOK = true; return true;
+    } catch (error) {
+      if (epoch !== authEpoch || request !== readinessEpoch) return false;
+      readinessOK = false;
+      if (authFailure(error)) { queueSession(null); el("login-error").textContent = "Your session could not be verified. Sign in again."; return false; }
+      var setup = ["PGRST202", "PGRST204", "42P01", "42703", "42883", "OFFICE_SETUP"].includes(error.code) || typeof db.rpc !== "function";
+      blockWorkspace(setup ? "Office setup is incomplete or out of date. Editing is paused until the required database update is installed. Your open draft stays in this tab." : "The office connection could not be verified. Editing is paused. Refresh to reconnect; your open draft stays in this tab.", setup);
+      return false;
+    }
+  }
+  async function ensureReady(epoch) {
+    epoch = epoch === undefined ? authEpoch : epoch;
+    if (!current(epoch) || !workspaceReady) return false;
+    var okay = await verifyReadiness(epoch);
+    return okay && current(epoch) && canEdit();
+  }
   async function useSession(next, epoch) {
     if (epoch !== authEpoch) return;
-    var result = await db.from("staff_roles").select("role").eq("user_id", next.user.id).maybeSingle();
-    if (epoch !== authEpoch) return;
-    if (result.error) throw result.error;
-    if (!result.data || ["admin", "editor", "viewer"].indexOf(result.data.role) === -1) { await logout(); el("login-error").textContent = "This account has not been approved for Creek Office."; return; }
-    role = result.data.role;
-    el("user-label").textContent = next.user.email;
-    el("role-label").textContent = role;
-    show("workspace");
+    el("user-label").textContent = next.user.email; show("workspace");
     await loadAll(epoch); if (current(epoch)) route();
   }
 
@@ -158,29 +245,42 @@
     var all = [];
     for (var offset = 0;; offset += 1000) {
       var query = db.from(table).select("*").order(column, { ascending: ascending }).order("id", { ascending: true });
-      var result = typeof query.range === "function" ? await query.range(offset, offset + 999) : await query;
+      var result = await deadline(typeof query.range === "function" ? query.range(offset, offset + 999) : query);
       if (result.error) return result; all = all.concat(result.data || []);
       if (!result.data || result.data.length < 1000 || typeof query.range !== "function") return { data: all };
     }
   }
   async function loadAll(epoch) {
     epoch = epoch === undefined ? authEpoch : epoch;
-    if (!current(epoch)) return;
-    var request = ++loadEpoch; peopleReady = false;
-    var results = await Promise.all([
-      db.from("events").select("*").order("starts_at", { ascending: true }),
-      fetchRecords("contacts", "last_name", true),
-      fetchRecords("documents", "updated_at", false),
-      db.from("audit_log").select("*").order("created_at", { ascending: false }).limit(100)
-    ]);
-    if (!current(epoch) || request !== loadEpoch) return;
-    peopleReady = !results[1].error;
-    if (!peopleReady) state.people = [];
-    var names = ["events", "people", "documents", "activity"];
-    results.forEach(function (result, index) { if (result.error) fail(result.error); else state[names[index]] = result.data || []; });
-    if (canEdit()) await Promise.all([membership ? membership.load(epoch) : null, care ? care.load(epoch) : null, officeContent ? officeContent.load(epoch) : null, signups ? signups.load(epoch) : null, followups ? followups.load(epoch) : null]);
-    if (!current(epoch) || request !== loadEpoch) return;
-    render();
+    if (epoch !== authEpoch || !session || refreshing || (draft && draft.busy)) return;
+    var request = ++loadEpoch; refreshing = true;
+    health("Checking the office connection and refreshing records…", false);
+    try {
+      if (!await verifyReadiness(epoch)) return;
+      request = loadEpoch;
+      var results = await Promise.all([
+        fetchRecords("events", "starts_at", true), fetchRecords("contacts", "last_name", true),
+        fetchRecords("documents", "updated_at", false), deadline(db.from("audit_log").select("*").order("created_at", { ascending: false }).limit(100))
+      ]);
+      if (!current(epoch) || request !== loadEpoch) return;
+      var failed = results.find(function (result) { return result.error || !Array.isArray(result.data); });
+      if (failed) throw failed.error || new Error("Incomplete record response");
+      var invalid = results.slice(0, 3).some(function (result) { return result.data.some(function (row) { return !row.id || !Number.isInteger(row.version) || row.version < 1; }); });
+      if (invalid) throw { code: "OFFICE_SETUP" };
+      ["events", "people", "documents", "activity"].forEach(function (name, index) { state[name] = results[index].data; });
+      workspaceReady = true; peopleReady = true; el("workspace").dataset.connection = "ready";
+      await reconcileDraft(epoch);
+      if (!current(epoch) || request !== loadEpoch) return;
+      freezeOtherDialogs(false);
+      if (canEdit()) await Promise.all([membership ? membership.load(epoch) : null, care ? care.load(epoch) : null, officeContent ? officeContent.load(epoch) : null, signups ? signups.load(epoch) : null, followups ? followups.load(epoch) : null]);
+      if (!current(epoch) || request !== loadEpoch) return;
+      health("", false); route(); syncEditor();
+    } catch (error) {
+      if (epoch !== authEpoch) return;
+      if (authFailure(error)) { queueSession(null); el("login-error").textContent = "Your session could not be verified. Sign in again."; return; }
+      var setup = ["OFFICE_SETUP", "42P01", "42703", "PGRST204"].includes(error.code);
+      blockWorkspace(setup ? "Office setup is incomplete or out of date. Editing is paused until the required database update is installed." : "Some office records could not be refreshed. Editing is paused and stale lists have been cleared. Your draft is preserved; refresh to try again.", setup);
+    } finally { if (epoch === authEpoch) { refreshing = false; syncEditor(); ["workspace-refresh", "editor-refresh"].forEach(function (id) { if (el(id)) el(id).disabled = !!(draft && draft.busy); }); } }
   }
 
   function route() {
@@ -192,21 +292,22 @@
     document.querySelectorAll("aside nav a").forEach(function (node) { node.classList.toggle("active", node.dataset.view === view); });
     el("page-title").textContent = titles[view];
     var labels = { calendar: "Add staff event", people: "Add person", documents: "Upload document", announcements: "Add announcement", committees: "Add contact", slides: "Add Sunday slides", prayers: "Add prayer request" };
+    el("primary-action").disabled = !canEdit();
     el("primary-action").textContent = labels[view] || "Add";
     el("primary-action").classList.toggle("hidden", !labels[view] || !canEdit());
     render();
   }
 
   function render() {
-    if (!session || !role) return;
+    if (!session || !role || !workspaceReady) return;
     var now = new Date();
-    var future = state.events.filter(function (item) { return new Date(item.ends_at || item.starts_at) >= now; });
+    var future = state.events.filter(function (item) { return !item.is_archived && new Date(item.ends_at || item.starts_at) >= now; });
     el("event-count").textContent = future.length;
     el("people-count").textContent = state.people.length;
     el("document-count").textContent = state.documents.length;
     el("dashboard-events").innerHTML = future.slice(0, 5).map(eventRow).join("");
-    var eventTerm = el("event-search").value.toLowerCase(), eventTag = el("event-filter").value;
-    el("events-list").innerHTML = state.events.filter(function (item) { return (!eventTag || item.tag === eventTag) && (!eventTerm || [item.title, item.location, item.description].join(" ").toLowerCase().includes(eventTerm)); }).map(eventRow).join("");
+    var eventTerm = el("event-search").value.toLowerCase(), eventTag = el("event-filter").value, eventStatus = el("event-status-filter") ? el("event-status-filter").value : "active";
+    el("events-list").innerHTML = state.events.filter(function (item) { return (eventStatus === "all" || !!item.is_archived === (eventStatus === "archived")) && (!eventTag || item.tag === eventTag) && (!eventTerm || [item.title, item.location, item.description].join(" ").toLowerCase().includes(eventTerm)); }).map(eventRow).join("");
     var peopleTerm = el("people-search").value.toLowerCase(), peopleStatus = el("people-filter").value;
     el("people-list").innerHTML = state.people.filter(function (item) { return (!peopleStatus || item.status === peopleStatus) && (!peopleTerm || [item.first_name, item.last_name, item.middle_name, item.preferred_name, item.former_names, item.membership_number, item.legacy_member_id, item.household_name, item.email, item.phone].join(" ").toLowerCase().includes(peopleTerm)); }).map(personRow).join("");
     var docTerm = el("document-search").value.toLowerCase(), docCategory = el("document-filter").value;
@@ -238,22 +339,23 @@
 
   function eventRow(item) {
     var start = new Date(item.starts_at);
-    return '<article class="row"><time datetime="' + safe(item.starts_at) + '">' + safe(start.toLocaleDateString("en-US", { month: "short", day: "numeric" })) + '</time><div><b>' + safe(item.title) + '</b><small>' + safe(start.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })) + (item.location ? " · " + safe(item.location) : "") + '</small></div>' + (canEdit() ? '<div class="row-actions"><button data-edit-event="' + item.id + '">Edit</button><button data-delete-event="' + item.id + '">Delete</button></div>' : "") + '</article>';
+    return '<article class="row"><time datetime="' + safe(item.starts_at) + '">' + safe(start.toLocaleDateString("en-US", { month: "short", day: "numeric" })) + '</time><div><b>' + safe(item.title) + (item.is_archived ? ' · Archived' : '') + '</b><small>' + safe(start.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })) + (item.location ? " · " + safe(item.location) : "") + '</small></div>' + (canEdit() ? '<div class="row-actions"><button data-edit-event="' + item.id + '">Edit</button><button data-delete-event="' + item.id + '">' + (item.is_archived ? "Restore" : "Archive") + '</button></div>' : "") + '</article>';
   }
   function personRow(item) { return '<tr><td><b>' + safe(item.last_name + ", " + item.first_name) + '</b>' + (item.membership_number ? '<small class="membership-person-extra">Member #'+safe(item.membership_number)+'</small>' : '') + (item.needs_review ? '<small class="membership-person-extra">Needs source review</small>' : '') + '</td><td><span class="tag">' + safe(item.status) + '</span></td><td>' + safe(item.household_name || "—") + '</td><td>' + dateLabel(item.updated_at.slice(0, 10)) + '</td><td>' + (canEdit() ? '<button class="quiet" data-edit-person="' + item.id + '">Edit</button> <button class="quiet" data-person-history="'+safe(item.id)+'">History</button>' : "") + '</td></tr>'; }
-  function documentRow(item) { return '<tr><td><b>' + safe(item.title) + '</b><small>' + safe(item.file_name) + '</small></td><td><span class="tag">' + safe(item.category) + '</span></td><td>' + dateLabel(item.updated_at.slice(0, 10)) + '</td><td><button class="quiet" data-open-document="' + item.id + '">Open</button></td></tr>'; }
+  function documentRow(item) { return '<tr><td><b>' + safe(item.title) + '</b><small>' + safe(item.file_name) + '</small></td><td><span class="tag">' + safe(item.category) + '</span></td><td>' + dateLabel(item.updated_at.slice(0, 10)) + '</td><td><button class="quiet" data-open-document="' + item.id + '">Open</button>' + (canEdit() ? ' <button class="quiet" data-edit-document="' + safe(item.id) + '">Edit details</button>' : '') + '</td></tr>'; }
   function activityRow(item) { return '<article class="row"><time>' + safe(new Date(item.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })) + '</time><div><b>' + safe(item.action) + " " + safe(item.entity_type) + '</b><small>Record ' + safe(item.entity_id || "") + '</small></div></article>'; }
 
   function bindRowActions() {
     document.querySelectorAll("[data-edit-event]").forEach(function (b) { b.onclick = function () { openEvent(state.events.find(function (x) { return x.id === b.dataset.editEvent; })); }; });
-    document.querySelectorAll("[data-delete-event]").forEach(function (b) { b.onclick = function () { deleteEvent(b.dataset.deleteEvent); }; });
+    document.querySelectorAll("[data-delete-event]").forEach(function (b) { b.onclick = function () { var item = state.events.find(function (row) { return row.id === b.dataset.deleteEvent; }); if (item) { openEvent(item); archiveEvent(); } }; });
     document.querySelectorAll("[data-edit-person]").forEach(function (b) { b.onclick = function () { openPerson(state.people.find(function (x) { return x.id === b.dataset.editPerson; })); }; });
     document.querySelectorAll("[data-person-history]").forEach(function (b) { b.onclick = function () { if (membership) membership.selectPerson(b.dataset.personHistory); }; });
+    document.querySelectorAll("[data-edit-document]").forEach(function (b) { b.onclick = function () { openDocumentEditor(state.documents.find(function (row) { return row.id === b.dataset.editDocument; })); }; });
     document.querySelectorAll("[data-open-document]").forEach(function (b) { b.onclick = function () { openDocument(b.dataset.openDocument); }; });
   }
 
   function primaryAction() { var view = (location.hash || "#dashboard").slice(1); if (view === "calendar") openEvent(); if (view === "people") openPerson(); if (view === "documents") openUpload(); if (officeContent && contentViews.includes(view)) officeContent.open(view); }
-  function openEditor(kind, title, fields, id) { if (!session || !canEdit()) return; clearEditor(); el("editor-kicker").textContent = kind; el("editor-title").textContent = title; el("editor-fields").innerHTML = fields; el("editor-error").textContent = ""; el("editor-form").dataset.kind = kind; el("editor-form").dataset.id = id || ""; el("editor").showModal(); }
+  function openEditor(kind, title, fields, id) { if (!session || !canEdit() || (draft && draft.busy)) return; if (!clearEditor()) return; var list = state[kind === "event" ? "events" : kind === "person" ? "people" : "documents"], existing = id ? list.find(function (row) { return row.id === id; }) : null; if (id && !existing) return; draft = { kind: kind, id: id || crypto.randomUUID(), isNew: !id, version: existing ? existing.version : 0, archived: !!(existing && existing.is_archived), busy: false, requiresRefresh: false, conflict: false }; el("editor-kicker").textContent = kind; el("editor-title").textContent = title; el("editor-fields").innerHTML = fields; el("editor-error").textContent = ""; el("editor-form").dataset.kind = kind; el("editor-form").dataset.id = id || ""; el("editor").showModal(); draft.initial = editorSnapshot(); syncEditor(); }
   function input(name, label, type, value, wide) { return '<label class="' + (wide ? "wide" : "") + '">' + label + '<input name="' + name + '" type="' + type + '" value="' + safe(value || "") + '" ' + (["title", "first_name", "starts_at"].indexOf(name) > -1 ? "required" : "") + '></label>'; }
   function select(name, label, options, value) { return '<label>' + label + '<select name="' + name + '">' + options.map(function (x) { return '<option value="' + x + '" ' + (x === value ? "selected" : "") + '>' + x + '</option>'; }).join("") + '</select></label>'; }
   function textArea(name, label, value) { return '<label class="wide">' + label + '<textarea name="' + name + '">' + safe(value || "") + '</textarea></label>'; }
@@ -263,70 +365,122 @@
 
   function openUpload(category) { openEditor("document", "Upload document", '<div class="form-grid">' + input("title", "Title", "text", "") + select("category", "Category", ["policy", "spreadsheet", "form", "minutes", "ministry", "other"], category || "policy") + '<label class="wide">File<input name="file" type="file" required aria-describedby="upload-help"><span id="upload-help">Maximum file size: 50 MB.</span></label>' + textArea("description", "Description", "") + '</div>'); }
 
+  function openDocumentEditor(item) {
+    if (!item) return;
+    openEditor("document", "Edit document details", '<p class="membership-note">This changes the description and category. The original uploaded file stays in place.</p><div class="form-grid">' + input("title", "Title", "text", item.title) + select("category", "Category", ["policy", "spreadsheet", "form", "minutes", "ministry", "other"], item.category) + textArea("description", "Description", item.description) + '</div>', item.id);
+  }
+  function tableFor(kind) { return kind === "event" ? "events" : kind === "person" ? "contacts" : "documents"; }
+  function valuesMatch(row, payload) { return Object.keys(payload || {}).every(function (key) { return ((key === "starts_at" || key === "ends_at") && row[key] && payload[key] && Date.parse(row[key]) === Date.parse(payload[key])) || row[key] === payload[key] || (row[key] == null && payload[key] == null); }); }
+  function textValue(form, key) { return String(form.get(key) || "").trim(); }
+  function payloadFor(form, item) {
+    var row;
+    if (item.kind === "event") {
+      var starts = new Date(form.get("starts_at")), ends = form.get("ends_at") ? new Date(form.get("ends_at")) : null;
+      if (!textValue(form, "title")) throw new Error("Enter a title.");
+      if (isNaN(starts) || (ends && (isNaN(ends) || ends < starts))) throw new Error("Choose a valid start time and an end time after it.");
+      row = { title: textValue(form, "title"), tag: form.get("tag"), starts_at: starts.toISOString(), ends_at: ends ? ends.toISOString() : null, location: textValue(form, "location") || null, description: textValue(form, "description") || null };
+    } else if (item.kind === "person") {
+      if (!textValue(form, "first_name")) throw new Error("Enter a first name.");
+      row = { first_name: textValue(form, "first_name"), last_name: textValue(form, "last_name"), status: form.get("status"), needs_review: form.get("needs_review") === "Needs review" };
+      ["household_name", "email", "phone", "notes", "membership_number", "legacy_member_id", "middle_name", "preferred_name", "former_names", "address", "birth_date_text", "received_date_text", "how_received", "baptism_date_text", "dismissal_date_text", "reason_for_decrease"].forEach(function (key) { row[key] = textValue(form, key) || null; });
+    } else {
+      if (!textValue(form, "title")) throw new Error("Enter a title.");
+      row = { title: textValue(form, "title"), category: form.get("category"), description: textValue(form, "description") || null };
+      if (item.isNew) {
+        var file = item.file || form.get("file");
+        if (!file || !file.name || !file.size) throw new Error("Choose a non-empty file.");
+        if (file.size > MAX_FILE_BYTES) throw new Error("This file is larger than 50 MB. Choose a smaller file.");
+        item.file = file;
+        if (el("upload-help")) el("upload-help").textContent = "This draft keeps the selected file through recovery. Start a new upload to choose a different file.";
+        var suffix = file.name.includes(".") ? file.name.split(".").pop().toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 12) : "";
+        item.path = item.path || session.user.id + "/" + item.id + (suffix ? "." + suffix : "");
+        Object.assign(row, { storage_path: item.path, file_name: file.name, mime_type: file.type || null, size_bytes: file.size });
+      }
+    }
+    return row;
+  }
   async function saveEditor(event) {
     event.preventDefault();
-    if (!session || !canEdit()) return;
-    var epoch = authEpoch, editorRequest = editorEpoch;
-    var form = new FormData(event.currentTarget), kind = event.currentTarget.dataset.kind, id = event.currentTarget.dataset.id;
-    el("save").disabled = true; el("editor-error").textContent = "";
+    if (!session || !canEdit() || !draft || draft.busy || draft.requiresRefresh || draft.conflict) return;
+    try { var payload = payloadFor(new FormData(event.currentTarget), draft); await persistDraft(payload); }
+    catch (error) { if (draft) el("editor-error").textContent = error.message || "Check the form and try again."; }
+  }
+  async function persistDraft(payload) {
+    var item = draft, epoch = authEpoch;
+    if (!item || item.busy || !canEdit()) return;
+    item.busy = true; item.submitted = payload; item.attempted = false;
+    el("editor-error").textContent = ""; syncEditor();
     try {
-      if (kind === "event") await saveEvent(form, id, epoch);
-      if (kind === "person") await savePerson(form, id, epoch);
-      if (kind === "document") await saveDocument(form, epoch);
-      if (!current(epoch) || editorRequest !== editorEpoch) return;
-      clearEditor(); await loadAll(epoch); if (current(epoch)) notice("Saved.");
-    } catch (error) { if (current(epoch) && editorRequest === editorEpoch) el("editor-error").textContent = error.message; }
-    finally { if (current(epoch) && editorRequest === editorEpoch) el("save").disabled = false; }
+      if (!await ensureReady(epoch) || draft !== item) throw new Error("The workspace could not be verified. Refresh before saving.");
+      requireCurrent(epoch);
+      if (item.kind === "document" && item.isNew && !item.uploadVerified) {
+        item.attempted = true; item.uploadUncertain = true;
+        var uploaded = await deadline(db.storage.from("church-documents").upload(item.path, item.file, { contentType: item.file.type || "application/octet-stream", upsert: false }));
+        requireCurrent(epoch); if (draft !== item) return;
+        if (uploaded.error) throw uploaded.error;
+        item.uploadVerified = true; item.uploadUncertain = false;
+      }
+      requireCurrent(epoch);
+      if (!canEdit() || draft !== item) throw new Error("Your access changed. Refresh before saving.");
+      item.attempted = true;
+      var query = item.isNew ? db.from(tableFor(item.kind)).insert(Object.assign({ id: item.id }, payload)) : db.from(tableFor(item.kind)).update(payload).eq("id", item.id).eq("version", item.version);
+      var result = await deadline(query.select("*").single());
+      if (!current(epoch) || draft !== item) return;
+      if (result.error) throw result.error;
+      if (!result.data || result.data.id !== item.id || result.data.version !== (item.isNew ? 1 : item.version + 1)) throw new Error("The saved record could not be confirmed.");
+      if (item.kind === "document" && item.isNew && result.data.storage_path !== item.path) throw new Error("The uploaded document could not be confirmed.");
+      item.busy = false; clearEditor(true);
+      notice(payload.is_archived === true ? "Event archived. You can restore it from Archived events." : payload.is_archived === false ? "Event restored." : "Saved and confirmed.");
+      await loadAll(epoch);
+    } catch (error) {
+      if (!current(epoch) || draft !== item) return;
+      if (authFailure(error)) { queueSession(null); el("login-error").textContent = "Your session could not be verified. Sign in again."; return; }
+      item.requiresRefresh = true;
+      el("editor-error").textContent = item.attempted ? "The save could not be confirmed. Your submitted draft is locked temporarily. Refresh workspace to check whether it saved before trying again." : "The workspace could not be verified. Your draft is preserved. Refresh before trying again.";
+    } finally { if (draft === item) { item.busy = false; syncEditor(); if (el("workspace-refresh")) el("workspace-refresh").disabled = refreshing; } }
   }
-  async function saveEvent(form, id, epoch) {
-    requireCurrent(epoch);
-    var starts = new Date(form.get("starts_at")), ends = form.get("ends_at") ? new Date(form.get("ends_at")) : null;
-    if (isNaN(starts) || (ends && (isNaN(ends) || ends < starts))) throw new Error("Choose a valid start time and an end time after it.");
-    var row = { title: form.get("title"), tag: form.get("tag"), starts_at: starts.toISOString(), ends_at: ends ? ends.toISOString() : null, location: form.get("location") || null, description: form.get("description") || null, updated_by: session.user.id };
-    var result = id ? await db.from("events").update(row).eq("id", id) : await db.from("events").insert(row);
-    if (result.error) throw result.error;
-  }
-  async function savePerson(form, id, epoch) {
-    requireCurrent(epoch);
-    var row = { first_name: form.get("first_name"), last_name: form.get("last_name"), status: form.get("status"), household_name: form.get("household_name") || null, email: form.get("email") || null, phone: form.get("phone") || null, notes: form.get("notes") || null, updated_by: session.user.id };
-    ["membership_number", "legacy_member_id", "middle_name", "preferred_name", "former_names", "address", "birth_date_text", "received_date_text", "how_received", "baptism_date_text", "dismissal_date_text", "reason_for_decrease"].forEach(function (key) { row[key] = String(form.get(key) || "").trim() || null; });
-    row.needs_review = form.get("needs_review") === "Needs review";
-    var result = id ? await db.from("contacts").update(row).eq("id", id) : await db.from("contacts").insert(row);
-    if (result.error) throw result.error;
-  }
-  async function saveDocument(form, epoch) {
-    requireCurrent(epoch);
-    var file = form.get("file");
-    if (!file || !file.name || !file.size) throw new Error("Choose a non-empty file.");
-    if (file.size > MAX_FILE_BYTES) throw new Error("This file is larger than 50 MB. Choose a smaller file.");
-    var suffix = file.name.includes(".") ? file.name.split(".").pop().toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 12) : "";
-    var userId = session.user.id, path = userId + "/" + crypto.randomUUID() + (suffix ? "." + suffix : "");
-    var upload = await db.storage.from("church-documents").upload(path, file, { contentType: file.type || "application/octet-stream", upsert: false });
-    if (upload.error) throw upload.error;
-    requireCurrent(epoch);
-    var result = await db.from("documents").insert({ title: form.get("title"), category: form.get("category"), description: form.get("description") || null, storage_path: path, file_name: file.name, mime_type: file.type || null, size_bytes: file.size, uploaded_by: userId });
-    if (result.error) {
-      if (current(epoch)) await db.storage.from("church-documents").remove([path]);
-      throw result.error;
+  async function reconcileDraft(epoch) {
+    var item = draft;
+    if (!item || item.busy) return;
+    var rows = state[item.kind === "event" ? "events" : item.kind === "person" ? "people" : "documents"], saved = rows.find(function (row) { return row.id === item.id; });
+    if (item.requiresRefresh && item.attempted && saved && saved.version === (item.isNew ? 1 : item.version + 1) && valuesMatch(saved, item.submitted)) {
+      clearEditor(true); notice("The previous save was confirmed during refresh. Review the saved record before making more changes."); return;
+    }
+    if ((!item.isNew && (!saved || saved.version !== item.version)) || (item.isNew && saved)) {
+      item.requiresRefresh = false; item.conflict = true;
+      el("editor-error").textContent = "This record changed or is no longer available. Your draft is preserved. Review or copy your changes, then close and reopen the current record; this older draft cannot overwrite it.";
+      return;
+    }
+    if (item.requiresRefresh && item.uploadUncertain && item.path) {
+      var split = item.path.lastIndexOf("/"), name = item.path.slice(split + 1);
+      var result = await deadline(db.storage.from("church-documents").list(item.path.slice(0, split), { search: name, limit: 100 }));
+      if (!current(epoch) || draft !== item) return;
+      if (result.error || !Array.isArray(result.data)) throw result.error || new Error("The uploaded file could not be checked.");
+      var stored = result.data.find(function (file) { return file.name === name; });
+      if (stored && (!stored.metadata || Number(stored.metadata.size) !== item.file.size)) {
+        item.conflict = true; el("editor-error").textContent = "An upload exists at this draft's reserved path but its details could not be verified. Keep this draft and ask the office administrator to review it."; return;
+      }
+      item.uploadVerified = !!stored; item.uploadUncertain = false;
+    }
+    if (item.requiresRefresh) {
+      item.requiresRefresh = false;
+      el("editor-error").textContent = "The previous save was not found. Your draft is preserved and can be retried using the same record ID.";
     }
   }
-  async function deleteEvent(id) {
-    if (!session || !canEdit() || !window.confirm("Delete this staff calendar event?")) return;
-    var epoch = authEpoch;
-    try {
-      var result = await db.from("events").delete().eq("id", id);
-      if (!current(epoch)) return;
-      if (result.error) return fail(result.error);
-      await loadAll(epoch); if (current(epoch)) notice("Event deleted.");
-    } catch (error) { if (current(epoch)) fail(error); }
+  async function archiveEvent() {
+    if (!draft || draft.kind !== "event" || draft.isNew || draft.busy || draft.requiresRefresh || draft.conflict || !canEdit()) return;
+    if (editorSnapshot() !== draft.initial) { el("editor-error").textContent = "Save your other event changes before archiving or restoring it, or close and discard those changes first."; return; }
+    if (!draft.archived && !window.confirm("Archive this staff calendar event? It will leave the active list and can be restored from Archived events.")) return;
+    await persistDraft({ is_archived: !draft.archived });
   }
   async function openDocument(id) {
-    if (!session || !role) return;
+    if (!session || !role || !workspaceReady) return;
     var item = state.documents.find(function (x) { return x.id === id; }); if (!item) return;
     var epoch = authEpoch, request = ++documentEpoch;
     el("document-result").textContent = "Preparing a private link…"; el("document-dialog").showModal();
     try {
-      var result = await db.storage.from("church-documents").createSignedUrl(item.storage_path, 60);
+      if (!await verifyReadiness(epoch) || !workspaceReady) throw new Error("The workspace could not be verified. Refresh before opening a file.");
+      var result = await deadline(db.storage.from("church-documents").createSignedUrl(item.storage_path, 60));
       if (!current(epoch) || request !== documentEpoch || !el("document-dialog").open) return;
       if (result.error) throw result.error;
       var address = new URL(result.data.signedUrl);

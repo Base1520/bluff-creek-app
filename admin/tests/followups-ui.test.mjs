@@ -33,7 +33,7 @@ function fixture(t,opts={}) {
     row.version++;rows.leader_followup_contacts.push({id:'log-'+next++,followup_id:row.id,owner_id:ctx.userId,contacted_on:args.p_contacted_on,outcome:args.p_outcome,method:args.p_method,notes:args.p_notes,created_at:today()+'T12:00:00Z'});
     let data={id:row.id,version:row.version,last_contact_on:row.last_contact_on};if(control.returnOverride)data=control.returnOverride(data);return Promise.resolve({data,error:null});
   }};
-  api=w.CreekFollowups.create({root,db,getContext:()=>ctx,isCurrent:e=>ctx.epoch===e&&!!ctx.userId,notice:(text,bad)=>notices.push({text,bad}),onSummary:s=>summaries.push(s),refresh:async()=>{refreshes++;return api.load(ctx.epoch);}});
+  api=w.CreekFollowups.create({root,db,getContext:()=>ctx,ensureReady:async epoch=>control.ensure?await control.ensure(epoch):true,isCurrent:e=>ctx.epoch===e&&!!ctx.userId,notice:(text,bad)=>notices.push({text,bad}),onSummary:s=>summaries.push(s),refresh:async()=>{refreshes++;return api.load(ctx.epoch);}});
   const form=()=>w.document.querySelector('[data-followups-form]');
   function set(name,value,change=false){const el=form().elements[name];if(el.type==='checkbox')el.checked=value;else el.value=value;if(change)el.dispatchEvent(new w.Event('change',{bubbles:true}));return el;}
   async function submit(force=false){if(force)form().reportValidity=()=>true;form().dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await tick();await tick();}
@@ -154,4 +154,19 @@ test('dashboard navigation reveals upcoming leaders after earlier search and rol
   assert.equal(search.value,'');assert.equal(role.value,'');assert.equal(f.root.querySelector('[data-followups-view="upcoming"]').getAttribute('aria-pressed'),'true');assert.equal(f.root.querySelectorAll('.followups-row').length,1);assert.match(f.root.querySelector('.followups-row').textContent,/Sample future leader/);
   f.api.showView('invalid');assert.equal(f.root.querySelector('[data-followups-view="upcoming"]').getAttribute('aria-pressed'),'true');
   f.setContext({epoch:2,userId:null,role:null,canEdit:false});f.api.clear();f.api.showView('all');assert.equal(f.root.textContent,'');
+});
+
+test('whole-workspace outage preserves same-owner draft, clears private list, and recovers without erasing text',async t=>{
+ const f=fixture(t,{plans:[plan]});await f.api.load(1);f.click('[data-followups-action="edit"]');f.set('notes','Synthetic unsaved personal note');
+ f.setContext({epoch:1,userId:'sample-owner',role:'editor',canEdit:false,workspaceReady:false});f.api.render();await f.api.load(1);assert.equal(f.form().elements.notes.value,'Synthetic unsaved personal note');assert.equal(f.form().elements.notes.disabled,true);assert.equal(f.root.querySelector('[data-followups-list]').textContent,'');assert.equal(f.summaries.at(-1).due,null);
+ f.setContext({epoch:1,userId:'sample-owner',role:'editor',canEdit:true,workspaceReady:true});await f.api.load(1);assert.equal(f.form().elements.notes.value,'Synthetic unsaved personal note');assert.equal(f.form().querySelector('[type=submit]').disabled,false);
+});
+test('personal writes await readiness and preserve frozen drafts when the live check fails',async t=>{
+ const f=fixture(t,{plans:[plan]});await f.api.load(1);f.click('[data-followups-action="contact"]');f.set('notes','Synthetic contact draft');let verify;f.control.ensure=()=>new Promise(r=>verify=r);const saving=f.submit();await tick();assert.equal(f.form().elements.notes.disabled,true);assert.equal(f.calls.some(q=>q.op==='rpc'),false);
+ f.setContext({epoch:1,userId:'sample-owner',role:'editor',canEdit:false,workspaceReady:false});verify(false);await saving;assert.equal(f.form().elements.notes.value,'Synthetic contact draft');assert.equal(f.form().querySelector('[type=submit]').disabled,true);assert.equal(f.calls.some(q=>q.op==='rpc'),false);
+ f.setContext({epoch:2,userId:null,role:null,canEdit:false});f.api.render();assert.equal(f.form(),null);assert.equal(f.root.textContent,'');
+});
+
+test('a personal write timeout preserves its submitted draft and ignores late acknowledgement',async t=>{
+ const f=fixture(t,{plans:[plan]});await f.api.load(1);f.click('[data-followups-action="contact"]');f.set('notes','Synthetic timed contact');let finish,expire;const real=f.w.setTimeout.bind(f.w);f.w.setTimeout=(fn,ms)=>ms===12000?(expire=fn,9999):real(fn,ms);f.control.hold=q=>new Promise(r=>finish=r);const saving=f.submit();await tick();expire();await saving;assert.equal(f.form().querySelector('[type=submit]').disabled,true);assert.equal(f.w.document.querySelector('[data-followups-close]').disabled,false);assert.equal(f.form().elements.notes.value,'Synthetic timed contact');finish({data:{id:plan.id,version:2,last_contact_on:today()}});await tick();assert.ok(f.form());assert.equal(f.notices.length,0);
 });
