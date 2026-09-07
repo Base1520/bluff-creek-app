@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { spotifyPlaylist, publicLink, pauseVisible } = require('../js/grow.js');
+const { spotifyPlaylist, publicLink, pauseVisible, displayedPassage } = require('../js/grow.js');
 
 test('Spotify accepts only full public playlist URLs and drops tracking parameters', () => {
   const id='0123456789ABCDEFGHIJKL';
@@ -25,4 +25,17 @@ test('the one-Sunday pause expires at Central midnight, not UTC midnight', () =>
 
 test('missing or impossible pause dates never produce an undated series exception', () => {
   for(const pause of [null,{}, {date:'2026-02-30'},{date:'2026-9-13'},{date:'next Sunday'}])assert.equal(pauseVisible(pause,new Date('2026-01-01T12:00:00Z')),false);
+});
+
+
+test('upcoming sermon stays scheduled through its Central date and never becomes preached history automatically', () => {
+  const series={nextPassage:{reference:'Habakkuk 1:2–4',date:'2026-09-20'},currentPassage:null};
+  assert.deepEqual(displayedPassage(series,new Date('2026-09-21T04:59:59Z')),{reference:'Habakkuk 1:2–4',date:'2026-09-20',upcoming:true});
+  assert.equal(displayedPassage(series,new Date('2026-09-21T05:00:00Z')),null);
+  series.currentPassage={reference:'Confirmed older passage',date:'2026-09-06'};
+  assert.equal(displayedPassage(series,new Date('2026-09-21T05:00:00Z')).upcoming,false);
+});
+test('invalid or future most-recent passages are not represented as preached sermons', () => {
+  const now=new Date('2026-09-07T18:00:00Z');
+  for(const currentPassage of [{reference:'Future',date:'2026-09-20'},{reference:'Impossible',date:'2026-02-30'},{reference:' ',date:'2026-09-06'},null])assert.equal(displayedPassage({currentPassage},now),null);
 });

@@ -235,8 +235,8 @@
         <div class="panel">
           <img class="sign" src="assets/la63.svg" alt="" aria-hidden="true">
           <div class="eye">Scan &amp; connect</div>
-          <h3>Get on the list.</h3>
-          <p>New here, or want <b>The 63</b> — our weekly update — plus prayer and announcements? Send a note so we can help you connect.</p>
+          <h3>Let’s stay connected.</h3>
+          <p>New here, have a question, or want to hear from the church? Send a note so we can help you connect.</p>
           <button class="btn" data-go="new">Connect with us</button>
         </div>
         <div class="install" id="installCard"></div>
@@ -257,16 +257,16 @@
             <div class="field"><label for="jl">Last name</label><input id="jl" name="last" autocomplete="family-name"></div>
           </div>
           <div class="field"><label for="je">Email</label><input id="je" name="email" type="email" required autocomplete="email" inputmode="email" placeholder="you@email.com"></div>
-          <div class="field"><label for="jp">Mobile (for text updates)</label><input id="jp" name="phone" type="tel" autocomplete="tel" inputmode="tel" placeholder="(225) 000-0000"></div>
+          <div class="field"><label for="jp">Mobile (optional)</label><input id="jp" name="phone" type="tel" autocomplete="tel" inputmode="tel" placeholder="(225) 000-0000"></div>
           <label class="check"><input type="checkbox" name="guest"> This was my first visit</label>
           <label class="check"><input type="checkbox" name="texts"> I’m interested in text updates</label>
-          <label class="check"><input type="checkbox" name="the63"> I’d like The 63 weekly email</label>
+          <label class="check"><input type="checkbox" name="the63"> I’m interested in future church email updates</label>
           <div class="field"><label for="jq">Anything we can pray for? (optional)</label><textarea id="jq" name="prayer" placeholder="Share as much or as little as you'd like…"></textarea></div>
           <button class="btn" type="submit">Open email draft</button>
         </form>
         <p class="form-status" id="joinStatus" role="status" aria-live="polite" hidden></p>
       </div>
-      <p class="note" id="joinNote">Review and send in your email app. Your entries stay on this page until you leave. <a class="direct-email">Email the church office directly</a>.</p>
+      <p class="note" id="joinNote">Review and send in your email app. Update preferences are an inquiry to the office; this form does not enroll you in a mailing or texting list. Your entries stay on this page until you leave. <a class="direct-email">Email the church office directly</a>.</p>
       <h3>What to expect on Sunday</h3>
       <div class="card plain">
         <ul>
@@ -348,7 +348,7 @@
           <p id="growSeriesIntroduction">Over the coming months, we’re walking through Habakkuk—bringing honest questions to God and learning to trust Him as we wait.</p>
           <p class="grow-cover-meta">Three chapters · An honest conversation with God</p>
         </div>
-        <div class="grow-current" id="growCurrent" hidden><span class="grow-eyebrow">Where we are</span><b id="growCurrentReference"></b><p id="growCurrentDate"></p></div>
+        <div class="grow-current" id="growCurrent" hidden><span class="grow-eyebrow" id="growPassageLabel">Where we are</span><b id="growCurrentReference"></b><p id="growCurrentDate"></p></div>
         <aside class="grow-pause" id="growPause" hidden><b id="growPauseTitle"></b><p id="growPauseDescription"></p></aside>
       </div>
 

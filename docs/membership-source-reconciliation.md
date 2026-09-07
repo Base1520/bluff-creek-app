@@ -63,3 +63,7 @@ The user confirmed that `Column 6` is unknown and should be explained by the led
 5. Where are the current first-time guest sheet and approved deacon visitation guidelines? What staff should be able to see detailed notes?
 
 After those decisions, prepare an import preview and exception report with all rows accounted for, preserve the source, and review identity/status decisions before applying changes to an authorized private backend. Browser Editor permission does not activate that backend, OCR, Google write-back or external reminders.
+
+## Read-only source preflight prepared September 7
+
+`tools/membership-import/preflight.py` now checks a privately selected CSV against the observed A:P header/width contract and reports sanitized row-number exceptions. It preserves source text in memory and never changes or copies raw source records into the repository. Column 6, identity and active/inactive status remain unresolved. It was verified with 15 fictional tests only; no actual source export was processed. See [usage and limits](../tools/membership-import/README.md). A structural pass is not approval to import. The reviewed crosswalk, durable import-batch/source-event identities and future writer still need to be built after the source walkthrough.

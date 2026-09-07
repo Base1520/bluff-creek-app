@@ -19,23 +19,33 @@
   function churchDate(now) { return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit'}).format(now || new Date()); }
   function validDate(value) { return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && !isNaN(Date.parse(value+'T12:00:00Z')) && new Date(value+'T12:00:00Z').toISOString().slice(0,10) === value; }
   function pauseVisible(pause, now) { return !!(pause && validDate(pause.date) && churchDate(now) <= pause.date); }
+  function displayedPassage(series, now) {
+    series = series || {};
+    var next = series.nextPassage, recent = series.currentPassage;
+    if (next && typeof next.reference === 'string' && next.reference.trim() && validDate(next.date) && next.date >= churchDate(now)) return { reference: next.reference, date: next.date, upcoming: true };
+    if (recent && typeof recent.reference === 'string' && recent.reference.trim() && validDate(recent.date) && recent.date <= churchDate(now)) return { reference: recent.reference, date: recent.date, upcoming: false };
+    return null;
+  }
   function init(doc, content) {
     var screen = doc.querySelector('[data-screen="grow"]');
     if (!screen) return;
     function set(id, value) { var node=doc.getElementById(id); if(node && typeof value === 'string')node.textContent=value; }
     var series=content.series || {}, spotify=content.spotify || {};
     set('growSeriesTitle',series.title);set('homeSeriesTitle',series.title);set('growSeriesSubtitle',series.subtitle);set('growSeriesIntroduction',series.introduction);
-    var passage=series.currentPassage;
-    if(passage && typeof passage.reference==='string' && validDate(passage.date)) {
-      set('growCurrentReference',passage.reference);
-      set('growCurrentDate','Most recent passage · '+new Date(passage.date+'T12:00:00Z').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric',timeZone:'UTC'}));
-      doc.getElementById('growCurrent').hidden=false;
+    function updateDatedContent() {
+      var passage = displayedPassage(series);
+      doc.getElementById('growCurrent').hidden = !passage;
+      if (passage) {
+        set('growPassageLabel', passage.upcoming ? 'Next in the series' : 'Where we are');
+        set('growCurrentReference', passage.reference);
+        set('growCurrentDate', (passage.upcoming ? 'Scheduled passage · ' : 'Most recent passage · ') + new Date(passage.date+'T12:00:00Z').toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric',timeZone:'UTC'}));
+      }
+      doc.getElementById('growPause').hidden = !pauseVisible(series.pause);
     }
-    function updatePause() { doc.getElementById('growPause').hidden=!pauseVisible(series.pause); }
     if(series.pause){set('growPauseTitle',series.pause.title);set('growPauseDescription',series.pause.description)}
-    updatePause(); doc.addEventListener('visibilitychange',updatePause);
+    updateDatedContent(); doc.addEventListener('visibilitychange',updateDatedContent);
     // Recheck after a long-open overnight session, not only on a full reload.
-    doc.defaultView.setInterval(updatePause,60000);
+    doc.defaultView.setInterval(updateDatedContent,60000);
     screen.querySelectorAll('[data-grow-scroll]').forEach(function(button){button.addEventListener('click',function(){var target=doc.getElementById(button.dataset.growScroll);if(target){target.scrollIntoView({behavior:'auto',block:'start'});var heading=target.querySelector('h3');if(heading){heading.tabIndex=-1;heading.focus({preventScroll:true})}}})});
     set('growSpotifyTitle',spotify.title);set('growSpotifyDescription',spotify.description);
     var playlist=spotifyPlaylist(spotify.playlistUrl), player=doc.getElementById('growSpotifyPlayer'), load=doc.getElementById('growSpotifyLoad'), close=doc.getElementById('growSpotifyClose');
@@ -62,5 +72,5 @@
     });
     doc.getElementById('growBooksPending').hidden=books.length>0;
   }
-  return { spotifyPlaylist:spotifyPlaylist, publicLink:publicLink, pauseVisible:pauseVisible, init:init };
+  return { spotifyPlaylist:spotifyPlaylist, publicLink:publicLink, pauseVisible:pauseVisible, displayedPassage:displayedPassage, init:init };
 }));

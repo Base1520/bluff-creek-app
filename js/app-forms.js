@@ -14,7 +14,7 @@
       body = 'A connection request from the Creek app\n\nName: ' + [value(form, 'first'), value(form, 'last')].filter(Boolean).join(' ') +
         '\nEmail: ' + value(form, 'email') + '\nPhone: ' + value(form, 'phone') +
         '\nFirst visit: ' + checked(form, 'guest') + '\nInterested in text updates: ' + checked(form, 'texts') +
-        '\nInterested in The 63 weekly email: ' + checked(form, 'the63') + '\nPrayer: ' + value(form, 'prayer');
+        '\nInterested in future church email updates: ' + checked(form, 'the63') + '\nPrayer: ' + value(form, 'prayer');
     } else {
       subject = 'Prayer @ the Creek';
       body = 'A prayer request from the Creek app\n\nFrom: ' + (value(form, 'name') || 'Name not provided') +

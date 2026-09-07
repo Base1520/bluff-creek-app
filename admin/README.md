@@ -4,6 +4,8 @@ Creek Office is the private staff side of Home @ the Creek. It provides staff si
 
 ## Backend setup
 
+Before setup, run `node tools/office-preflight/cli.mjs` from the app repository root. See [the preflight guide](../tools/office-preflight/README.md). A passing local packet is not a configured or verified church backend.
+
 1. Create a church-owned Supabase project. Do not use a personal project.
 2. Run `supabase/schema.sql`, followed by `supabase/migrations/20260907_membership_care.sql`, `supabase/migrations/20260907_office_content.sql`, `supabase/migrations/20260907164733_app_connections_care_roles.sql`, `supabase/migrations/20260907171014_leader_followups.sql`, then `supabase/migrations/20260907174301_office_record_recovery.sql`, in that explicit order in the project's SQL editor. See [signup/care setup](../docs/signup-care-maintenance.md) for migration-order and activation details.
 3. In Supabase Auth, create the first staff user. Public sign-up is not exposed by Creek Office.

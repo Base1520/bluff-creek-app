@@ -1,0 +1,101 @@
+{
+  "format_version": 1,
+  "schema_revision": "20260907174301",
+  "sql_files": [
+    {
+      "path": "supabase/schema.sql",
+      "sha256": "8c8a971885d4d2ec60a3f57c4a416ecc2bb6282c4b9065bc67ed87280bc2a28b",
+      "depends_on": []
+    },
+    {
+      "path": "supabase/migrations/20260907_membership_care.sql",
+      "sha256": "3c2fa9df159b4b7d6c6c84a9d883cac6d4dde411aa01f26df802d9665cee5b53",
+      "depends_on": [
+        "supabase/schema.sql"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260907_office_content.sql",
+      "sha256": "e4d287bfcfc8f8c6f68b7a217fe2abe87e7f7c337a548bb991dc6bbe441783a7",
+      "depends_on": [
+        "supabase/migrations/20260907_membership_care.sql"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260907164733_app_connections_care_roles.sql",
+      "sha256": "41fed80650afca46abb763569173e4a4656610634b60bbd6dd223c7ec103875d",
+      "depends_on": [
+        "supabase/migrations/20260907_office_content.sql"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260907171014_leader_followups.sql",
+      "sha256": "63c1d7400f99bdb1ffff9d616b93affc7321004bff6cac459ba31b4b59cbfc34",
+      "depends_on": [
+        "supabase/migrations/20260907164733_app_connections_care_roles.sql"
+      ]
+    },
+    {
+      "path": "supabase/migrations/20260907174301_office_record_recovery.sql",
+      "sha256": "c8d53cb0b4025d4d36b03169a50ff30f7d1eb8956357e0b1130e2bfbbbeb8b7b",
+      "depends_on": [
+        "supabase/migrations/20260907171014_leader_followups.sql"
+      ]
+    }
+  ],
+  "required_files": [
+    "admin/index.html",
+    "admin/help.html",
+    "admin/README.md",
+    "admin/config.js",
+    "admin/app.js",
+    "admin/membership.js",
+    "admin/care.js",
+    "admin/office-content.js",
+    "admin/signups.js",
+    "admin/followups.js",
+    "admin/reminder-calendar.js",
+    "admin/admin.css",
+    "admin/membership.css",
+    "admin/care.css",
+    "admin/office-content.css",
+    "admin/signups.css",
+    "admin/followups.css",
+    "admin/reminder-calendar.css",
+    "css/fonts.css",
+    "assets/logo.png",
+    "assets/fonts/bitter-latin-italic-500-v42.woff2",
+    "assets/fonts/bitter-latin-normal-v42.woff2",
+    "assets/fonts/nunito-sans-latin-normal-v19.woff2"
+  ],
+  "readiness_modules": [
+    "events",
+    "contacts",
+    "documents",
+    "activity",
+    "membership",
+    "care",
+    "office_content",
+    "app_signups",
+    "leader_followups"
+  ],
+  "prerequisite_tables": [
+    "staff_roles",
+    "events",
+    "contacts",
+    "documents",
+    "audit_log",
+    "membership_history",
+    "care_assignments",
+    "care_visits",
+    "guest_intakes",
+    "care_guidelines",
+    "office_announcements",
+    "committee_contacts",
+    "sunday_slides",
+    "office_prayer_requests",
+    "app_connections",
+    "leader_followups",
+    "leader_followup_contacts"
+  ]
+}

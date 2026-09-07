@@ -4,7 +4,7 @@ Grow is a public app screen at `#grow`, with an entry on Home and in More. It fo
 
 ## Current content
 
-The user confirmed Habakkuk for the coming months, except September 13, 2026. The September 6 passage, Habakkuk 1:2–4, is supported by dated church sermon metadata; this is not proof of a recording or its availability. No future weekly passage, exact series end date, or September 13 topic has been invented.
+On September 7 the pastor confirmed: **Sunday, September 13: Colossians 3 again; Sunday, September 20: Habakkuk 1:2–4.** The app displays September 20 as a scheduled upcoming series passage, not an already-preached message. The September 13 exception has its confirmed topic. The earlier claim of a September 6 Habakkuk passage is cleared (`currentPassage: null`); no historical sermon date has been inferred. The Habakkuk introduction and historical guide remain available.
 
 The guide covers historical setting, the movement of the book, themes, and reading questions. Historical dating is explicitly approximate. It contains original summaries and references, with no copied private sermon prose or new personal records. The guide is reviewable church content, not attributed as Pastor Cole's verbatim writing.
 
@@ -22,7 +22,8 @@ Edit the public `js/grow-content.js` file on a feature branch, preview and revie
 - `updated`: the church review date.
 - `series.title`, `subtitle`, `introduction`: short public copy.
 - `series.currentPassage`: `{ reference: 'Habakkuk 1:2–4', date: '2026-09-06' }`, or `null` when no passage is confirmed. This remains a dated latest passage and does not claim to be the next Sunday's text.
-- `series.pause`: an absolute `YYYY-MM-DD` date, a title that includes that date, and public description, or `null`. The notice appears through that day in America/Chicago and then hides. Long-open sessions recheck on visibility changes and every minute. Set the actual September 13 topic only after Cole confirms it.
+- `series.nextPassage`: a confirmed upcoming passage/date, or `null`. It is labeled scheduled, hides after its date in Central time, and is never automatically promoted to preached history. After the service, explicitly confirm a `currentPassage` and set the next planned text.
+- `series.pause`: an absolute `YYYY-MM-DD` date, a title that includes that date, and public description, or `null`. When confirmed and configured, the notice appears through that day in America/Chicago and then hides. Long-open sessions recheck on visibility changes and every minute. September 13 Colossians 3 is confirmed; change the exception only after a new pastoral instruction.
 - `spotify.playlistUrl`: the full approved `https://open.spotify.com/playlist/…` share link. Localized `intl-xx` links work; tracking/query fragments are removed. Shortened Spotify links and non-playlist entities are not accepted. The blank current value intentionally displays a coming-soon state.
 - `books`: Cole's approved recommendations only. Each item needs `approved: true`, `title`, and `author`. Optional `note` is a short approved explanation; optional `url` is the publisher's HTTPS page. Unapproved entries never render. The current list is empty because Cole has not yet supplied titles. No sample books, invented endorsements, affiliate tags or purchase transactions are included.
 
@@ -32,7 +33,7 @@ For the next series, also replace the static context/chapters/reflections/source
 
 The app makes no Spotify request until a visitor clicks **Load Spotify player** or follows **Open in Spotify**. The player is built from the validated playlist ID, with a descriptive title, no autoplay request and a persistent external fallback. It is never represented as successfully playing merely because its frame loaded. **Close player** removes the frame and restores focus. Spotify controls playback, account/region availability and any previews. Actual playback cannot be verified until the approved public playlist is supplied.
 
-The text guide, CSS and both public Grow scripts join the versioned `creek-v6` service-worker shell (19 assets). Music and linked books/Bible resources need internet; no audio or third-party content is cached. Existing private/admin route exclusions remain.
+The text guide, CSS and both public Grow scripts join the versioned `creek-v8` service-worker shell (19 assets). Music and linked books/Bible resources need internet; no audio or third-party content is cached. Existing private/admin route exclusions remain.
 
 ## Verification
 
