@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Bluff Creek — Social Studio</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:wght@500;600;700&family=Nunito+Sans:wght@400;600;700;800&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  :root{--ivory:#F5EFE3;--surface:#fff;--ink:#221F1A;--ink2:#5E574C;--ink3:#938a79;
+        --pine:#3C5A45;--pine-deep:#2E4636;--pine-tint:#EAF0EA;--wheat:#B08636;--wheat-text:#9C7630;
+        --clay:#A8573E;--moss:#6B8F5E;--creekblue:#557A82;--line:#E4DAC8}
+  *{box-sizing:border-box}
+  body{margin:0;background:#e8e2d6;color:var(--ink);font-family:"Nunito Sans",system-ui,sans-serif;font-size:15px;line-height:1.6}
+  header{background:var(--pine-deep);color:#f4efe2;padding:22px 26px}
+  header h1{font-family:"Bitter",serif;font-weight:600;font-size:24px;margin:0 0 3px;letter-spacing:-.01em}
+  header p{margin:0;font-size:13.5px;color:#cdbf98}
+  header a{color:#e5c76f}
+  .wrap{max-width:1180px;margin:0 auto;padding:24px 20px 60px}
+  .cols{display:grid;grid-template-columns:340px 1fr;gap:26px;align-items:start}
+  @media (max-width:900px){.cols{grid-template-columns:1fr}}
+  .panel{background:#fff;border:1px solid var(--line);border-radius:10px;padding:18px}
+  .panel h2{font-family:"Bitter",serif;font-size:16px;margin:0 0 12px}
+  label{display:block;font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--wheat-text);margin:14px 0 5px}
+  select,input,textarea{width:100%;font-family:inherit;font-size:14px;padding:9px 10px;border:1px solid var(--line);border-radius:7px;background:#fdfbf7;color:var(--ink)}
+  textarea{resize:vertical;min-height:64px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .btn{display:inline-block;margin-top:18px;width:100%;text-align:center;background:var(--wheat);color:#231a06;
+       font-weight:800;font-size:15px;padding:13px 16px;border:0;border-radius:9px;cursor:pointer;letter-spacing:.01em}
+  .btn:hover{filter:brightness(1.06)}
+  .btn.ghost{background:transparent;border:1.5px solid var(--line);color:var(--ink);margin-top:8px}
+  .hint{font-size:12.5px;color:var(--ink3);margin-top:10px;line-height:1.5}
+
+  .stage{background:#fff;border:1px solid var(--line);border-radius:10px;padding:20px;display:flex;flex-direction:column;align-items:center}
+  .shell{overflow:hidden;border-radius:8px;box-shadow:0 20px 44px -24px rgba(30,24,12,.5)}
+  #card{transform-origin:top left}
+
+  /* ---------- the canvas itself: always real pixels ---------- */
+  .post{position:relative;overflow:hidden;font-family:"Nunito Sans",sans-serif;background:var(--ivory);color:var(--ink)}
+  .post .pad{position:relative;z-index:3;height:100%;display:flex;flex-direction:column;justify-content:space-between}
+  .post .eyebrow{font-weight:800;text-transform:uppercase;letter-spacing:.2em;display:flex;align-items:center;gap:14px}
+  .post .eyebrow::before{content:"";height:3px;width:38px;background:currentColor;border-radius:3px;flex:0 0 auto}
+  .post h2.head{font-family:"Bitter",serif;font-weight:600;letter-spacing:-.022em;line-height:1.03;margin:0}
+  .post .body{line-height:1.5;margin:0}
+  .post .meta{font-weight:800;text-transform:uppercase;letter-spacing:.15em}
+  .post .wm63{position:absolute;font-family:"Bitter",serif;font-weight:700;line-height:1;letter-spacing:-.05em;opacity:.055;z-index:1;pointer-events:none}
+  .post img.mark{display:block}
+  .post img.creek{display:block;opacity:.9}
+  .post .rule{background:var(--wheat);border-radius:4px}
+  .post .foot{display:flex;align-items:center;justify-content:space-between;gap:16px;position:relative;z-index:3}
+  .post .foot .addr{display:flex;align-items:center;gap:10px;font-weight:800;text-transform:uppercase;letter-spacing:.13em}
+
+  details.rules{margin-top:26px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+  details.rules summary{font-family:"Bitter",serif;font-size:17px;font-weight:600;cursor:pointer}
+  details.rules h3{font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--wheat-text);margin:18px 0 6px}
+  details.rules ul{margin:0;padding-left:18px}
+  details.rules li{margin-bottom:5px}
+  code{background:var(--pine-tint);padding:1px 6px;border-radius:4px;font-size:13px}
+</style></head>
+<body>
+
+<header>
+  <h1>Social Studio — Bluff Creek</h1>
+  <p>Pick a template, type the words, download the image. Everything comes out on brand. Full guidelines: <a href="../">the brand kit</a>.</p>
+</header>
+
+<div class="wrap">
+<div class="cols">
+
+  <div class="panel">
+    <h2>Build a post</h2>
+
+    <label for="tpl">Template</label>
+    <select id="tpl"></select>
+
+    <label for="size">Size</label>
+    <select id="size">
+      <option value="1080x1080">Square — feed post (1080 × 1080)</option>
+      <option value="1080x1350">Portrait — best reach (1080 × 1350)</option>
+      <option value="1080x1920">Story / Reel cover (1080 × 1920)</option>
+    </select>
+
+    <label for="eyebrow">Small label on top</label>
+    <input id="eyebrow" maxlength="42">
+
+    <label for="head">Headline</label>
+    <textarea id="head" maxlength="90"></textarea>
+
+    <label for="body">Supporting line <span style="color:var(--ink3);font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
+    <textarea id="body" maxlength="180"></textarea>
+
+    <div class="row">
+      <div><label for="meta1">Detail line 1</label><input id="meta1" maxlength="34"></div>
+      <div><label for="meta2">Detail line 2</label><input id="meta2" maxlength="34"></div>
+    </div>
+
+    <button class="btn" id="dl">Download PNG</button>
+    <button class="btn ghost" id="reset">Reset to the example</button>
+    <p class="hint">Post the PNG straight to Instagram or Facebook. Paste the matching caption from the guide below the preview.</p>
+  </div>
+
+  <div class="stage">
+    <div class="shell"><div id="card"></div></div>
+    <p class="hint" id="dims" style="margin-top:14px"></p>
+  </div>
+
+</div>
+
+<details class="rules" open>
+  <summary>Captions, cadence, and the rules that matter</summary>
+
+  <h3>Caption formulas — fill in the blanks</h3>
+  <ul>
+    <li><b>Sunday invite:</b> "Doors open at 9. [One warm sentence about what happens.] Come as you are — we'd love to meet you. 1706 Highway 63, Clinton."</li>
+    <li><b>Sermon quote:</b> "[The quote.] — Pastor Cole, [passage], this Sunday at the Creek. Full message at the link in bio."</li>
+    <li><b>Scripture:</b> Post the verse and the reference. Say nothing else. Let it sit.</li>
+    <li><b>Event:</b> "[What it is.] [Day, date, time.] [Where.] [Who it's for.] [What to bring, or 'just bring yourself.']"</li>
+    <li><b>Youth:</b> "6 on the 63. Wednesday, 6:00, fellowship building. [What's happening.] Bring a friend."</li>
+    <li><b>Recap / photo dump:</b> "[What we did.] Grateful for [who]. [One line of why it mattered.]"</li>
+  </ul>
+
+  <h3>Rhythm — three posts a week beats seven</h3>
+  <ul>
+    <li><b>Thursday:</b> what's coming Sunday.</li>
+    <li><b>Sunday morning:</b> the invite, posted early.</li>
+    <li><b>Monday or Tuesday:</b> a line from the sermon, or photos from the weekend.</li>
+    <li>Stories any time — they're low stakes and don't need to be perfect.</li>
+  </ul>
+
+  <h3>Always</h3>
+  <ul>
+    <li>Ivory backgrounds most of the time. Pine and gold are accents, not the whole post.</li>
+    <li><b>Kidz @ the Creek</b> is spelled with a z. That's the church's own spelling.</li>
+    <li>Ministry names always read <b>[Ministry] @ the Creek</b> — never "at the Creek", never "BCBC Youth".</li>
+    <li>One idea per post. If it needs two headlines, it's two posts.</li>
+    <li>Real photos of real people beat stock every single time.</li>
+  </ul>
+
+  <h3>Never</h3>
+  <ul>
+    <li>Don't recolor, stretch, outline, or add effects to the logo.</li>
+    <li>Don't give a ministry its own logo, icon, or mascot — accent color only.</li>
+    <li>Don't use the green from the little LA 63 highway sign (<code>#006B54</code>) anywhere else. It belongs to that marker only.</li>
+    <li>Don't post photos of children without a parent's okay.</li>
+    <li>Don't post photos from international mission work. Ever — it can expose locations and the people who host us.</li>
+    <li>Don't use canned Christian stock art or free-clipart crosses.</li>
+  </ul>
+
+  <h3>Colors, if you're building something custom</h3>
+  <ul>
+    <li>Ivory <code>#F5EFE3</code> · White <code>#FFFFFF</code> · Pine <code>#3C5A45</code> · Gold <code>#B08636</code> · Clay <code>#A8573E</code> · Ink <code>#221F1A</code></li>
+    <li>Ministry accents — Kidz <code>#6B8F5E</code> · Youth <code>#557A82</code> · Missions <code>#A8573E</code> · Worship <code>#B08636</code></li>
+    <li>Fonts: <b>Bitter</b> for headlines, <b>Nunito Sans</b> for everything else. Both free on Google Fonts.</li>
+  </ul>
+</details>
+
+</div>
+
+<script>
+var A = "../assets/";  // brand assets folder
+
+var TEMPLATES = {
+  invite:   {name:"Sunday invite",              style:"pine",   eyebrow:"Bluff Creek Baptist Church", head:"Welcome home to the Creek.", body:"A country church on Highway 63 that loves the Word and would love to know you.", meta1:"Sunday 10:15a", meta2:"1706 Hwy 63 · Clinton"},
+  quote:    {name:"Sermon quote",               style:"ivory",  eyebrow:"From Sunday",               head:"“Grace is not God lowering the standard. It is God meeting it for you.”", body:"", meta1:"Pastor Cole Permenter", meta2:"Romans 5"},
+  scripture:{name:"Scripture card",             style:"deep",   eyebrow:"The Word",                  head:"But as for me and my house, we will serve the LORD.", body:"", meta1:"Joshua 24:15", meta2:""},
+  event:    {name:"Event announcement",         style:"ivory",  eyebrow:"Mark your calendar",        head:"Fall Festival @ the Creek", body:"Games, food, and a trunk-or-treat for every age. Bring the whole family and a friend.", meta1:"Saturday, Oct 25 · 5:00p", meta2:"Fellowship Building"},
+  youth:    {name:"Youth — 6 on the 63",        style:"youth",  eyebrow:"Youth @ the Creek",         head:"6 on the 63.", body:"Wednesday nights. Supper, a word from the Word, and the pickleball court.", meta1:"Wednesdays 6:00p", meta2:"6th–12th grade"},
+  kidz:     {name:"Kidz @ the Creek",           style:"kidz",   eyebrow:"Kidz @ the Creek",          head:"A safe, loving place — every single week.", body:"Birth through 5th grade. Sunday School at 9:00 and a nursery for the littlest ones.", meta1:"Sundays 9:00a", meta2:"Fellowship Building"},
+  missions: {name:"Missions",                   style:"missions",eyebrow:"Missions @ the Creek",     head:"Across the street and across the world.", body:"We take the Great Commission personally — and we send our own people to do it.", meta1:"Get involved", meta2:"bluffcreekbaptistchurch.org"},
+  prayer:   {name:"Prayer",                     style:"pine",   eyebrow:"Pray with us",              head:"Wednesday night, we pray.", body:"Bring what you're carrying. Somebody here will carry it with you.", meta1:"Wednesdays 6:00p", meta2:"Sanctuary"},
+  newhere:  {name:"New here / first visit",     style:"ivory",  eyebrow:"First stop on the 63",      head:"Never been? Start here.", body:"Where to park, what to wear, what to do with your kids — we wrote it all down so nothing feels like a guess.", meta1:"Plan your first Sunday", meta2:"bluffcreekbaptistchurch.org"},
+  serve:    {name:"Serve / volunteer call",     style:"ivory",  eyebrow:"Lend a hand",               head:"There's a place for you on a team.", body:"Nursery, greeting, sound, and the Wednesday meal. It takes a couple hours a month.", meta1:"Talk to Pastor Cole", meta2:"or reply to this post"},
+  baptism:  {name:"Baptism / celebration",      style:"deep",   eyebrow:"Buried with Him",           head:"Another one home.", body:"Nothing gets old about this. Praise God for what He's doing at the Creek.", meta1:"Baptism Sunday", meta2:""},
+  schedule: {name:"Weekly schedule",            style:"pine",   eyebrow:"This week at the Creek",    head:"Here's when we gather.", body:"Sunday School 9:00a · Worship 10:15a · Evening 6:00p\nWednesday prayer &amp; youth 6:00p", meta1:"1706 Highway 63", meta2:"Clinton, Louisiana"}
+};
+
+var STYLES = {
+  ivory:    {bg:"#F5EFE3", fg:"#221F1A", eyebrow:"#9C7630", sub:"#5E574C", mark:"logo.png",       creek:"creek-gold.png",  wm:"#3C5A45", rule:"#B08636"},
+  pine:     {bg:"linear-gradient(160deg,#2E4636,#3C5A45 88%)", fg:"#F6F2E7", eyebrow:"#d9c896", sub:"#e6ddc7", mark:"logo-white.png", creek:"creek-ivory.png", wm:"#FFFFFF", rule:"#B08636"},
+  deep:     {bg:"linear-gradient(165deg,#16211A,#2E4636 92%)", fg:"#F6F2E7", eyebrow:"#e5c76f", sub:"#ded5bf", mark:"logo-white.png", creek:"creek-ivory.png", wm:"#FFFFFF", rule:"#B08636"},
+  youth:    {bg:"linear-gradient(160deg,#3B5A61,#557A82 90%)", fg:"#F6F2E7", eyebrow:"#dcecef", sub:"#e3edef", mark:"logo-white.png", creek:"creek-ivory.png", wm:"#FFFFFF", rule:"#B08636"},
+  kidz:     {bg:"linear-gradient(160deg,#4E7343,#6B8F5E 90%)", fg:"#F7F3E8", eyebrow:"#e8f0e2", sub:"#eaf1e5", mark:"logo-white.png", creek:"creek-ivory.png", wm:"#FFFFFF", rule:"#B08636"},
+  missions: {bg:"linear-gradient(160deg,#8A452F,#A8573E 90%)", fg:"#F8F1EA", eyebrow:"#f0d7c9", sub:"#f1ddd2", mark:"logo-white.png", creek:"creek-ivory.png", wm:"#FFFFFF", rule:"#E4C08A"}
+};
+
+var SIZES = {
+  "1080x1080":{w:1080,h:1080,pad:96,  head:82,  body:31, eye:20, meta:19, mark:132, creek:250, wm:600},
+  "1080x1350":{w:1080,h:1350,pad:104, head:90,  body:33, eye:21, meta:20, mark:140, creek:270, wm:660},
+  "1080x1920":{w:1080,h:1920,pad:112, head:100, body:35, eye:22, meta:21, mark:150, creek:300, wm:720}
+};
+
+var $ = function(id){return document.getElementById(id)};
+var cur = "invite";
+
+// build the template picker
+var sel = $("tpl");
+Object.keys(TEMPLATES).forEach(function(k){
+  var o = document.createElement("option"); o.value = k; o.textContent = TEMPLATES[k].name; sel.appendChild(o);
+});
+
+function esc(s){return String(s).replace(/&(?!amp;)/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+function nl(s){return esc(s).replace(/\n/g,"<br>")}
+
+function render(){
+  var t = TEMPLATES[cur], s = STYLES[t.style], z = SIZES[$("size").value];
+  var eyebrow = $("eyebrow").value, head = $("head").value, body = $("body").value,
+      m1 = $("meta1").value, m2 = $("meta2").value;
+
+  var html =
+  '<div class="post" style="width:'+z.w+'px;height:'+z.h+'px;background:'+s.bg+';color:'+s.fg+'">'
+  + '<div class="wm63" style="right:-.06em;bottom:-.28em;font-size:'+z.wm+'px;color:'+s.wm+'">63</div>'
+  + '<img class="creek" src="'+A+s.creek+'" style="position:absolute;left:-30px;bottom:'+Math.round(z.pad*1.5)+'px;width:'+z.creek+'px;opacity:.22;z-index:2" alt="">'
+  + '<div class="pad" style="padding:'+z.pad+'px">'
+  +   '<div>'
+  +     '<img class="mark" src="'+A+s.mark+'" style="width:'+z.mark+'px;margin-bottom:'+Math.round(z.pad*0.62)+'px" alt="">'
+  +     (eyebrow ? '<div class="eyebrow" style="font-size:'+z.eye+'px;color:'+s.eyebrow+';margin-bottom:'+Math.round(z.pad*0.30)+'px">'+esc(eyebrow)+'</div>' : '')
+  +     '<h2 class="head" style="font-size:'+z.head+'px;max-width:15ch">'+nl(head)+'</h2>'
+  +     (body ? '<p class="body" style="font-size:'+z.body+'px;color:'+s.sub+';max-width:26ch;margin-top:'+Math.round(z.pad*0.34)+'px">'+nl(body)+'</p>' : '')
+  +   '</div>'
+  +   '<div class="foot">'
+  +     '<div>'
+  +       '<div class="rule" style="width:64px;height:4px;background:'+s.rule+';margin-bottom:'+Math.round(z.pad*0.26)+'px"></div>'
+  +       (m1 ? '<div class="meta" style="font-size:'+z.meta+'px;color:'+s.fg+'">'+esc(m1)+'</div>' : '')
+  +       (m2 ? '<div class="meta" style="font-size:'+z.meta+'px;color:'+s.sub+';margin-top:6px">'+esc(m2)+'</div>' : '')
+  +     '</div>'
+  +     '<img src="'+A+'la63.svg" style="width:'+Math.round(z.mark*0.42)+'px;opacity:.9" alt="">'
+  +   '</div>'
+  + '</div></div>';
+
+  $("card").innerHTML = html;
+
+  // scale the preview to fit its column
+  var stageW = document.querySelector(".stage").clientWidth - 44;
+  var scale = Math.min(1, stageW / z.w, 560 / z.h);
+  $("card").style.transform = "scale("+scale+")";
+  document.querySelector(".shell").style.width  = Math.round(z.w*scale)+"px";
+  document.querySelector(".shell").style.height = Math.round(z.h*scale)+"px";
+  $("dims").textContent = z.w + " × " + z.h + " px  ·  " + TEMPLATES[cur].name;
+}
+
+function loadTemplate(k){
+  cur = k; var t = TEMPLATES[k];
+  $("eyebrow").value = t.eyebrow; $("head").value = t.head;
+  $("body").value = t.body.replace(/&amp;/g,"&"); $("meta1").value = t.meta1; $("meta2").value = t.meta2;
+  render();
+}
+
+sel.addEventListener("change", function(){ loadTemplate(sel.value) });
+["size","eyebrow","head","body","meta1","meta2"].forEach(function(id){
+  $(id).addEventListener("input", render);
+});
+$("reset").addEventListener("click", function(){ loadTemplate(cur) });
+window.addEventListener("resize", render);
+
+$("dl").addEventListener("click", function(){
+  var node = $("card").firstChild, btn = $("dl"), old = btn.textContent;
+  btn.textContent = "Building…";
+  var prev = $("card").style.transform; $("card").style.transform = "scale(1)";
+  html2canvas(node, {backgroundColor:null, scale:1, useCORS:true, logging:false}).then(function(canvas){
+    $("card").style.transform = prev;
+    var a = document.createElement("a");
+    a.download = "bluffcreek-" + cur + "-" + $("size").value + ".png";
+    a.href = canvas.toDataURL("image/png");
+    a.click(); btn.textContent = old;
+  }).catch(function(){ $("card").style.transform = prev; btn.textContent = old; alert("Couldn't build the image — try again."); });
+});
+
+document.fonts && document.fonts.ready.then(render);
+loadTemplate("invite");
+</script>
+</body></html>
