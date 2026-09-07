@@ -173,18 +173,18 @@ var TEMPLATES = {
 };
 
 var STYLES = {
-  ivory:    {bg:"#F5EFE3", fg:"#221F1A", eyebrow:"#9C7630", sub:"#5E574C", mark:"logo.png",       creek:"creek-gold.png",  wm:"#3C5A45", rule:"#B08636"},
-  pine:     {bg:"linear-gradient(160deg,#2E4636,#3C5A45 88%)", fg:"#F6F2E7", eyebrow:"#d9c896", sub:"#e6ddc7", mark:"logo-white.png", creek:"creek-ivory.png", wm:"#FFFFFF", rule:"#B08636"},
-  deep:     {bg:"linear-gradient(165deg,#16211A,#2E4636 92%)", fg:"#F6F2E7", eyebrow:"#e5c76f", sub:"#ded5bf", mark:"logo-white.png", creek:"creek-ivory.png", wm:"#FFFFFF", rule:"#B08636"},
-  youth:    {bg:"linear-gradient(160deg,#3B5A61,#557A82 90%)", fg:"#F6F2E7", eyebrow:"#dcecef", sub:"#e3edef", mark:"logo-white.png", creek:"creek-ivory.png", wm:"#FFFFFF", rule:"#B08636"},
-  kidz:     {bg:"linear-gradient(160deg,#4E7343,#6B8F5E 90%)", fg:"#F7F3E8", eyebrow:"#e8f0e2", sub:"#eaf1e5", mark:"logo-white.png", creek:"creek-ivory.png", wm:"#FFFFFF", rule:"#B08636"},
-  missions: {bg:"linear-gradient(160deg,#8A452F,#A8573E 90%)", fg:"#F8F1EA", eyebrow:"#f0d7c9", sub:"#f1ddd2", mark:"logo-white.png", creek:"creek-ivory.png", wm:"#FFFFFF", rule:"#E4C08A"}
+  ivory:    {bg:"#F5EFE3", fg:"#221F1A", eyebrow:"#9C7630", sub:"#5E574C", mark:"logo.png",       creek:"creek-gold.png",  wm:"#3C5A45", rule:"#B08636", signOp:0.06},
+  pine:     {bg:"linear-gradient(160deg,#2E4636,#3C5A45 88%)", fg:"#F6F2E7", eyebrow:"#d9c896", sub:"#e6ddc7", mark:"logo-white.png", creek:"creek-ivory.png", wm:"#FFFFFF", rule:"#B08636", signOp:0.06},
+  deep:     {bg:"linear-gradient(165deg,#16211A,#2E4636 92%)", fg:"#F6F2E7", eyebrow:"#e5c76f", sub:"#ded5bf", mark:"logo-white.png", creek:"creek-ivory.png", wm:"#FFFFFF", rule:"#B08636", signOp:0.06},
+  youth:    {bg:"linear-gradient(160deg,#3B5A61,#557A82 90%)", fg:"#F6F2E7", eyebrow:"#dcecef", sub:"#e3edef", mark:"logo-white.png", creek:"creek-ivory.png", wm:"#FFFFFF", rule:"#B08636", signOp:0.06},
+  kidz:     {bg:"linear-gradient(160deg,#4E7343,#6B8F5E 90%)", fg:"#F7F3E8", eyebrow:"#e8f0e2", sub:"#eaf1e5", mark:"logo-white.png", creek:"creek-ivory.png", wm:"#FFFFFF", rule:"#B08636", signOp:0.06},
+  missions: {bg:"linear-gradient(160deg,#8A452F,#A8573E 90%)", fg:"#F8F1EA", eyebrow:"#f0d7c9", sub:"#f1ddd2", mark:"logo-white.png", creek:"creek-ivory.png", wm:"#FFFFFF", rule:"#E4C08A", signOp:0.07}
 };
 
 var SIZES = {
-  "1080x1080":{w:1080,h:1080,pad:96,  head:82,  body:31, eye:20, meta:19, mark:132, creek:250, sign:190},
-  "1080x1350":{w:1080,h:1350,pad:104, head:90,  body:33, eye:21, meta:20, mark:140, creek:270, sign:205},
-  "1080x1920":{w:1080,h:1920,pad:112, head:100, body:35, eye:22, meta:21, mark:150, creek:300, sign:230}
+  "1080x1080":{w:1080,h:1080,pad:96,  head:82,  body:31, eye:20, meta:19, mark:132, creek:250, sign:620},
+  "1080x1350":{w:1080,h:1350,pad:104, head:90,  body:33, eye:21, meta:20, mark:140, creek:270, sign:680},
+  "1080x1920":{w:1080,h:1920,pad:112, head:100, body:35, eye:22, meta:21, mark:150, creek:300, sign:760}
 };
 
 var $ = function(id){return document.getElementById(id)};
@@ -206,7 +206,7 @@ function render(){
 
   var html =
   '<div class="post" style="width:'+z.w+'px;height:'+z.h+'px;background:'+s.bg+';color:'+s.fg+'">'
-  + '<img class="sign" src="'+A+'la63.svg" style="position:absolute;right:'+Math.round(z.pad*0.72)+'px;bottom:'+Math.round(z.pad*0.72)+'px;width:'+z.sign+'px;z-index:2;filter:drop-shadow(0 '+Math.round(z.sign*0.06)+'px '+Math.round(z.sign*0.10)+'px rgba(0,0,0,.28))" alt="Louisiana Highway 63">'
+  + '<img class="signwm" src="'+A+'la63.svg" style="position:absolute;right:-'+Math.round(z.sign*0.34)+'px;bottom:-'+Math.round(z.sign*0.30)+'px;width:'+z.sign+'px;opacity:'+s.signOp+';z-index:1;pointer-events:none" alt="">'
   + '<img class="creek" src="'+A+s.creek+'" style="position:absolute;left:-30px;bottom:'+Math.round(z.pad*1.5)+'px;width:'+z.creek+'px;opacity:.22;z-index:2" alt="">'
   + '<div class="pad" style="padding:'+z.pad+'px">'
   +   '<div>'
@@ -263,6 +263,15 @@ $("dl").addEventListener("click", function(){
 });
 
 document.fonts && document.fonts.ready.then(render);
-loadTemplate("invite");
+
+// deep-link: /brand/social/#youth  (and #youth/1080x1350) so a template can be bookmarked
+function fromHash(){
+  var h = (location.hash||"").replace("#","").split("/");
+  var t = TEMPLATES[h[0]] ? h[0] : "invite";
+  if (h[1] && SIZES[h[1]]) $("size").value = h[1];
+  sel.value = t; loadTemplate(t);
+}
+window.addEventListener("hashchange", fromHash);
+fromHash();
 </script>
 </body></html>
