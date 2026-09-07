@@ -5,7 +5,7 @@ Creek Office is the private staff side of Home @ the Creek. It provides staff si
 ## Backend setup
 
 1. Create a church-owned Supabase project. Do not use a personal project.
-2. Run `supabase/schema.sql`, followed by `supabase/migrations/20260907_membership_care.sql` and `supabase/migrations/20260907_office_content.sql`, in the project's SQL editor.
+2. Run `supabase/schema.sql`, followed by `supabase/migrations/20260907_membership_care.sql`, `supabase/migrations/20260907_office_content.sql`, then `supabase/migrations/20260907164733_app_connections_care_roles.sql`, in that explicit order in the project's SQL editor. See [signup/care setup](../docs/signup-care-maintenance.md) for migration-order and activation details.
 3. In Supabase Auth, create the first staff user. Public sign-up is not exposed by Creek Office.
 4. Copy that user's UUID and run the final commented `insert into public.staff_roles` statement as `admin`.
 5. Copy `config.example.js` to `config.js`. Add the project URL and **publishable** key. Never put a secret or `service_role` key in this repository.
@@ -38,3 +38,7 @@ The local regression suite in [`tests/README.md`](tests/README.md) executes the 
 ## Membership archive and care extension
 
 The September 7 extension adds expanded People fields, append-only member history with page-photo review, first-time guest tracking, deacon assignments, visit notes, an adjustable due-contact queue and admin-maintained guidelines. Apply the membership/care migration after the base schema before using those fields. See [maintenance and activation limits](../docs/membership-care-maintenance.md) and [schema details](../docs/membership-schema.md). The working Google Sheet remains separate until access and reconciliation are completed; `membershipSheetUrl` is a private edit link, not automatic synchronization. No OCR, external reminders, real member import or assigned-deacon-only role is active.
+
+## Optional app signup and ongoing care
+
+The public `connection.html` flow is separate from staff sign-in. It verifies email, accepts voluntary personal-contact details, and sends submissions/updates to App signups for admin/editor review. It does not grant staff access or church membership. Public configuration remains blank. Staff review can link an existing person or create a visitor and one-time welcome task. Deacon and Sunday school plans have separate quarterly/monthly deadlines. See [maintenance, access and activation details](../docs/signup-care-maintenance.md).

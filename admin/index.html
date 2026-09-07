@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="membership.css">
   <link rel="stylesheet" href="care.css">
   <link rel="stylesheet" href="office-content.css">
+  <link rel="stylesheet" href="signups.css">
 </head>
 <body>
   <noscript><main class="center"><section class="auth-card"><h1>Creek Office needs JavaScript.</h1><p>Enable JavaScript to sign in to the private staff workspace.</p><a href="../">Return to Home @ the Creek</a></section></main></noscript>
@@ -48,9 +49,10 @@
         <a href="#slides" data-view="slides" data-private-module>Sunday slides</a>
         <a href="#prayers" data-view="prayers" data-private-module>Prayer requests</a>
         <a href="#committees" data-view="committees" data-private-module>Committee contacts</a>
+        <a href="#signups" data-view="signups" data-private-module>App signups</a>
         <a href="#people" data-view="people">People &amp; membership</a>
         <a href="#history" data-view="history" data-private-module>Member history</a>
-        <a href="#care" data-view="care" data-private-module>Guests &amp; deacon care</a>
+        <a href="#care" data-view="care" data-private-module>Guests &amp; care</a>
         <a href="#documents" data-view="documents">Documents</a>
         <a href="#activity" data-view="activity">Activity</a>
       </nav>
@@ -66,6 +68,7 @@
           <article><span>Upcoming events</span><b id="event-count">—</b></article>
           <article><span>People records</span><b id="people-count">—</b></article>
           <article><span>Documents</span><b id="document-count">—</b></article>
+          <article data-private-module><span>Signups to review</span><b id="signup-count">—</b><a class="signup-dashboard-link" href="#signups">Open signup queue →</a></article>
         </div>
         <div class="panel"><div class="panel-head"><div><p class="eyebrow">Coming up</p><h2>Next events</h2></div><a href="#calendar">Open calendar →</a></div><div id="dashboard-events" class="rows"></div></div>
       </section>
@@ -85,6 +88,7 @@
 
       <section id="history-view" class="view hidden"></section>
       <section id="care-view" class="view hidden"></section>
+      <section id="signups-view" class="view hidden"></section>
       <section id="announcements-view" class="view hidden"></section>
       <section id="committees-view" class="view hidden"></section>
       <section id="slides-view" class="view hidden"></section>
@@ -108,6 +112,7 @@
   <script src="membership.js"></script>
   <script src="care.js"></script>
   <script src="office-content.js"></script>
+  <script src="signups.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

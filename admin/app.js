@@ -3,17 +3,18 @@
   var cfg = window.CREEK_OFFICE_CONFIG || {};
   var els = {};
   var db = null;
-  var membership = null, care = null, officeContent = null;
+  var membership = null, care = null, officeContent = null, signups = null;
   var session = null;
   var role = null;
   var authEpoch = 0, loadEpoch = 0, documentEpoch = 0, editorEpoch = 0;
   var MAX_FILE_BYTES = 52428800;
   var AUTH_STORAGE_KEY = "creek-office-auth", signedOut = false, manualSignInPending = false;
   var documentExpiryTimer;
+  var peopleReady = false;
   var state = { events: [], people: [], documents: [], activity: [] };
-  var titles = { dashboard: "Overview", calendar: "Staff calendar", announcements: "Announcements", committees: "Committee contacts", slides: "Sunday slides", prayers: "Prayer requests", people: "People & membership", history: "Member history", care: "Guests & deacon care", documents: "Documents", activity: "Activity" };
+  var titles = { dashboard: "Overview", calendar: "Staff calendar", announcements: "Announcements", committees: "Committee contacts", slides: "Sunday slides", prayers: "Prayer requests", people: "People & membership", history: "Member history", care: "Guests & care", signups: "App signups", documents: "Documents", activity: "Activity" };
   var contentViews = ["announcements", "committees", "slides", "prayers"];
-  var privateViews = ["history", "care"].concat(contentViews);
+  var privateViews = ["history", "care", "signups"].concat(contentViews);
 
   function el(id) { return document.getElementById(id); }
   function show(id) { ["setup", "login", "loading", "workspace"].forEach(function (name) { el(name).classList.toggle("hidden", name !== id); }); }
@@ -34,11 +35,11 @@
   function clearPrivate() {
     window.clearTimeout(documentExpiryTimer);
     if (membership) membership.clear(); if (care) care.clear();
-    if (officeContent) officeContent.clear();
-    loadEpoch++; documentEpoch++; state = { events: [], people: [], documents: [], activity: [] };
+    if (officeContent) officeContent.clear(); if (signups) signups.clear();
+    loadEpoch++; documentEpoch++; peopleReady = false; state = { events: [], people: [], documents: [], activity: [] };
     clearEditor(); if (el("document-dialog").open) el("document-dialog").close(); el("document-result").replaceChildren();
     ["dashboard-events", "events-list", "people-list", "documents-list", "activity-list", "user-label", "role-label"].forEach(function (id) { el(id).replaceChildren(); });
-    ["event-count", "people-count", "document-count"].forEach(function (id) { el(id).textContent = "—"; });
+    ["event-count", "people-count", "document-count", "signup-count"].forEach(function (id) { el(id).textContent = "—"; });
     ["event-search", "people-search", "document-search", "event-filter", "people-filter", "document-filter", "email", "password"].forEach(function (id) { el(id).value = ""; });
     window.clearTimeout(notice.timer); els.notice.textContent = ""; els.notice.classList.add("hidden");
     document.querySelector("aside").classList.remove("open"); el("menu").setAttribute("aria-expanded", "false");
@@ -71,7 +72,7 @@
     if (!window.supabase || !window.supabase.createClient) { show("setup"); el("setup").querySelector("p:last-child").textContent = "The secure client could not load. Check the network connection and pinned client file."; return; }
     db = window.supabase.createClient(cfg.supabaseUrl, cfg.publishableKey, { auth: { storage: window.sessionStorage, storageKey: AUTH_STORAGE_KEY, persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
     bind();
-    var moduleOptions = { db: db, getContext: function () { return { epoch: authEpoch, userId: session && session.user.id, role: role, canEdit: canEdit() }; }, isCurrent: current, refresh: function () { return loadAll(authEpoch); }, notice: notice, people: function () { return state.people; }, documents: function () { return state.documents; } };
+    var moduleOptions = { db: db, getContext: function () { return { epoch: authEpoch, userId: session && session.user.id, role: role, canEdit: canEdit() }; }, isCurrent: current, refresh: function () { return loadAll(authEpoch); }, notice: notice, people: function () { return state.people; }, peopleReady: function () { return peopleReady; }, documents: function () { return state.documents; } };
     if (window.CreekMembership && el("history-view")) membership = window.CreekMembership.create(Object.assign({}, moduleOptions, { root: el("history-view"), sheetUrl: cfg.membershipSheetUrl || "" }));
     if (window.CreekCare && el("care-view")) care = window.CreekCare.create(Object.assign({}, moduleOptions, { root: el("care-view") }));
     if (window.CreekOfficeContent) officeContent = window.CreekOfficeContent.create(Object.assign({}, moduleOptions, {
@@ -79,6 +80,11 @@
       openDocument: openDocument,
       uploadDocument: function () { location.hash = "documents"; openUpload("ministry"); }
     }));
+    if (window.CreekSignups && el("signups-view")) signups = window.CreekSignups.create(Object.assign({}, moduleOptions, {
+      root: el("signups-view"), onCount: function (count) { el("signup-count").textContent = count === null ? "—" : String(count); }
+    }));
+    // Refresh only the private queue; avoid disturbing unsaved editors elsewhere.
+    window.setInterval(function () { if (signups && canEdit() && session && document.visibilityState === "visible") signups.load(authEpoch); }, 60000);
     db.auth.onAuthStateChange(function (_event, nextSession) { queueSession(nextSession); });
     var initialEpoch = authEpoch, result = await db.auth.getSession();
     if (initialEpoch !== authEpoch) return;
@@ -151,7 +157,7 @@
   async function loadAll(epoch) {
     epoch = epoch === undefined ? authEpoch : epoch;
     if (!current(epoch)) return;
-    var request = ++loadEpoch;
+    var request = ++loadEpoch; peopleReady = false;
     var results = await Promise.all([
       db.from("events").select("*").order("starts_at", { ascending: true }),
       fetchRecords("contacts", "last_name", true),
@@ -159,9 +165,11 @@
       db.from("audit_log").select("*").order("created_at", { ascending: false }).limit(100)
     ]);
     if (!current(epoch) || request !== loadEpoch) return;
+    peopleReady = !results[1].error;
+    if (!peopleReady) state.people = [];
     var names = ["events", "people", "documents", "activity"];
     results.forEach(function (result, index) { if (result.error) fail(result.error); else state[names[index]] = result.data || []; });
-    if (canEdit()) await Promise.all([membership ? membership.load(epoch) : null, care ? care.load(epoch) : null, officeContent ? officeContent.load(epoch) : null]);
+    if (canEdit()) await Promise.all([membership ? membership.load(epoch) : null, care ? care.load(epoch) : null, officeContent ? officeContent.load(epoch) : null, signups ? signups.load(epoch) : null]);
     if (!current(epoch) || request !== loadEpoch) return;
     render();
   }
@@ -197,7 +205,7 @@
     el("activity-list").innerHTML = state.activity.map(activityRow).join("");
     bindRowActions();
     if (membership) membership.render(); if (care) care.render();
-    if (officeContent) officeContent.render();
+    if (officeContent) officeContent.render(); if (signups) signups.render();
   }
 
   function eventRow(item) {

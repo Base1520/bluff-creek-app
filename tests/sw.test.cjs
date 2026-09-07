@@ -91,6 +91,7 @@ for (const scope of ['https://app.example.test/', 'http://localhost:8080/church/
     const worker = harness(scope);
     for (const pathname of [
       'admin', 'admin/', 'admin/index.html', 'admin/events.json', 'brand/',
+      'connection.html', 'connection.html?code=sample', 'js/connection.js', 'js/connection-config.js',
       'unrelated', 'other/events.json', 'events.json.bak',
       'https://api.example.test/events.json', 'https://fonts.googleapis.com/css2?family=Bitter'
     ]) {

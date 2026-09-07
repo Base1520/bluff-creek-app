@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#3C5A45">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<title>Connect with the Creek — Bluff Creek Baptist Church</title>
+<meta name="description" content="An optional way to introduce yourself to Bluff Creek Baptist Church or update your contact information.">
+<link rel="icon" href="assets/favicon-32.png">
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/connection.css">
+<script src="js/connection-config.js" defer></script>
+<script src="js/connection.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#connection-main">Skip to connection form</a>
+<div class="connection-app">
+<header class="connection-header"><a href="./" aria-label="Back to the Creek app"><img src="assets/logo.png" alt="Bluff Creek" width="160" height="48"></a><a href="./">Back to the app</a></header>
+<main id="connection-main">
+<section class="connection-hero"><p class="eyebrow">Home at the Creek</p><h1>A place to know<br>and be known.</h1><p>New here or part of the family? Share a little about yourself so our church team can help you take your next step.</p><img src="assets/creek.png" alt="" aria-hidden="true"></section>
+<div class="connection-intro"><h2>Your connection with the Creek</h2><p>This is optional. You can keep using the app without signing up. Installing the app alone does not send us your information, and this form does not make you a church member.</p></div>
+<section id="connection-unavailable" class="connection-card" aria-labelledby="unavailable-title"><p class="eyebrow">Coming soon</p><h2 id="unavailable-title">Online connection is on the way.</h2><p>The sign-up service is not connected yet. You can still introduce yourself through our email connection form.</p><a class="connection-button" href="./#new">Open the email connection form</a></section>
+<p id="connection-status" class="connection-status" role="status" aria-live="polite" hidden></p>
+<section id="connection-signin" class="connection-card" hidden aria-labelledby="signin-title"><p class="eyebrow">Start with your email</p><h2 id="signin-title">A simple, secure way to connect.</h2><p>We’ll send a one-time sign-in link. Open it to add or update your own connection details.</p><form id="connection-email-form" autocomplete="off"><label for="connection-email">Email address</label><input id="connection-email" name="email" type="email" required maxlength="254" autocomplete="email" inputmode="email"><button type="submit">Email me a sign-in link</button></form><p class="connection-fine">Your email is used to verify your sign-in. This does not subscribe you to church announcements or group messages.</p></section>
+<section id="connection-account" class="connection-card" hidden aria-labelledby="profile-title"><div class="connection-account-head"><div><p class="eyebrow">Your connection details</p><h2 id="profile-title">Let’s stay in touch.</h2></div><button id="connection-signout" class="connection-quiet" type="button">Sign out</button></div><p class="connection-fine">Verified email: <strong id="connection-verified-email"></strong></p><button id="connection-retry" class="connection-quiet" type="button" hidden>Try loading my details again</button>
+<form id="connection-profile-form" autocomplete="off" hidden><fieldset id="connection-fields"><legend class="sr-only">Your contact information</legend><div class="connection-grid"><label>First name<input name="first_name" required maxlength="100" autocomplete="given-name"></label><label>Last name <span>(optional)</span><input name="last_name" maxlength="100" autocomplete="family-name"></label></div><label>How would you like us to contact you?<select name="preferred_contact"><option value="email">Email</option><option value="phone">Phone call</option><option value="text">Text message</option></select></label><label>Phone number <span id="connection-phone-help">(optional for email contact)</span><input name="phone" type="tel" maxlength="32" autocomplete="tel" inputmode="tel" aria-describedby="connection-phone-help"></label><label>Sunday school class <span>(optional)</span><input name="sunday_school" maxlength="160" placeholder="Your class, or leave blank if you’re exploring"></label><label class="connection-consent"><input name="contact_permission" type="checkbox" required><span>I give the church team permission to use these details to contact me personally about my connection with Bluff Creek.</span></label><p class="connection-fine">This permission is for personal follow-up. It does not sign you up for mass texts, newsletters, or automated announcements. Your details go to approved church staff for review.</p><button type="submit">Submit for staff review</button></fieldset></form><p class="connection-fine">Your sign-in and unfinished form stay in this page’s memory. Sign out when you finish, especially on a shared device. Reloading requires another sign-in link.</p></section>
+<p class="connection-help">Prefer email? <a href="./#new">Use our email connection form.</a></p>
+<noscript><p class="connection-card">JavaScript is needed for online sign-in. <a href="./#new">Return to the app’s email connection form.</a></p></noscript>
+</main><footer class="connection-footer">Bluff Creek Baptist Church<br><span>Rooted in the Word. Growing together.</span></footer>
+</div>
+</body>
+</html>
