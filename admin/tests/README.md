@@ -1,6 +1,6 @@
 # Local staff-workspace regression tests
 
-Run from this directory with Node and npm (verified with Node 25.8.1):
+Run from this directory with Node and npm (latest complete run verified with Node 24.19.0; earlier runs used Node 25.8.1):
 
 ```sh
 npm ci --ignore-scripts
@@ -22,3 +22,5 @@ No real staff/member records, credentials or live project connection are used. T
 Primary references: [Supabase auth events](https://supabase.com/docs/reference/javascript/auth-onauthstatechange), [Supabase changelog](https://supabase.com/changelog), [PGlite extensions](https://pglite.dev/extensions/#pgcrypto).
 
 `office-recovery-rls.test.mjs` applies the complete migration sequence and verifies immutable identities, server-owned versions, event archive/restore and delete denial, extended editor table versions, live-role/schema readiness and prerequisite failure. Updated UI suites exercise conflicting edits, committed-but-lost responses, stable retry identities, source upload recovery, pending field/close locks, same-user transient outages and forced private clearing. The reliability pass also verifies changed-draft discard confirmation; it does not promise browser-crash recovery.
+
+September 7 verification: 183/183 staff tests pass. A macOS dataless dependency had blocked jsdom import; reinstalling the exact locked packages using the command above restored local files without changing package versions or lockfile hashes. The initial logout test now waits at most two seconds for its contact fixture to render; its immediate privacy-clearing assertions still run synchronously after Sign out. This local pass does not replace the hosted Auth/Storage and restore checks.

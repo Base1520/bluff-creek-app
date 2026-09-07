@@ -35,3 +35,5 @@ HTTP reachability is not end-to-end success. The checkout response's title is St
 ## Remaining real-device checks
 
 Open the directions result and confirm the church pin; open a contact draft and confirm recipient/content without claiming delivery; check telephone handoff on the actual phone; install/reopen on iPhone and Android (and review the corrected iPad hint); inspect the giving checkout's church identity and wallet choices; verify the actual YouTube stream/video and audio. A financial transaction or sending a message is a separate user-authorized action, not part of this audit.
+
+Use the [phone rehearsal worksheet](phone-rehearsal.md) for the device checks, including audible Spotify playback and its app/browser fallback. Its actual results remain pending; a worksheet is not a completed rehearsal.

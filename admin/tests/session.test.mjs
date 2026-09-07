@@ -51,7 +51,13 @@ function fixture(t,options={}) {
   return {w,el,calls,delayed,pending,emit,created:()=>created,rows};
 }
 test('logout immediately clears open record, hidden lists, filters and pending data',async t=>{
-  const d=deferred(),f=fixture(t,{signOutDeferred:d});await pause();
+  const d=deferred(),f=fixture(t,{signOutDeferred:d});
+  // Initial auth intentionally defers loading; wait for the record, not elapsed time.
+  const readinessDeadline=performance.now()+2000;
+  while(!f.el('people-list').querySelector('button')&&performance.now()<readinessDeadline) {
+    await new Promise(resolve=>setTimeout(resolve,5));
+  }
+  assert.ok(f.el('people-list').querySelector('button'),'Initial contact must render before testing immediate logout cleanup');
   f.w.location.hash='#people';f.el('people-list').querySelector('button').click();
   assert.equal(f.el('editor').open,true);assert.match(f.el('editor-fields').textContent,/Synthetic private note a/);
   f.el('people-search').value='Synthetic';f.el('logout').click();
