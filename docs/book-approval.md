@@ -8,6 +8,8 @@ These descriptions and context notes are research prepared for your review. They
 
 The public app `books[]` remains empty. Checking this review list does not automatically publish books or change the app. After you return your selections, approved titles and their public descriptions can be added to the app candidate for review.
 
+Amazon options are ordinary, untagged shopping links: 12 verified product destinations and 9 clearly labeled searches. Affiliate commissions are not active. Check the format and seller on Amazon. SOM’s Amazon listing is not verified; its author page remains available. These links do not approve or publish any book.
+
 The structured companion is `docs/book-candidates.json`. It contains the complete source list, stable title IDs, and separate approval fields. Every `approved` field starts as `false`.
 
 1. [ ] **[Mere Christianity](https://churchsource.com/products/mere-christianity) — C. S. Lewis**
@@ -19,6 +21,8 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
    **Review context:** Apologetics drawn from wartime radio talks; broad Christian common ground rather than a Baptist doctrinal handbook.
 
    **Source:** [ChurchSource / HarperCollins](https://churchsource.com/products/mere-christianity).
+
+   **Amazon:** [View on Amazon](https://www.amazon.com/dp/0060652926) — HarperOne trade paperback; the main book, not a study guide.
 
    **Your note:**
 
@@ -32,6 +36,8 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
 
    **Source:** [ChurchSource / HarperCollins](https://churchsource.com/products/the-screwtape-letters-1).
 
+   **Amazon:** [View on Amazon](https://www.amazon.com/dp/0060652934) — HarperOne paperback; the primary work, not a workbook or dramatization.
+
    **Your note:**
 
 3. [ ] **[The Great Divorce](https://churchsource.com/products/the-great-divorce) — C. S. Lewis**
@@ -43,6 +49,8 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
    **Review context:** Fable and allegory about judgment and grace; present its imagined afterlife as fiction, not a literal account of heaven and hell.
 
    **Source:** [ChurchSource / HarperCollins](https://churchsource.com/products/the-great-divorce).
+
+   **Amazon:** [View on Amazon](https://www.amazon.com/dp/0060652950) — HarperOne trade paperback; the main book.
 
    **Your note:**
 
@@ -56,6 +64,8 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
 
    **Source:** [ChurchSource / HarperCollins](https://churchsource.com/products/the-knowledge-of-the-holy).
 
+   **Amazon:** [View on Amazon](https://www.amazon.com/dp/0060684127) — Paperback listed as The Knowledge of the Holy: The Attributes of God: Their Meaning in the Christian Life.
+
    **Your note:**
 
 5. [ ] **[The Pursuit of God](https://www.moodypublishers.com/the-pursuit-of-god) — A. W. Tozer**
@@ -67,6 +77,8 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
    **Review context:** Devotional exhortation with contemplative language; review its treatment of hearing God's voice when planning church discussion.
 
    **Source:** [Moody Publishers](https://www.moodypublishers.com/the-pursuit-of-god).
+
+   **Amazon:** [View on Amazon](https://www.amazon.com/dp/1600660037) — Moody paperback listed as The Pursuit of God: The Human Thirst for the Divine; matches the publisher edition identifier.
 
    **Your note:**
 
@@ -80,6 +92,8 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
 
    **Source:** [InterVarsity Press](https://ivpress.com/knowing-god).
 
+   **Amazon:** [View on Amazon](https://www.amazon.com/dp/1514007762) — IVP revised 50th Anniversary Edition, 2023 paperback; Kevin J. Vanhoozer provides the foreword.
+
    **Your note:**
 
 7. [ ] **[Evangelism and the Sovereignty of God](https://www.ivpress.com/evangelism-and-the-sovereignty-of-god) — J. I. Packer**
@@ -91,6 +105,8 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
    **Review context:** Focused theological argument on divine sovereignty and human responsibility; a discussion candidate rather than a step-by-step outreach workbook.
 
    **Source:** [InterVarsity Press](https://www.ivpress.com/evangelism-and-the-sovereignty-of-god).
+
+   **Amazon:** [View on Amazon](https://www.amazon.com/dp/083083799X) — IVP revised edition, 2012 paperback; Mark Dever provides the foreword.
 
    **Your note:**
 
@@ -104,6 +120,8 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
 
    **Source:** [Ligonier Ministries](https://store.ligonier.org/the-holiness-of-god-paperback).
 
+   **Amazon:** [View on Amazon](https://www.amazon.com/dp/0842339655) — Tyndale revised paperback, not the separate study guide or newer 40th-anniversary edition.
+
    **Your note:**
 
 9. [ ] **[Essential Truths of the Christian Faith](https://www.tyndale.com/p/essential-truths-of-the-christian-faith/9780842320016) — R. C. Sproul**
@@ -115,6 +133,8 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
    **Review context:** A topical theological reference rather than a continuous narrative; review individual doctrinal entries for fit with Bluff Creek's teaching.
 
    **Source:** [Tyndale](https://www.tyndale.com/p/essential-truths-of-the-christian-faith/9780842320016).
+
+   **Amazon:** [View on Amazon](https://www.amazon.com/dp/0842320016) — Tyndale paperback book, not the similarly named multi-speaker teaching series.
 
    **Your note:**
 
@@ -130,6 +150,8 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
 
    **Source:** [Publisher: Penguin Random House / Multnomah](https://penguinrandomhouselibrary.com/book/?isbn=9781601422217). **Edition:** 2010 paperback.
 
+   **Amazon:** [View on Amazon](https://www.amazon.com/dp/1601422210) — 2010 Multnomah paperback
+
    **Your note:**
 
 11. [ ] **[Follow Me](https://www.tyndale.com/p/follow-me/9781414373287) — David Platt**
@@ -143,6 +165,8 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
    **Review context:** A direct challenge about conversion and discipleship; the publisher provides a discussion guide.
 
    **Source:** [Publisher: Tyndale](https://www.tyndale.com/p/follow-me/9781414373287). **Edition:** 2013 softcover.
+
+   **Amazon:** [View on Amazon](https://www.amazon.com/dp/1414373287) — 2013 Tyndale softcover
 
    **Your note:**
 
@@ -158,6 +182,8 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
 
    **Source:** [Author’s ministry: Desiring God](https://www.desiringgod.org/books/desiring-god). **Edition:** Revised edition, 2025 hardcover.
 
+   **Amazon:** [Search Amazon](https://www.amazon.com/s?i=stripbooks&k=Desiring+God+Meditations+of+a+Christian+Hedonist+John+Piper+1433595974) — Search by title and author; confirm the edition before buying.
+
    **Your note:**
 
 13. [ ] **[Don’t Waste Your Life](https://www.desiringgod.org/books/dont-waste-your-life) — John Piper**
@@ -170,6 +196,8 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
 
    **Source:** [Author’s ministry: Desiring God](https://www.desiringgod.org/books/dont-waste-your-life). **Edition:** 2010 edition listed by the author’s ministry.
 
+   **Amazon:** [Search Amazon](https://www.amazon.com/s?i=stripbooks&k=Don%E2%80%99t+Waste+Your+Life+John+Piper) — Search by title and author; confirm the edition before buying.
+
    **Your note:**
 
 14. [ ] **[Seeing and Savoring Jesus Christ](https://www.desiringgod.org/books/seeing-and-savoring-jesus-christ) — John Piper**
@@ -181,6 +209,8 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
    **Review context:** A shorter introduction to Piper centered on the person of Christ, rather than a systematic theology.
 
    **Source:** [Author’s ministry: Desiring God](https://www.desiringgod.org/books/seeing-and-savoring-jesus-christ). **Edition:** Revised edition, 2004 paperback.
+
+   **Amazon:** [Search Amazon](https://www.amazon.com/s?i=stripbooks&k=Seeing+and+Savoring+Jesus+Christ+John+Piper+1581346239) — Search by title and author; confirm the edition before buying.
 
    **Your note:**
 
@@ -196,6 +226,8 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
 
    **Source:** [BASE 1520 · author/publisher](https://www.base1520.com/spiritual-operators-manual/). **Edition:** Digital edition; author page checked September 7, 2026.
 
+   **Amazon:** [Search Amazon](https://www.amazon.com/s?i=stripbooks&k=The+Spiritual+Operator%E2%80%99s+Manual+Cole+Permenter) — Listing not verified. Author’s digital edition is linked above.
+
    **Your note:**
 
 16. [ ] **[Growing Up](https://www.bhpublishinggroup.com/product/growing-up-revised-and-updated-2/) — Robby Gallaty**
@@ -209,6 +241,8 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
    **Review context:** Uses Gallaty’s D-Group model; select the revised and updated edition when linking a purchase.
 
    **Source:** [Publisher: B&H](https://www.bhpublishinggroup.com/product/growing-up-revised-and-updated-2/). **Edition:** Revised and Updated, 2022.
+
+   **Amazon:** [Search Amazon](https://www.amazon.com/s?i=stripbooks&k=Growing+Up+How+to+Be+a+Disciple+Who+Makes+Disciples+Robby+Gallaty+1087768225) — Search by title and author; confirm the edition before buying.
 
    **Your note:**
 
@@ -224,6 +258,8 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
 
    **Source:** [Publisher: Zondervan Academic](https://zondervanacademic.com/products/rediscovering-discipleship). **Edition:** 2015 softcover.
 
+   **Amazon:** [View on Amazon](https://www.amazon.com/dp/0310521289) — 2015 Zondervan softcover
+
    **Your note:**
 
 18. [ ] **[Love Your Church](https://www.thegoodbook.com/ministry/love-your-church) — Tony Merida**
@@ -237,6 +273,8 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
    **Review context:** Includes a discussion guide and publisher-provided group resources. Ray Ortlund wrote the foreword; he is not a coauthor.
 
    **Source:** [The Good Book Company](https://www.thegoodbook.com/ministry/love-your-church). **Edition:** 2021 paperback.
+
+   **Amazon:** [Search Amazon](https://www.amazon.com/s?i=stripbooks&k=Love+Your+Church+8+Great+Things+About+Being+a+Church+Member+Tony+Merida+9781784986087) — Search by title and author; confirm the edition before buying.
 
    **Your note:**
 
@@ -252,6 +290,8 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
 
    **Source:** [Lifeway / B&H](https://www.lifeway.com/en/product/ebook-ordinary-P005665762). **Edition:** 2015 eBook listing; trade book, not the separate Bible study workbook.
 
+   **Amazon:** [Search Amazon](https://www.amazon.com/s?i=stripbooks&k=Ordinary+How+to+Turn+the+World+Upside+Down+Tony+Merida) — Search by title and author; confirm the edition before buying.
+
    **Your note:**
 
 20. [ ] **[How to Read the Bible for All Its Worth](https://zondervanacademic.com/products/how-to-read-the-bible-for-all-its-worth-4th) — Gordon D. Fee and Douglas Stuart**
@@ -263,6 +303,8 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
    **Review context:** A guide to reading genres and interpreting Scripture, not a devotional. The fourth-edition publisher listing has no separate subtitle.
 
    **Source:** [Zondervan Academic](https://zondervanacademic.com/products/how-to-read-the-bible-for-all-its-worth-4th). **Edition:** Fourth Edition (2014).
+
+   **Amazon:** [Search Amazon](https://www.amazon.com/s?i=stripbooks&k=How+to+Read+the+Bible+for+All+Its+Worth+Gordon+D.+Fee+and+Douglas+Stuart+9780310517825) — Search by title and author; confirm the edition before buying.
 
    **Your note:**
 
@@ -277,5 +319,7 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
    **Review context:** A reading companion covering all 66 books, including Habakkuk. It supplies book context rather than a full verse-by-verse commentary. Audiobook narrator Trevor Thompson is not a print-book coauthor.
 
    **Source:** [Zondervan Academic](https://zondervanacademic.com/products/how-to-read-the-bible-book-by-book). **Edition:** 2014 softcover publisher listing.
+
+   **Amazon:** [Search Amazon](https://www.amazon.com/s?i=stripbooks&k=How+to+Read+the+Bible+Book+by+Book+A+Guided+Tour+Gordon+D.+Fee+and+Douglas+Stuart+9780310518082) — Search by title and author; confirm the edition before buying.
 
    **Your note:**

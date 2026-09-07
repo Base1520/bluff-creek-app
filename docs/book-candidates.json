@@ -28,7 +28,23 @@
       ],
       "approved": false,
       "approval_note": "",
-      "edition": null
+      "edition": null,
+      "amazon": {
+        "url": "https://www.amazon.com/dp/0060652926",
+        "kind": "product",
+        "asin": "0060652926",
+        "format": "Paperback",
+        "edition_note": "HarperOne trade paperback; the main book, not a study guide.",
+        "verification_note": "Amazon product title, C. S. Lewis author byline, and Paperback format were read directly; matches the publisher paperback record.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://www.amazon.com/dp/0060652926"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "HarperOne trade paperback; the main book, not a study guide."
+      }
     },
     {
       "id": "lewis-screwtape-letters",
@@ -50,7 +66,23 @@
       ],
       "approved": false,
       "approval_note": "",
-      "edition": null
+      "edition": null,
+      "amazon": {
+        "url": "https://www.amazon.com/dp/0060652934",
+        "kind": "product",
+        "asin": "0060652934",
+        "format": "Paperback",
+        "edition_note": "HarperOne paperback; the primary work, not a workbook or dramatization.",
+        "verification_note": "Amazon product title, C. S. Lewis author byline, and Paperback format were read directly.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://www.amazon.com/dp/0060652934"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "HarperOne paperback; the primary work, not a workbook or dramatization."
+      }
     },
     {
       "id": "lewis-great-divorce",
@@ -72,7 +104,23 @@
       ],
       "approved": false,
       "approval_note": "",
-      "edition": null
+      "edition": null,
+      "amazon": {
+        "url": "https://www.amazon.com/dp/0060652950",
+        "kind": "product",
+        "asin": "0060652950",
+        "format": "Paperback",
+        "edition_note": "HarperOne trade paperback; the main book.",
+        "verification_note": "Amazon product title, C. S. Lewis author byline, and Paperback format were read directly; matches the publisher paperback record.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://www.amazon.com/dp/0060652950"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "HarperOne trade paperback; the main book."
+      }
     },
     {
       "id": "tozer-knowledge-holy",
@@ -98,7 +146,23 @@
       ],
       "approved": false,
       "approval_note": "",
-      "edition": null
+      "edition": null,
+      "amazon": {
+        "url": "https://www.amazon.com/dp/0060684127",
+        "kind": "product",
+        "asin": "0060684127",
+        "format": "Paperback",
+        "edition_note": "Paperback listed as The Knowledge of the Holy: The Attributes of God: Their Meaning in the Christian Life.",
+        "verification_note": "Amazon product title, A. W. Tozer author byline, and Paperback format were read directly. The descriptive product URL loaded even though the short URL initially had a web-cache miss.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://www.amazon.com/Knowledge-Holy-Attributes-Meaning-Christian/dp/0060684127"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "Paperback listed as The Knowledge of the Holy: The Attributes of God: Their Meaning in the Christian Life."
+      }
     },
     {
       "id": "tozer-pursuit-god",
@@ -120,7 +184,23 @@
       ],
       "approved": false,
       "approval_note": "",
-      "edition": null
+      "edition": null,
+      "amazon": {
+        "url": "https://www.amazon.com/dp/1600660037",
+        "kind": "product",
+        "asin": "1600660037",
+        "format": "Paperback",
+        "edition_note": "Moody paperback listed as The Pursuit of God: The Human Thirst for the Divine; matches the publisher edition identifier.",
+        "verification_note": "Amazon product title, A W Tozer author byline, and Paperback format were read directly; checked against Moody’s main-book listing.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://www.amazon.com/dp/1600660037"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "Moody paperback listed as The Pursuit of God: The Human Thirst for the Divine; matches the publisher edition identifier."
+      }
     },
     {
       "id": "packer-knowing-god",
@@ -142,7 +222,23 @@
       ],
       "approved": false,
       "approval_note": "",
-      "edition": null
+      "edition": null,
+      "amazon": {
+        "url": "https://www.amazon.com/dp/1514007762",
+        "kind": "product",
+        "asin": "1514007762",
+        "format": "Paperback",
+        "edition_note": "IVP revised 50th Anniversary Edition, 2023 paperback; Kevin J. Vanhoozer provides the foreword.",
+        "verification_note": "Amazon title, J. I. Packer author byline, foreword contributor, Paperback format, publication date, and revised 50th Anniversary edition were read directly and match IVP.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://www.amazon.com/dp/1514007762"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "IVP revised 50th Anniversary Edition, 2023 paperback; Kevin J. Vanhoozer provides the foreword."
+      }
     },
     {
       "id": "packer-evangelism-sovereignty",
@@ -164,7 +260,23 @@
       ],
       "approved": false,
       "approval_note": "",
-      "edition": null
+      "edition": null,
+      "amazon": {
+        "url": "https://www.amazon.com/dp/083083799X",
+        "kind": "product",
+        "asin": "083083799X",
+        "format": "Paperback",
+        "edition_note": "IVP revised edition, 2012 paperback; Mark Dever provides the foreword.",
+        "verification_note": "Amazon title, J. I. Packer byline, and Paperback format were read directly. IVP identifies Mark Dever as foreword contributor; Amazon merges Author/Foreword labels for both contributors.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://www.amazon.com/Evangelism-Sovereignty-God-J-Packer/dp/083083799X"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "IVP revised edition, 2012 paperback; Mark Dever provides the foreword."
+      }
     },
     {
       "id": "sproul-holiness-god",
@@ -186,7 +298,23 @@
       ],
       "approved": false,
       "approval_note": "",
-      "edition": null
+      "edition": null,
+      "amazon": {
+        "url": "https://www.amazon.com/dp/0842339655",
+        "kind": "product",
+        "asin": "0842339655",
+        "format": "Paperback",
+        "edition_note": "Tyndale revised paperback, not the separate study guide or newer 40th-anniversary edition.",
+        "verification_note": "Amazon title, R. C. Sproul author byline, Paperback format, and Revised edition were read directly; edition identifier matches Ligonier’s paperback. Ligonier and Amazon display different publication dates, so no edition-year claim is made.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://www.amazon.com/dp/0842339655"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "Tyndale revised paperback, not the separate study guide or newer 40th-anniversary edition."
+      }
     },
     {
       "id": "sproul-essential-truths",
@@ -208,7 +336,23 @@
       ],
       "approved": false,
       "approval_note": "",
-      "edition": null
+      "edition": null,
+      "amazon": {
+        "url": "https://www.amazon.com/dp/0842320016",
+        "kind": "product",
+        "asin": "0842320016",
+        "format": "Paperback",
+        "edition_note": "Tyndale paperback book, not the similarly named multi-speaker teaching series.",
+        "verification_note": "Amazon product title, R. C. Sproul author byline, and Paperback format were read directly; matches Tyndale’s book edition identifier.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://www.amazon.com/Essential-Truths-Christian-Faith-Sproul/dp/0842320016"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "Tyndale paperback book, not the similarly named multi-speaker teaching series."
+      }
     },
     {
       "id": "platt-radical",
@@ -230,7 +374,23 @@
       ],
       "approved": false,
       "approval_note": "",
-      "edition": "2010 paperback"
+      "edition": "2010 paperback",
+      "amazon": {
+        "url": "https://www.amazon.com/dp/1601422210",
+        "kind": "product",
+        "asin": "1601422210",
+        "format": "Paperback",
+        "edition_note": "2010 Multnomah paperback",
+        "verification_note": "Exact Amazon product destination observed in the author ministry’s outbound link and matched against official publisher title/edition metadata. Amazon page content could not be fetched; current price and availability are not asserted.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://radical.net/book/radical/"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "2010 Multnomah paperback"
+      }
     },
     {
       "id": "platt-follow-me",
@@ -252,7 +412,23 @@
       ],
       "approved": false,
       "approval_note": "",
-      "edition": "2013 softcover"
+      "edition": "2013 softcover",
+      "amazon": {
+        "url": "https://www.amazon.com/dp/1414373287",
+        "kind": "product",
+        "asin": "1414373287",
+        "format": "Paperback",
+        "edition_note": "2013 Tyndale softcover",
+        "verification_note": "Exact Amazon product destination observed in the author ministry’s outbound link and matched against official publisher title/edition metadata. Amazon page content could not be fetched; current price and availability are not asserted.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://radical.net/book/follow-me/"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "2013 Tyndale softcover"
+      }
     },
     {
       "id": "piper-desiring-god",
@@ -278,7 +454,23 @@
       ],
       "approved": false,
       "approval_note": "",
-      "edition": "Revised edition, 2025 hardcover"
+      "edition": "Revised edition, 2025 hardcover",
+      "amazon": {
+        "url": "https://www.amazon.com/s?i=stripbooks&k=Desiring+God+Meditations+of+a+Christian+Hedonist+John+Piper+1433595974",
+        "kind": "search",
+        "asin": null,
+        "format": "Search; choose the full book and desired format",
+        "edition_note": "Revised edition, 2025 hardcover",
+        "verification_note": "Crossway’s Amazon button targets an ISBN search (1433595974). No direct Amazon product page was verified.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://www.crossway.org/books/desiring-god-hcj/"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "Search by title and author; confirm the edition before buying."
+      }
     },
     {
       "id": "piper-dont-waste",
@@ -300,7 +492,23 @@
       ],
       "approved": false,
       "approval_note": "",
-      "edition": "2010 edition listed by the author’s ministry"
+      "edition": "2010 edition listed by the author’s ministry",
+      "amazon": {
+        "url": "https://www.amazon.com/s?i=stripbooks&k=Don%E2%80%99t+Waste+Your+Life+John+Piper",
+        "kind": "search",
+        "asin": null,
+        "format": "Search; choose the full book and desired format",
+        "edition_note": "Full trade book; select desired current print edition",
+        "verification_note": "Crossway’s older paperback page links to an ISBN search and marks that edition out of print. Use title/author search; no current product ASIN verified.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://www.crossway.org/books/dont-waste-your-life-tpb/"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "Search by title and author; confirm the edition before buying."
+      }
     },
     {
       "id": "piper-seeing-savoring",
@@ -326,7 +534,23 @@
       ],
       "approved": false,
       "approval_note": "",
-      "edition": "Revised edition, 2004 paperback"
+      "edition": "Revised edition, 2004 paperback",
+      "amazon": {
+        "url": "https://www.amazon.com/s?i=stripbooks&k=Seeing+and+Savoring+Jesus+Christ+John+Piper+1581346239",
+        "kind": "search",
+        "asin": null,
+        "format": "Search; choose the full book and desired format",
+        "edition_note": "Revised edition, 2004 paperback",
+        "verification_note": "Crossway’s Amazon button targets an ISBN search (1581346239). No direct Amazon product page was verified.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://www.crossway.org/books/seeing-and-savoring-jesus-christ-tpb/"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "Search by title and author; confirm the edition before buying."
+      }
     },
     {
       "id": "permenter-spiritual-operators-manual",
@@ -348,7 +572,23 @@
       ],
       "approved": false,
       "approval_note": "",
-      "edition": "Digital edition; author page checked September 7, 2026"
+      "edition": "Digital edition; author page checked September 7, 2026",
+      "amazon": {
+        "url": "https://www.amazon.com/s?i=stripbooks&k=The+Spiritual+Operator%E2%80%99s+Manual+Cole+Permenter",
+        "kind": "search",
+        "asin": null,
+        "format": "Search; listing not verified",
+        "edition_note": "Retain the verified author page for the digital book; no Amazon edition verified.",
+        "verification_note": "Exact-title/author Amazon searches did not establish a product listing. This is a labeled search, not a verified sale page.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://www.base1520.com/spiritual-operators-manual/"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "Listing not verified. Author’s digital edition is linked above."
+      }
     },
     {
       "id": "gallaty-growing-up",
@@ -370,7 +610,23 @@
       ],
       "approved": false,
       "approval_note": "",
-      "edition": "Revised and Updated, 2022"
+      "edition": "Revised and Updated, 2022",
+      "amazon": {
+        "url": "https://www.amazon.com/s?i=stripbooks&k=Growing+Up+How+to+Be+a+Disciple+Who+Makes+Disciples+Robby+Gallaty+1087768225",
+        "kind": "search",
+        "asin": null,
+        "format": "Search; choose the full book and desired format",
+        "edition_note": "Revised and Updated, 2022 paperback",
+        "verification_note": "2022 title and edition verified at B&H. Replicate’s direct Amazon link points to the older 2013 edition, so this search targets the requested revised edition instead.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://www.bhpublishinggroup.com/product/growing-up-revised-and-updated-2/"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "Search by title and author; confirm the edition before buying."
+      }
     },
     {
       "id": "gallaty-rediscovering",
@@ -392,7 +648,23 @@
       ],
       "approved": false,
       "approval_note": "",
-      "edition": "2015 softcover"
+      "edition": "2015 softcover",
+      "amazon": {
+        "url": "https://www.amazon.com/dp/0310521289",
+        "kind": "product",
+        "asin": "0310521289",
+        "format": "Paperback",
+        "edition_note": "2015 Zondervan softcover",
+        "verification_note": "Exact Amazon product destination observed in the author ministry’s outbound link and matched against official publisher title/edition metadata. Amazon page content could not be fetched; current price and availability are not asserted.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://replicate.org/books"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "2015 Zondervan softcover"
+      }
     },
     {
       "id": "merida-love-your-church",
@@ -414,7 +686,23 @@
       ],
       "approved": false,
       "approval_note": "",
-      "edition": "2021 paperback"
+      "edition": "2021 paperback",
+      "amazon": {
+        "url": "https://www.amazon.com/s?i=stripbooks&k=Love+Your+Church+8+Great+Things+About+Being+a+Church+Member+Tony+Merida+9781784986087",
+        "kind": "search",
+        "asin": null,
+        "format": "Search; choose the full book and desired format",
+        "edition_note": "2021 paperback",
+        "verification_note": "Publisher confirms the book, author, subtitle, and edition; no direct Amazon product page verified.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://www.thegoodbook.com/love-your-church"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "Search by title and author; confirm the edition before buying."
+      }
     },
     {
       "id": "merida-ordinary",
@@ -436,7 +724,23 @@
       ],
       "approved": false,
       "approval_note": "",
-      "edition": "2015 eBook listing; trade book, not the separate Bible study workbook"
+      "edition": "2015 eBook listing; trade book, not the separate Bible study workbook",
+      "amazon": {
+        "url": "https://www.amazon.com/s?i=stripbooks&k=Ordinary+How+to+Turn+the+World+Upside+Down+Tony+Merida",
+        "kind": "search",
+        "asin": null,
+        "format": "Search; choose the full book and desired format",
+        "edition_note": "Full trade book, not Ordinary Bible Study Book",
+        "verification_note": "Publisher-linked source confirms the trade book’s subtitle and author. No direct Amazon product page verified; check title/subtitle to avoid the distinct Bible study workbook.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://www.lifeway.com/en/product/ebook-ordinary-P005665762"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "Search by title and author; confirm the edition before buying."
+      }
     },
     {
       "id": "fee-stuart-all-its-worth",
@@ -458,7 +762,23 @@
       ],
       "approved": false,
       "approval_note": "",
-      "edition": "Fourth Edition (2014)"
+      "edition": "Fourth Edition (2014)",
+      "amazon": {
+        "url": "https://www.amazon.com/s?i=stripbooks&k=How+to+Read+the+Bible+for+All+Its+Worth+Gordon+D.+Fee+and+Douglas+Stuart+9780310517825",
+        "kind": "search",
+        "asin": null,
+        "format": "Search; choose the full book and desired format",
+        "edition_note": "Fourth Edition, 2014 paperback",
+        "verification_note": "Publisher confirms the book and fourth edition. No direct Amazon product page verified.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://zondervanacademic.com/products/how-to-read-the-bible-for-all-its-worth-4th"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "Search by title and author; confirm the edition before buying."
+      }
     },
     {
       "id": "fee-stuart-book-by-book",
@@ -480,7 +800,23 @@
       ],
       "approved": false,
       "approval_note": "",
-      "edition": "2014 softcover publisher listing"
+      "edition": "2014 softcover publisher listing",
+      "amazon": {
+        "url": "https://www.amazon.com/s?i=stripbooks&k=How+to+Read+the+Bible+Book+by+Book+A+Guided+Tour+Gordon+D.+Fee+and+Douglas+Stuart+9780310518082",
+        "kind": "search",
+        "asin": null,
+        "format": "Search; choose the full book and desired format",
+        "edition_note": "2014 softcover; A Guided Tour",
+        "verification_note": "Publisher confirms the book and authors. No direct Amazon product page verified; Trevor Thompson is an audiobook narrator, not an additional print author.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://zondervanacademic.com/products/how-to-read-the-bible-book-by-book"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "Search by title and author; confirm the edition before buying."
+      }
     }
   ]
 }

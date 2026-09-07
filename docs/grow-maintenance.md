@@ -33,6 +33,12 @@ Edit the public `js/grow-content.js` file on a feature branch, preview and revie
 
 For the next series, also replace the static context/chapters/reflections/source links in `index.html`; they are specifically about Habakkuk. Do not change only the config title and accidentally leave Habakkuk's guide beneath another book.
 
+## Amazon links and affiliate preparation
+
+The separate browser approval review now gives every candidate an Amazon option: 12 verified product destinations and 9 labeled searches. Publisher/author links remain intact; all links are untagged and all titles remain pending approval. The user authorized starting a church-owned Amazon Associates application. Signup is in progress; no issued tracking ID or completed enrollment has been verified. See [Amazon setup and link rules](amazon-book-links.md).
+
+Do not copy Amazon destinations into the installed PWA yet. Amazon’s published application requirements leave this PWA’s eligibility unresolved, including untagged links while participating in Associates. Confirm that classification and any app-to-website route with Amazon before activation. Approved books may still use their publisher/author URLs.
+
 ## Playback and offline behavior
 
 The app makes no Spotify request until a visitor clicks **Load Spotify player** or follows **Open in Spotify**. The player is built from the validated playlist ID, with a descriptive title, no autoplay request and a persistent external fallback. It is never represented as successfully playing merely because its frame loaded. **Close player** removes the frame and restores focus. Spotify controls playback, account/region availability and any previews. The real playlist title rendered in the local embed. Spotify’s full player entered playing state with an advancing timer and was paused afterward; this does not establish audible output, full-track access or actual-phone playback. Keep that listening rehearsal on the launch checklist.
