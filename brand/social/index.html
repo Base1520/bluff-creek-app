@@ -45,7 +45,7 @@
   .post img.mark{display:block}
   .post img.creek{display:block;opacity:.9}
   .post .rule{background:var(--wheat);border-radius:4px}
-  .post .foot{display:flex;align-items:center;justify-content:space-between;gap:16px;position:relative;z-index:3}
+  .post .foot{display:flex;align-items:flex-end;gap:16px;position:relative;z-index:3}
   .post .foot .addr{display:flex;align-items:center;gap:10px;font-weight:800;text-transform:uppercase;letter-spacing:.13em}
 
   details.rules{margin-top:26px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px 18px}
@@ -182,9 +182,9 @@ var STYLES = {
 };
 
 var SIZES = {
-  "1080x1080":{w:1080,h:1080,pad:96,  head:82,  body:31, eye:20, meta:19, mark:132, creek:250, wm:600},
-  "1080x1350":{w:1080,h:1350,pad:104, head:90,  body:33, eye:21, meta:20, mark:140, creek:270, wm:660},
-  "1080x1920":{w:1080,h:1920,pad:112, head:100, body:35, eye:22, meta:21, mark:150, creek:300, wm:720}
+  "1080x1080":{w:1080,h:1080,pad:96,  head:82,  body:31, eye:20, meta:19, mark:132, creek:250, sign:190},
+  "1080x1350":{w:1080,h:1350,pad:104, head:90,  body:33, eye:21, meta:20, mark:140, creek:270, sign:205},
+  "1080x1920":{w:1080,h:1920,pad:112, head:100, body:35, eye:22, meta:21, mark:150, creek:300, sign:230}
 };
 
 var $ = function(id){return document.getElementById(id)};
@@ -206,7 +206,7 @@ function render(){
 
   var html =
   '<div class="post" style="width:'+z.w+'px;height:'+z.h+'px;background:'+s.bg+';color:'+s.fg+'">'
-  + '<div class="wm63" style="right:-.06em;bottom:-.28em;font-size:'+z.wm+'px;color:'+s.wm+'">63</div>'
+  + '<img class="sign" src="'+A+'la63.svg" style="position:absolute;right:'+Math.round(z.pad*0.72)+'px;bottom:'+Math.round(z.pad*0.72)+'px;width:'+z.sign+'px;z-index:2;filter:drop-shadow(0 '+Math.round(z.sign*0.06)+'px '+Math.round(z.sign*0.10)+'px rgba(0,0,0,.28))" alt="Louisiana Highway 63">'
   + '<img class="creek" src="'+A+s.creek+'" style="position:absolute;left:-30px;bottom:'+Math.round(z.pad*1.5)+'px;width:'+z.creek+'px;opacity:.22;z-index:2" alt="">'
   + '<div class="pad" style="padding:'+z.pad+'px">'
   +   '<div>'
@@ -221,8 +221,7 @@ function render(){
   +       (m1 ? '<div class="meta" style="font-size:'+z.meta+'px;color:'+s.fg+'">'+esc(m1)+'</div>' : '')
   +       (m2 ? '<div class="meta" style="font-size:'+z.meta+'px;color:'+s.sub+';margin-top:6px">'+esc(m2)+'</div>' : '')
   +     '</div>'
-  +     '<img src="'+A+'la63.svg" style="width:'+Math.round(z.mark*0.42)+'px;opacity:.9" alt="">'
-  +   '</div>'
+    +   '</div>'
   + '</div></div>';
 
   $("card").innerHTML = html;
