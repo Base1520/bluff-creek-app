@@ -1,8 +1,8 @@
 {
   "version": "2026-09-07-v1",
   "checked_on": "2026-09-07",
-  "status": "pending_pastor_approval",
-  "note": "A shortlist for Pastor Cole to review, not a list of approved church recommendations. Descriptions summarize public publisher or ministry information; reader and difficulty labels are editorial judgments. Source checks confirm book metadata and stated subject matter, not a full theological review. Naming an author does not approve every work. The public app books[] remains empty until specific titles are approved.",
+  "status": "approved_for_app",
+  "note": "Pastor Cole explicitly approved all 21 titles in list 2026-09-07-v1 for the app on September 7, 2026. Approval applies to these individual books; it does not authorize deployment or approve every work by their authors. Descriptions summarize public publisher or ministry information, and reader and difficulty labels are editorial judgments. The source checks confirm metadata and stated subject matter, not a full theological review.",
   "books": [
     {
       "id": "lewis-mere-christianity",
@@ -26,8 +26,8 @@
           "url": "https://www.cslewis.com/uk/books/hardcover/mere-christianity/9780060652883/"
         }
       ],
-      "approved": false,
-      "approval_note": "",
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
       "edition": null,
       "amazon": {
         "url": "https://www.amazon.com/dp/0060652926",
@@ -44,7 +44,10 @@
         ],
         "checked_on": "2026-09-07",
         "display_note": "HarperOne trade paperback; the main book, not a study guide."
-      }
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
     },
     {
       "id": "lewis-screwtape-letters",
@@ -64,8 +67,8 @@
           "url": "https://churchsource.com/products/the-screwtape-letters-1"
         }
       ],
-      "approved": false,
-      "approval_note": "",
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
       "edition": null,
       "amazon": {
         "url": "https://www.amazon.com/dp/0060652934",
@@ -82,7 +85,10 @@
         ],
         "checked_on": "2026-09-07",
         "display_note": "HarperOne paperback; the primary work, not a workbook or dramatization."
-      }
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
     },
     {
       "id": "lewis-great-divorce",
@@ -102,8 +108,8 @@
           "url": "https://churchsource.com/products/the-great-divorce"
         }
       ],
-      "approved": false,
-      "approval_note": "",
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
       "edition": null,
       "amazon": {
         "url": "https://www.amazon.com/dp/0060652950",
@@ -120,7 +126,10 @@
         ],
         "checked_on": "2026-09-07",
         "display_note": "HarperOne trade paperback; the main book."
-      }
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
     },
     {
       "id": "tozer-knowledge-holy",
@@ -144,8 +153,8 @@
           "url": "https://boydellandbrewer.com/book/the-knowledge-of-the-holy-9780718895310/"
         }
       ],
-      "approved": false,
-      "approval_note": "",
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
       "edition": null,
       "amazon": {
         "url": "https://www.amazon.com/dp/0060684127",
@@ -162,7 +171,10 @@
         ],
         "checked_on": "2026-09-07",
         "display_note": "Paperback listed as The Knowledge of the Holy: The Attributes of God: Their Meaning in the Christian Life."
-      }
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
     },
     {
       "id": "tozer-pursuit-god",
@@ -182,8 +194,8 @@
           "url": "https://www.moodypublishers.com/the-pursuit-of-god"
         }
       ],
-      "approved": false,
-      "approval_note": "",
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
       "edition": null,
       "amazon": {
         "url": "https://www.amazon.com/dp/1600660037",
@@ -200,7 +212,10 @@
         ],
         "checked_on": "2026-09-07",
         "display_note": "Moody paperback listed as The Pursuit of God: The Human Thirst for the Divine; matches the publisher edition identifier."
-      }
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
     },
     {
       "id": "packer-knowing-god",
@@ -220,8 +235,8 @@
           "url": "https://ivpress.com/knowing-god"
         }
       ],
-      "approved": false,
-      "approval_note": "",
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
       "edition": null,
       "amazon": {
         "url": "https://www.amazon.com/dp/1514007762",
@@ -238,7 +253,10 @@
         ],
         "checked_on": "2026-09-07",
         "display_note": "IVP revised 50th Anniversary Edition, 2023 paperback; Kevin J. Vanhoozer provides the foreword."
-      }
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
     },
     {
       "id": "packer-evangelism-sovereignty",
@@ -258,8 +276,8 @@
           "url": "https://www.ivpress.com/evangelism-and-the-sovereignty-of-god"
         }
       ],
-      "approved": false,
-      "approval_note": "",
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
       "edition": null,
       "amazon": {
         "url": "https://www.amazon.com/dp/083083799X",
@@ -276,7 +294,10 @@
         ],
         "checked_on": "2026-09-07",
         "display_note": "IVP revised edition, 2012 paperback; Mark Dever provides the foreword."
-      }
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
     },
     {
       "id": "sproul-holiness-god",
@@ -296,8 +317,8 @@
           "url": "https://store.ligonier.org/the-holiness-of-god-paperback"
         }
       ],
-      "approved": false,
-      "approval_note": "",
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
       "edition": null,
       "amazon": {
         "url": "https://www.amazon.com/dp/0842339655",
@@ -314,7 +335,10 @@
         ],
         "checked_on": "2026-09-07",
         "display_note": "Tyndale revised paperback, not the separate study guide or newer 40th-anniversary edition."
-      }
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
     },
     {
       "id": "sproul-essential-truths",
@@ -334,8 +358,8 @@
           "url": "https://www.tyndale.com/p/essential-truths-of-the-christian-faith/9780842320016"
         }
       ],
-      "approved": false,
-      "approval_note": "",
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
       "edition": null,
       "amazon": {
         "url": "https://www.amazon.com/dp/0842320016",
@@ -352,7 +376,10 @@
         ],
         "checked_on": "2026-09-07",
         "display_note": "Tyndale paperback book, not the similarly named multi-speaker teaching series."
-      }
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
     },
     {
       "id": "platt-radical",
@@ -372,8 +399,8 @@
           "url": "https://penguinrandomhouselibrary.com/book/?isbn=9781601422217"
         }
       ],
-      "approved": false,
-      "approval_note": "",
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
       "edition": "2010 paperback",
       "amazon": {
         "url": "https://www.amazon.com/dp/1601422210",
@@ -390,7 +417,10 @@
         ],
         "checked_on": "2026-09-07",
         "display_note": "2010 Multnomah paperback"
-      }
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
     },
     {
       "id": "platt-follow-me",
@@ -410,8 +440,8 @@
           "url": "https://www.tyndale.com/p/follow-me/9781414373287"
         }
       ],
-      "approved": false,
-      "approval_note": "",
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
       "edition": "2013 softcover",
       "amazon": {
         "url": "https://www.amazon.com/dp/1414373287",
@@ -428,7 +458,10 @@
         ],
         "checked_on": "2026-09-07",
         "display_note": "2013 Tyndale softcover"
-      }
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
     },
     {
       "id": "piper-desiring-god",
@@ -452,8 +485,8 @@
           "url": "https://uploads.crossway.org/extra/sf25-new-books.pdf"
         }
       ],
-      "approved": false,
-      "approval_note": "",
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
       "edition": "Revised edition, 2025 hardcover",
       "amazon": {
         "url": "https://www.amazon.com/s?i=stripbooks&k=Desiring+God+Meditations+of+a+Christian+Hedonist+John+Piper+1433595974",
@@ -470,7 +503,10 @@
         ],
         "checked_on": "2026-09-07",
         "display_note": "Search by title and author; confirm the edition before buying."
-      }
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
     },
     {
       "id": "piper-dont-waste",
@@ -490,8 +526,8 @@
           "url": "https://www.desiringgod.org/books/dont-waste-your-life"
         }
       ],
-      "approved": false,
-      "approval_note": "",
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
       "edition": "2010 edition listed by the author’s ministry",
       "amazon": {
         "url": "https://www.amazon.com/s?i=stripbooks&k=Don%E2%80%99t+Waste+Your+Life+John+Piper",
@@ -508,7 +544,10 @@
         ],
         "checked_on": "2026-09-07",
         "display_note": "Search by title and author; confirm the edition before buying."
-      }
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
     },
     {
       "id": "piper-seeing-savoring",
@@ -532,8 +571,8 @@
           "url": "https://www.crossway.org/books/seeing-and-savoring-jesus-christ-tpb/"
         }
       ],
-      "approved": false,
-      "approval_note": "",
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
       "edition": "Revised edition, 2004 paperback",
       "amazon": {
         "url": "https://www.amazon.com/s?i=stripbooks&k=Seeing+and+Savoring+Jesus+Christ+John+Piper+1581346239",
@@ -550,7 +589,10 @@
         ],
         "checked_on": "2026-09-07",
         "display_note": "Search by title and author; confirm the edition before buying."
-      }
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
     },
     {
       "id": "permenter-spiritual-operators-manual",
@@ -570,8 +612,8 @@
           "url": "https://www.base1520.com/spiritual-operators-manual/"
         }
       ],
-      "approved": false,
-      "approval_note": "",
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
       "edition": "Digital edition; author page checked September 7, 2026",
       "amazon": {
         "url": "https://www.amazon.com/s?i=stripbooks&k=The+Spiritual+Operator%E2%80%99s+Manual+Cole+Permenter",
@@ -588,7 +630,10 @@
         ],
         "checked_on": "2026-09-07",
         "display_note": "Listing not verified. Author’s digital edition is linked above."
-      }
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
     },
     {
       "id": "gallaty-growing-up",
@@ -608,8 +653,8 @@
           "url": "https://www.bhpublishinggroup.com/product/growing-up-revised-and-updated-2/"
         }
       ],
-      "approved": false,
-      "approval_note": "",
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
       "edition": "Revised and Updated, 2022",
       "amazon": {
         "url": "https://www.amazon.com/s?i=stripbooks&k=Growing+Up+How+to+Be+a+Disciple+Who+Makes+Disciples+Robby+Gallaty+1087768225",
@@ -626,7 +671,10 @@
         ],
         "checked_on": "2026-09-07",
         "display_note": "Search by title and author; confirm the edition before buying."
-      }
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
     },
     {
       "id": "gallaty-rediscovering",
@@ -646,8 +694,8 @@
           "url": "https://zondervanacademic.com/products/rediscovering-discipleship"
         }
       ],
-      "approved": false,
-      "approval_note": "",
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
       "edition": "2015 softcover",
       "amazon": {
         "url": "https://www.amazon.com/dp/0310521289",
@@ -664,7 +712,10 @@
         ],
         "checked_on": "2026-09-07",
         "display_note": "2015 Zondervan softcover"
-      }
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
     },
     {
       "id": "merida-love-your-church",
@@ -684,8 +735,8 @@
           "url": "https://www.thegoodbook.com/ministry/love-your-church"
         }
       ],
-      "approved": false,
-      "approval_note": "",
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
       "edition": "2021 paperback",
       "amazon": {
         "url": "https://www.amazon.com/s?i=stripbooks&k=Love+Your+Church+8+Great+Things+About+Being+a+Church+Member+Tony+Merida+9781784986087",
@@ -702,7 +753,10 @@
         ],
         "checked_on": "2026-09-07",
         "display_note": "Search by title and author; confirm the edition before buying."
-      }
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
     },
     {
       "id": "merida-ordinary",
@@ -722,8 +776,8 @@
           "url": "https://www.lifeway.com/en/product/ebook-ordinary-P005665762"
         }
       ],
-      "approved": false,
-      "approval_note": "",
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
       "edition": "2015 eBook listing; trade book, not the separate Bible study workbook",
       "amazon": {
         "url": "https://www.amazon.com/s?i=stripbooks&k=Ordinary+How+to+Turn+the+World+Upside+Down+Tony+Merida",
@@ -740,7 +794,10 @@
         ],
         "checked_on": "2026-09-07",
         "display_note": "Search by title and author; confirm the edition before buying."
-      }
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
     },
     {
       "id": "fee-stuart-all-its-worth",
@@ -760,8 +817,8 @@
           "url": "https://zondervanacademic.com/products/how-to-read-the-bible-for-all-its-worth-4th"
         }
       ],
-      "approved": false,
-      "approval_note": "",
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
       "edition": "Fourth Edition (2014)",
       "amazon": {
         "url": "https://www.amazon.com/s?i=stripbooks&k=How+to+Read+the+Bible+for+All+Its+Worth+Gordon+D.+Fee+and+Douglas+Stuart+9780310517825",
@@ -778,7 +835,10 @@
         ],
         "checked_on": "2026-09-07",
         "display_note": "Search by title and author; confirm the edition before buying."
-      }
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
     },
     {
       "id": "fee-stuart-book-by-book",
@@ -798,8 +858,8 @@
           "url": "https://zondervanacademic.com/products/how-to-read-the-bible-book-by-book"
         }
       ],
-      "approved": false,
-      "approval_note": "",
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
       "edition": "2014 softcover publisher listing",
       "amazon": {
         "url": "https://www.amazon.com/s?i=stripbooks&k=How+to+Read+the+Bible+Book+by+Book+A+Guided+Tour+Gordon+D.+Fee+and+Douglas+Stuart+9780310518082",
@@ -816,7 +876,17 @@
         ],
         "checked_on": "2026-09-07",
         "display_note": "Search by title and author; confirm the edition before buying."
-      }
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
     }
-  ]
+  ],
+  "approval": {
+    "approved_on": "2026-09-07",
+    "method": "explicit_user_confirmation_in_chat",
+    "catalog_version": "2026-09-07-v1",
+    "scope": "All 21 listed titles approved for inclusion in the app; deployment is not authorized.",
+    "deployment_authorized": false
+  }
 }

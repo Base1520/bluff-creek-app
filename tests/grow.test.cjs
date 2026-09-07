@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { spotifyPlaylist, publicLink, pauseVisible, displayedPassage } = require('../js/grow.js');
+const { spotifyPlaylist, publicLink, pauseVisible, displayedPassage, approvedBooks } = require('../js/grow.js');
 
 test('Spotify accepts only full public playlist URLs and drops tracking parameters', () => {
   const id='0123456789ABCDEFGHIJKL';
@@ -13,6 +13,25 @@ test('Spotify accepts only full public playlist URLs and drops tracking paramete
 test('external book links require HTTPS and never accept embedded credentials', () => {
   assert.equal(publicLink('https://publisher.example.test/books/title'),'https://publisher.example.test/books/title');
   for(const url of ['',null,'javascript:alert(1)','data:text/html,hello','http://publisher.example.test/','https://user:password@publisher.example.test/','/relative'])assert.equal(publicLink(url),null,String(url));
+});
+
+test('book search finds subtitles, coauthors and topics despite punctuation or word order', () => {
+  const books=[
+    {approved:true,title:'Don’t Waste Your Life',author:'John Piper',note:'Following Jesus every day'},
+    {approved:true,title:'How to Read the Bible Book by Book',subtitle:'A Guided Tour',author:'Gordon D. Fee and Douglas Stuart',category:'Bible study'}
+  ];
+  for(const query of ["don't waste",'PIPER life','Jesus'])assert.deepEqual(approvedBooks(books,query),[books[0]]);
+  for(const query of ['Stuart','tour guided','Bible study'])assert.deepEqual(approvedBooks(books,query),[books[1]]);
+  assert.deepEqual(approvedBooks(books,'   '),books);
+  assert.deepEqual(approvedBooks(books,'no matching book'),[]);
+});
+
+test('book searches never expose unapproved or incomplete recommendations', () => {
+  const approved={approved:true,title:'Approved book',author:'Author'};
+  const candidates=[approved,{approved:false,title:'Hidden book',author:'Author'},{approved:'true',title:'Hidden book',author:'Author'},{approved:true,title:'Missing author'},null];
+  assert.deepEqual(approvedBooks(candidates),[approved]);
+  assert.deepEqual(approvedBooks(candidates,'hidden'),[]);
+  assert.deepEqual(approvedBooks(null),[]);
 });
 
 test('the one-Sunday pause expires at Central midnight, not UTC midnight', () => {

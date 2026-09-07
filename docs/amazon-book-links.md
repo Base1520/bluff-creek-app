@@ -1,6 +1,6 @@
 # Amazon book links and Associates setup
 
-Updated September 7, 2026. All 21 candidates now have an ordinary Amazon option in the standalone browser book-approval review: 12 verified product destinations and 9 explicitly labeled searches. Candidate titles remain unapproved; public app books remain empty. No issued affiliate ID has been verified and no commissions are active.
+Updated September 7, 2026. All 21 approved titles have an ordinary Amazon option in the standalone browser book-approval review: 12 verified product destinations and 9 explicitly labeled searches. The user explicitly approved all 21 titles for the app in list 2026-09-07-v1. The app candidate now includes them with publisher/author links; Amazon destinations remain confined to the standalone browser review. Deployment is not authorized. No issued affiliate ID has been verified and no commissions are active.
 
 ## Current setup
 
@@ -22,7 +22,7 @@ Amazon permits churches/nonprofits to apply and recommends organizational contin
 
 Amazon’s rules cover Special Links and other Amazon links in installable software except approved mobile applications; the published mobile requirements include an app-store listing. A browser-installed PWA is not explicitly classified in the sources checked. Hold Amazon links inside the installable church app until Amazon clarifies eligibility. Untagged links are not a proven exemption once participating in Associates. [Program Policies](https://affiliate-program.amazon.com/help/operating/policies), [Mobile requirements](https://affiliate-program.amazon.com/help/node/topic/GHBY6W8UPTEFD3ZX).
 
-Prepare the ordinary website reading page after titles are approved. Use substantive original descriptions and a voluntary outbound click, never automatic redirects or disguised Amazon destinations. An app-to-website route is not assumed to bypass Amazon’s application rules. Ask Amazon to confirm that use too. No inquiry was sent on the user’s behalf.
+The titles are now approved; prepare the ordinary website reading page before a separately authorized release. Use substantive original descriptions and a voluntary outbound click, never automatic redirects or disguised Amazon destinations. An app-to-website route is not assumed to bypass Amazon’s application rules. Ask Amazon to confirm that use too. No inquiry was sent on the user’s behalf.
 
 ## Disclosure prepared for activation
 

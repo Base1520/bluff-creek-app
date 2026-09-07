@@ -16,6 +16,15 @@
   function publicLink(value) {
     try { var url = new URL(value); return url.protocol === 'https:' && !url.username && !url.password ? url.href : null; } catch (_) { return null; }
   }
+  function bookSearchText(value) { return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/['’‘]/g,'').replace(/[^a-z0-9]+/g,' ').trim(); }
+  function approvedBooks(value, query) {
+    var words=bookSearchText(query).split(' ').filter(Boolean);
+    return (Array.isArray(value)?value:[]).filter(function(book){
+      if(!book || book.approved!==true || typeof book.title!=='string' || !book.title.trim() || typeof book.author!=='string' || !book.author.trim())return false;
+      var text=bookSearchText([book.title,book.subtitle,book.author,book.category,book.note,book.reader].join(' '));
+      return words.every(function(word){return text.indexOf(word)!==-1});
+    });
+  }
   function churchDate(now) { return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit'}).format(now || new Date()); }
   function validDate(value) { return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && !isNaN(Date.parse(value+'T12:00:00Z')) && new Date(value+'T12:00:00Z').toISOString().slice(0,10) === value; }
   function pauseVisible(pause, now) { return !!(pause && validDate(pause.date) && churchDate(now) <= pause.date); }
@@ -61,16 +70,35 @@
       });
       close.addEventListener('click',function(){player.replaceChildren();player.hidden=true;close.hidden=true;load.textContent='Load Spotify player';load.removeAttribute('aria-disabled');set('growSpotifyStatus','The player is closed.');load.focus()});
     }
-    var shelf=doc.getElementById('growBooks'), books=(Array.isArray(content.books)?content.books:[]).filter(function(book){return book && book.approved===true && typeof book.title==='string' && book.title.trim() && typeof book.author==='string' && book.author.trim()});
+    var shelf=doc.getElementById('growBooks'), books=approvedBooks(content.books), cards=[];
     books.forEach(function(book,i){
       var article=doc.createElement('article');article.className='grow-book';var number=doc.createElement('span');number.className='book-number';number.setAttribute('aria-hidden','true');number.textContent=String(i+1).padStart(2,'0');article.appendChild(number);
       var body=doc.createElement('div'), heading=doc.createElement('h4');heading.textContent=book.title;body.appendChild(heading);
+      if(typeof book.subtitle==='string' && book.subtitle.trim()){var subtitle=doc.createElement('p');subtitle.className='book-subtitle';subtitle.textContent=book.subtitle;body.appendChild(subtitle)}
       var author=doc.createElement('div');author.className='book-author';author.textContent=book.author;body.appendChild(author);
       if(typeof book.note==='string' && book.note.trim()){var note=doc.createElement('p');note.textContent=book.note;body.appendChild(note)}
-      var url=publicLink(book.url);if(url){var link=doc.createElement('a');link.href=url;link.target='_blank';link.rel='noopener noreferrer';link.textContent='About this book ↗';body.appendChild(link)}
-      article.appendChild(body);shelf.appendChild(article);
+      if(typeof book.context==='string' && book.context.trim()){
+        var details=doc.createElement('details');details.className='book-context';var summary=doc.createElement('summary');summary.textContent='Reading context';details.appendChild(summary);
+        if(typeof book.reader==='string' && book.reader.trim()){var reader=doc.createElement('p');reader.textContent='Good for: '+book.reader;details.appendChild(reader)}
+        var context=doc.createElement('p');context.textContent=book.context;details.appendChild(context);body.appendChild(details);
+        if(typeof book.edition==='string' && book.edition.trim()){var edition=doc.createElement('p');edition.textContent='Edition: '+book.edition;details.appendChild(edition)}
+      }
+      var url=publicLink(book.url);if(url){var link=doc.createElement('a');link.href=url;link.target='_blank';link.rel='noopener noreferrer';link.textContent='About this book ↗';link.setAttribute('aria-label','About this book: '+book.title);body.appendChild(link)}
+      article.appendChild(body);shelf.appendChild(article);cards.push({book:book,node:article});
     });
     doc.getElementById('growBooksPending').hidden=books.length>0;
+    var tools=doc.getElementById('growBookTools'), search=doc.getElementById('growBookSearch'), clear=doc.getElementById('growBookClear');
+    if(tools && search && clear){
+      tools.hidden=books.length===0;
+      function filterShelf(){
+        var visible=approvedBooks(books,search.value);
+        cards.forEach(function(card){card.node.hidden=visible.indexOf(card.book)===-1});
+        set('growBookCount',visible.length+' '+(visible.length===1?'book':'books')+(search.value.trim()?' found':' on the shelf'));
+        doc.getElementById('growBooksEmpty').hidden=visible.length>0 || books.length===0;
+        clear.hidden=!search.value;
+      }
+      search.addEventListener('input',filterShelf);clear.addEventListener('click',function(){search.value='';filterShelf();search.focus()});filterShelf();
+    }
   }
-  return { spotifyPlaylist:spotifyPlaylist, publicLink:publicLink, pauseVisible:pauseVisible, displayedPassage:displayedPassage, init:init };
+  return { spotifyPlaylist:spotifyPlaylist, publicLink:publicLink, pauseVisible:pauseVisible, displayedPassage:displayedPassage, approvedBooks:approvedBooks, init:init };
 }));

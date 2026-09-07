@@ -1,18 +1,18 @@
-# Books for Pastor Cole to review
+# Approved books for the Bluff Creek app
 
-21 candidates · checked September 7, 2026 · none approved yet
+21 titles approved · September 7, 2026 · list version `2026-09-07-v1`
 
-Check the individual titles you want in the Bluff Creek app. Leave a note if you want a different edition, a narrower reader group, or a particular explanation beside a book. An author’s inclusion does not approve every book by that author.
+Pastor Cole explicitly approved all 21 books in this list in chat for inclusion in the app. The checkmarks below record that decision. Approval applies to these individual titles and does not authorize deployment or approve every work by their authors.
 
-These descriptions and context notes are research prepared for your review. They are not yet pastoral endorsements, and the source checks are not a full theological review. Reader and difficulty labels are editorial judgments, not publisher reading scores.
+Descriptions, reading levels, and context notes remain editorial guidance based on publisher and author sources. The source checks confirm metadata and stated subject matter, not a full theological review. Notes may be refined for the app without changing the recorded title approval.
 
-The public app `books[]` remains empty. Checking this review list does not automatically publish books or change the app. After you return your selections, approved titles and their public descriptions can be added to the app candidate for review.
+The companion review page shows a checked, read-only approval on every book. Earlier browser storage is retained for continuity, and saved notes remain available. Copy or download the authoritative approval record together with any actual notes you entered. Earlier checkbox choices are not interpreted as requests or changes.
 
-Amazon options are ordinary, untagged shopping links: 12 verified product destinations and 9 clearly labeled searches. Affiliate commissions are not active. Check the format and seller on Amazon. SOM’s Amazon listing is not verified; its author page remains available. These links do not approve or publish any book.
+Amazon options remain ordinary, untagged shopping links: 12 verified product destinations and 9 clearly labeled searches. Affiliate signup is unresolved, and commissions are not active. Check the format and seller on Amazon. SOM’s Amazon listing is not verified; its author page remains available.
 
-The structured companion is `docs/book-candidates.json`. It contains the complete source list, stable title IDs, and separate approval fields. Every `approved` field starts as `false`.
+The structured companion is `docs/book-candidates.json`. It retains stable title IDs, source and Amazon records, and list version `2026-09-07-v1`. All 21 `approved` fields are now `true`, with the approval date, method, and version recorded. Publishing the app remains a separate step.
 
-1. [ ] **[Mere Christianity](https://churchsource.com/products/mere-christianity) — C. S. Lewis**
+1. [x] **[Mere Christianity](https://churchsource.com/products/mere-christianity) — C. S. Lewis**
 
    Builds a reasoned case for Christian belief, then explores Christian character and what it means to live a transformed life.
 
@@ -26,7 +26,7 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
 
    **Your note:**
 
-2. [ ] **[The Screwtape Letters](https://churchsource.com/products/the-screwtape-letters-1) — C. S. Lewis**
+2. [x] **[The Screwtape Letters](https://churchsource.com/products/the-screwtape-letters-1) — C. S. Lewis**
 
    Fictional correspondence between two tempters exposes ordinary spiritual distractions, self-deception, and habits that quietly pull people away from God.
 
@@ -40,7 +40,7 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
 
    **Your note:**
 
-3. [ ] **[The Great Divorce](https://churchsource.com/products/the-great-divorce) — C. S. Lewis**
+3. [x] **[The Great Divorce](https://churchsource.com/products/the-great-divorce) — C. S. Lewis**
 
    An imagined journey between hell and heaven explores the stubborn attachments, evasions, and choices that keep people from receiving grace.
 
@@ -54,7 +54,7 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
 
    **Your note:**
 
-4. [ ] **[The Knowledge of the Holy](https://churchsource.com/products/the-knowledge-of-the-holy) — A. W. Tozer**
+4. [x] **[The Knowledge of the Holy](https://churchsource.com/products/the-knowledge-of-the-holy) — A. W. Tozer**
 
    Reflects on God's character and majesty, connecting what Christians believe about him with reverence, prayer, worship, and daily life.
 
@@ -68,7 +68,7 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
 
    **Your note:**
 
-5. [ ] **[The Pursuit of God](https://www.moodypublishers.com/the-pursuit-of-god) — A. W. Tozer**
+5. [x] **[The Pursuit of God](https://www.moodypublishers.com/the-pursuit-of-god) — A. W. Tozer**
 
    Calls readers to seek God wholeheartedly, surrender competing attachments, and cultivate humility, attentive prayer, and awareness of his presence.
 
@@ -82,7 +82,7 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
 
    **Your note:**
 
-6. [ ] **[Knowing God](https://ivpress.com/knowing-god) — J. I. Packer**
+6. [x] **[Knowing God](https://ivpress.com/knowing-god) — J. I. Packer**
 
    Connects careful study of God's character with personal trust, worship, adoption in Christ, and confidence in his faithfulness through trials.
 
@@ -96,7 +96,7 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
 
    **Your note:**
 
-7. [ ] **[Evangelism and the Sovereignty of God](https://www.ivpress.com/evangelism-and-the-sovereignty-of-god) — J. I. Packer**
+7. [x] **[Evangelism and the Sovereignty of God](https://www.ivpress.com/evangelism-and-the-sovereignty-of-god) — J. I. Packer**
 
    Explains how confidence in God's sovereignty supports evangelism, holding together human responsibility, faithful gospel witness, and dependence on God's work.
 
@@ -110,7 +110,7 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
 
    **Your note:**
 
-8. [ ] **[The Holiness of God](https://store.ligonier.org/the-holiness-of-god-paperback) — R. C. Sproul**
+8. [x] **[The Holiness of God](https://store.ligonier.org/the-holiness-of-god-paperback) — R. C. Sproul**
 
    Explores God's holiness and the human response to it, inviting deeper reverence, renewed worship, and a life shaped by his character.
 
@@ -124,7 +124,7 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
 
    **Your note:**
 
-9. [ ] **[Essential Truths of the Christian Faith](https://www.tyndale.com/p/essential-truths-of-the-christian-faith/9780842320016) — R. C. Sproul**
+9. [x] **[Essential Truths of the Christian Faith](https://www.tyndale.com/p/essential-truths-of-the-christian-faith/9780842320016) — R. C. Sproul**
 
    Introduces more than one hundred Christian doctrines through concise explanations and familiar illustrations, providing a reference for growing theological understanding.
 
@@ -138,7 +138,7 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
 
    **Your note:**
 
-10. [ ] **[Radical](https://penguinrandomhouselibrary.com/book/?isbn=9781601422217) — David Platt**
+10. [x] **[Radical](https://penguinrandomhouselibrary.com/book/?isbn=9781601422217) — David Platt**
 
    *Taking Back Your Faith from the American Dream*
 
@@ -154,7 +154,7 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
 
    **Your note:**
 
-11. [ ] **[Follow Me](https://www.tyndale.com/p/follow-me/9781414373287) — David Platt**
+11. [x] **[Follow Me](https://www.tyndale.com/p/follow-me/9781414373287) — David Platt**
 
    *A Call to Die. A Call to Live.*
 
@@ -170,7 +170,7 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
 
    **Your note:**
 
-12. [ ] **[Desiring God](https://www.desiringgod.org/books/desiring-god) — John Piper**
+12. [x] **[Desiring God](https://www.desiringgod.org/books/desiring-god) — John Piper**
 
    *Meditations of a Christian Hedonist*
 
@@ -186,7 +186,7 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
 
    **Your note:**
 
-13. [ ] **[Don’t Waste Your Life](https://www.desiringgod.org/books/dont-waste-your-life) — John Piper**
+13. [x] **[Don’t Waste Your Life](https://www.desiringgod.org/books/dont-waste-your-life) — John Piper**
 
    Urges readers to place Christ’s glory above comfort and achievement, pursuing a purposeful life of sacrificial love and eternal significance.
 
@@ -200,7 +200,7 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
 
    **Your note:**
 
-14. [ ] **[Seeing and Savoring Jesus Christ](https://www.desiringgod.org/books/seeing-and-savoring-jesus-christ) — John Piper**
+14. [x] **[Seeing and Savoring Jesus Christ](https://www.desiringgod.org/books/seeing-and-savoring-jesus-christ) — John Piper**
 
    Invites readers to contemplate the biblical portrait of Jesus, seeking deeper understanding of his character and greater delight in him.
 
@@ -214,7 +214,7 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
 
    **Your note:**
 
-15. [ ] **[The Spiritual Operator’s Manual](https://www.base1520.com/spiritual-operators-manual/) — Cole Permenter**
+15. [x] **[The Spiritual Operator’s Manual](https://www.base1520.com/spiritual-operators-manual/) — Cole Permenter**
 
    *The C.O.V.E.N.A.N.T. Method for Text-Driven, Christ-Exalting, Mission-Ready Preaching*
 
@@ -230,7 +230,7 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
 
    **Your note:**
 
-16. [ ] **[Growing Up](https://www.bhpublishinggroup.com/product/growing-up-revised-and-updated-2/) — Robby Gallaty**
+16. [x] **[Growing Up](https://www.bhpublishinggroup.com/product/growing-up-revised-and-updated-2/) — Robby Gallaty**
 
    *How to Be a Disciple Who Makes Disciples*
 
@@ -246,7 +246,7 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
 
    **Your note:**
 
-17. [ ] **[Rediscovering Discipleship](https://zondervanacademic.com/products/rediscovering-discipleship) — Robby Gallaty**
+17. [x] **[Rediscovering Discipleship](https://zondervanacademic.com/products/rediscovering-discipleship) — Robby Gallaty**
 
    *Making Jesus’ Final Words Our First Work*
 
@@ -262,7 +262,7 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
 
    **Your note:**
 
-18. [ ] **[Love Your Church](https://www.thegoodbook.com/ministry/love-your-church) — Tony Merida**
+18. [x] **[Love Your Church](https://www.thegoodbook.com/ministry/love-your-church) — Tony Merida**
 
    *8 Great Things About Being a Church Member*
 
@@ -278,7 +278,7 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
 
    **Your note:**
 
-19. [ ] **[Ordinary](https://www.lifeway.com/en/product/ebook-ordinary-P005665762) — Tony Merida**
+19. [x] **[Ordinary](https://www.lifeway.com/en/product/ebook-ordinary-P005665762) — Tony Merida**
 
    *How to Turn the World Upside Down*
 
@@ -294,7 +294,7 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
 
    **Your note:**
 
-20. [ ] **[How to Read the Bible for All Its Worth](https://zondervanacademic.com/products/how-to-read-the-bible-for-all-its-worth-4th) — Gordon D. Fee and Douglas Stuart**
+20. [x] **[How to Read the Bible for All Its Worth](https://zondervanacademic.com/products/how-to-read-the-bible-for-all-its-worth-4th) — Gordon D. Fee and Douglas Stuart**
 
    Introduces interpretation through biblical genres, helping readers consider original context before applying passages to Christian life today.
 
@@ -308,7 +308,7 @@ The structured companion is `docs/book-candidates.json`. It contains the complet
 
    **Your note:**
 
-21. [ ] **[How to Read the Bible Book by Book](https://zondervanacademic.com/products/how-to-read-the-bible-book-by-book) — Gordon D. Fee and Douglas Stuart**
+21. [x] **[How to Read the Bible Book by Book](https://zondervanacademic.com/products/how-to-read-the-bible-book-by-book) — Gordon D. Fee and Douglas Stuart**
 
    *A Guided Tour*
 
