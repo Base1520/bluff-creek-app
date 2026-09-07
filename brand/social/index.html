@@ -36,6 +36,7 @@
   /* ---------- the canvas itself: always real pixels ---------- */
   .post{position:relative;overflow:hidden;font-family:"Nunito Sans",sans-serif;background:var(--ivory);color:var(--ink)}
   .post .pad{position:relative;z-index:3;height:100%;display:flex;flex-direction:column;justify-content:space-between}
+  .post .eyebrow.mid{justify-content:center}
   .post .eyebrow{font-weight:800;text-transform:uppercase;letter-spacing:.2em;display:flex;align-items:center;gap:14px}
   .post .eyebrow::before{content:"";height:3px;width:38px;background:currentColor;border-radius:3px;flex:0 0 auto}
   .post h2.head{font-family:"Bitter",serif;font-weight:600;letter-spacing:-.022em;line-height:1.03;margin:0}
@@ -77,6 +78,25 @@
       <option value="1080x1350">Portrait — best reach (1080 × 1350)</option>
       <option value="1080x1920">Story / Reel cover (1080 × 1920)</option>
     </select>
+
+    <div class="row">
+      <div><label for="layout">Layout</label>
+        <select id="layout">
+          <option value="standard">Standard</option>
+          <option value="centered">Centered</option>
+          <option value="bottom">Anchored low</option>
+          <option value="banner">Colour band</option>
+          <option value="quote">Big quote mark</option>
+        </select>
+      </div>
+      <div><label for="signmode">The 63</label>
+        <select id="signmode">
+          <option value="badge">Road sign, as is</option>
+          <option value="watermark">Faint watermark</option>
+          <option value="none">None — creek only</option>
+        </select>
+      </div>
+    </div>
 
     <label for="eyebrow">Small label on top</label>
     <input id="eyebrow" maxlength="42">
@@ -158,27 +178,27 @@
 var A = "../assets/";  // brand assets folder
 
 var TEMPLATES = {
-  invite:   {name:"Sunday invite",              style:"pine",   eyebrow:"Bluff Creek Baptist Church", head:"Welcome home to the Creek.", body:"A country church on Highway 63 that loves the Word and would love to know you.", meta1:"Sunday 10:15a", meta2:"1706 Hwy 63 · Clinton"},
-  quote:    {name:"Sermon quote",               style:"ivory",  eyebrow:"From Sunday",               head:"“Grace is not God lowering the standard. It is God meeting it for you.”", body:"", meta1:"Pastor Cole Permenter", meta2:"Romans 5"},
-  scripture:{name:"Scripture card",             style:"deep",   eyebrow:"The Word",                  head:"But as for me and my house, we will serve the LORD.", body:"", meta1:"Joshua 24:15", meta2:""},
-  event:    {name:"Event announcement",         style:"ivory",  eyebrow:"Mark your calendar",        head:"Fall Festival @ the Creek", body:"Games, food, and a trunk-or-treat for every age. Bring the whole family and a friend.", meta1:"Saturday, Oct 25 · 5:00p", meta2:"Fellowship Building"},
-  youth:    {name:"Youth — 6 on the 63",        style:"youth",  eyebrow:"Youth @ the Creek",         head:"6 on the 63.", body:"Wednesday nights. Supper, a word from the Word, and the pickleball court.", meta1:"Wednesdays 6:00p", meta2:"6th–12th grade"},
-  kidz:     {name:"Kidz @ the Creek",           style:"kidz",   eyebrow:"Kidz @ the Creek",          head:"A safe, loving place — every single week.", body:"Birth through 5th grade. Sunday School at 9:00 and a nursery for the littlest ones.", meta1:"Sundays 9:00a", meta2:"Fellowship Building"},
-  missions: {name:"Missions",                   style:"missions",eyebrow:"Missions @ the Creek",     head:"Across the street and across the world.", body:"We take the Great Commission personally — and we send our own people to do it.", meta1:"Get involved", meta2:"bluffcreekbaptistchurch.org"},
-  prayer:   {name:"Prayer",                     style:"pine",   eyebrow:"Pray with us",              head:"Wednesday night, we pray.", body:"Bring what you're carrying. Somebody here will carry it with you.", meta1:"Wednesdays 6:00p", meta2:"Sanctuary"},
-  newhere:  {name:"New here / first visit",     style:"ivory",  eyebrow:"First stop on the 63",      head:"Never been? Start here.", body:"Where to park, what to wear, what to do with your kids — we wrote it all down so nothing feels like a guess.", meta1:"Plan your first Sunday", meta2:"bluffcreekbaptistchurch.org"},
-  serve:    {name:"Serve / volunteer call",     style:"ivory",  eyebrow:"Lend a hand",               head:"There's a place for you on a team.", body:"Nursery, greeting, sound, and the Wednesday meal. It takes a couple hours a month.", meta1:"Talk to Pastor Cole", meta2:"or reply to this post"},
-  baptism:  {name:"Baptism / celebration",      style:"deep",   eyebrow:"Buried with Him",           head:"Another one home.", body:"Nothing gets old about this. Praise God for what He's doing at the Creek.", meta1:"Baptism Sunday", meta2:""},
-  schedule: {name:"Weekly schedule",            style:"pine",   eyebrow:"This week at the Creek",    head:"Here's when we gather.", body:"Sunday School 9:00a · Worship 10:15a · Evening 6:00p\nWednesday prayer &amp; youth 6:00p", meta1:"1706 Highway 63", meta2:"Clinton, Louisiana"}
+  invite:   {name:"Sunday invite",          style:"pine",    layout:"standard", sign:"badge",     eyebrow:"Bluff Creek Baptist Church", head:"Welcome home to the Creek.", body:"A country church on Highway 63 that loves the Word and would love to know you.", meta1:"Sunday 10:15a", meta2:"1706 Hwy 63 · Clinton"},
+  quote:    {name:"Sermon quote",           style:"ivory",   layout:"quote",    sign:"none",      eyebrow:"From Sunday", head:"Grace is not God lowering the standard. It is God meeting it for you.", body:"", meta1:"Pastor Cole Permenter", meta2:"Romans 5"},
+  scripture:{name:"Scripture card",         style:"deep",    layout:"centered", sign:"watermark", eyebrow:"The Word", head:"But as for me and my house, we will serve the LORD.", body:"", meta1:"Joshua 24:15", meta2:""},
+  event:    {name:"Event announcement",     style:"ivory",   layout:"banner",   sign:"badge",     eyebrow:"Mark your calendar", head:"Fall Festival @ the Creek", body:"Games, food, and a trunk-or-treat for every age. Bring the whole family and a friend.", meta1:"Saturday, Oct 25 · 5:00p", meta2:"Fellowship Building"},
+  youth:    {name:"Youth — 6 on the 63",    style:"youth",   layout:"standard", sign:"watermark", eyebrow:"Youth @ the Creek", head:"6 on the 63.", body:"Wednesday nights. Supper, a word from the Word, and the pickleball court.", meta1:"Wednesdays 6:00p", meta2:"6th–12th grade"},
+  kidz:     {name:"Kidz @ the Creek",       style:"kidz",    layout:"standard", sign:"none",      eyebrow:"Kidz @ the Creek", head:"A safe, loving place — every single week.", body:"Birth through 5th grade. Sunday School at 9:00 and a nursery for the littlest ones.", meta1:"Sundays 9:00a", meta2:"Fellowship Building"},
+  missions: {name:"Missions",               style:"missions",layout:"bottom",   sign:"badge",     eyebrow:"Missions @ the Creek", head:"Across the street and across the world.", body:"We take the Great Commission personally — and we send our own people to do it.", meta1:"Get involved", meta2:"bluffcreekbaptistchurch.org"},
+  prayer:   {name:"Prayer",                 style:"pine",    layout:"centered", sign:"none",      eyebrow:"Pray with us", head:"Wednesday night, we pray.", body:"Bring what you're carrying. Somebody here will carry it with you.", meta1:"Wednesdays 6:00p", meta2:"Sanctuary"},
+  newhere:  {name:"New here / first visit", style:"ivory",   layout:"standard", sign:"badge",     eyebrow:"First stop on the 63", head:"Never been? Start here.", body:"Where to park, what to wear, what to do with your kids — we wrote it all down so nothing feels like a guess.", meta1:"Plan your first Sunday", meta2:"bluffcreekbaptistchurch.org"},
+  serve:    {name:"Serve / volunteer call", style:"ivory",   layout:"banner",   sign:"none",      eyebrow:"Lend a hand", head:"There's a place for you on a team.", body:"Nursery, greeting, sound, and the Wednesday meal. It takes a couple hours a month.", meta1:"Talk to Pastor Cole", meta2:"or reply to this post"},
+  baptism:  {name:"Baptism / celebration",  style:"deep",    layout:"centered", sign:"watermark", eyebrow:"Buried with Him", head:"Another one home.", body:"Nothing gets old about this. Praise God for what He's doing at the Creek.", meta1:"Baptism Sunday", meta2:""},
+  schedule: {name:"Weekly schedule",        style:"pine",    layout:"bottom",   sign:"badge",     eyebrow:"This week at the Creek", head:"Here's when we gather.", body:"Sunday School 9:00a · Worship 10:15a · Evening 6:00p\nWednesday prayer & youth 6:00p", meta1:"1706 Highway 63", meta2:"Clinton, Louisiana"}
 };
 
 var STYLES = {
-  ivory:    {bg:"#F5EFE3", fg:"#221F1A", eyebrow:"#9C7630", sub:"#5E574C", mark:"logo.png",       creek:"creek-gold.png",  wm:"#3C5A45", rule:"#B08636", signOp:0.06},
-  pine:     {bg:"linear-gradient(160deg,#2E4636,#3C5A45 88%)", fg:"#F6F2E7", eyebrow:"#d9c896", sub:"#e6ddc7", mark:"logo-white.png", creek:"creek-ivory.png", wm:"#FFFFFF", rule:"#B08636", signOp:0.06},
-  deep:     {bg:"linear-gradient(165deg,#16211A,#2E4636 92%)", fg:"#F6F2E7", eyebrow:"#e5c76f", sub:"#ded5bf", mark:"logo-white.png", creek:"creek-ivory.png", wm:"#FFFFFF", rule:"#B08636", signOp:0.06},
-  youth:    {bg:"linear-gradient(160deg,#3B5A61,#557A82 90%)", fg:"#F6F2E7", eyebrow:"#dcecef", sub:"#e3edef", mark:"logo-white.png", creek:"creek-ivory.png", wm:"#FFFFFF", rule:"#B08636", signOp:0.06},
-  kidz:     {bg:"linear-gradient(160deg,#4E7343,#6B8F5E 90%)", fg:"#F7F3E8", eyebrow:"#e8f0e2", sub:"#eaf1e5", mark:"logo-white.png", creek:"creek-ivory.png", wm:"#FFFFFF", rule:"#B08636", signOp:0.06},
-  missions: {bg:"linear-gradient(160deg,#8A452F,#A8573E 90%)", fg:"#F8F1EA", eyebrow:"#f0d7c9", sub:"#f1ddd2", mark:"logo-white.png", creek:"creek-ivory.png", wm:"#FFFFFF", rule:"#E4C08A", signOp:0.07}
+  ivory:    {bg:"#F5EFE3", fg:"#221F1A", eyebrow:"#9C7630", sub:"#5E574C", mark:"logo.png",       creek:"creek-gold.png",  wm:"#3C5A45", rule:"#B08636", signOp:0.06, band:"#3C5A45", bandFg:"#F6F2E7"},
+  pine:     {bg:"linear-gradient(160deg,#2E4636,#3C5A45 88%)", fg:"#F6F2E7", eyebrow:"#d9c896", sub:"#e6ddc7", mark:"logo-white.png", creek:"creek-ivory.png", wm:"#FFFFFF", rule:"#B08636", signOp:0.06, band:"#B08636", bandFg:"#231a06"},
+  deep:     {bg:"linear-gradient(165deg,#16211A,#2E4636 92%)", fg:"#F6F2E7", eyebrow:"#e5c76f", sub:"#ded5bf", mark:"logo-white.png", creek:"creek-ivory.png", wm:"#FFFFFF", rule:"#B08636", signOp:0.06, band:"#B08636", bandFg:"#231a06"},
+  youth:    {bg:"linear-gradient(160deg,#3B5A61,#557A82 90%)", fg:"#F6F2E7", eyebrow:"#dcecef", sub:"#e3edef", mark:"logo-white.png", creek:"creek-ivory.png", wm:"#FFFFFF", rule:"#B08636", signOp:0.06, band:"#B08636", bandFg:"#231a06"},
+  kidz:     {bg:"linear-gradient(160deg,#4E7343,#6B8F5E 90%)", fg:"#F7F3E8", eyebrow:"#e8f0e2", sub:"#eaf1e5", mark:"logo-white.png", creek:"creek-ivory.png", wm:"#FFFFFF", rule:"#B08636", signOp:0.06, band:"#B08636", bandFg:"#231a06"},
+  missions: {bg:"linear-gradient(160deg,#8A452F,#A8573E 90%)", fg:"#F8F1EA", eyebrow:"#f0d7c9", sub:"#f1ddd2", mark:"logo-white.png", creek:"creek-ivory.png", wm:"#FFFFFF", rule:"#E4C08A", signOp:0.07, band:"#E4C08A", bandFg:"#3A1B10"}
 };
 
 var SIZES = {
@@ -203,30 +223,63 @@ function render(){
   var t = TEMPLATES[cur], s = STYLES[t.style], z = SIZES[$("size").value];
   var eyebrow = $("eyebrow").value, head = $("head").value, body = $("body").value,
       m1 = $("meta1").value, m2 = $("meta2").value;
+  var layout = $("layout").value, signMode = $("signmode").value;
+  var pad = z.pad, mid = (layout === "centered");
 
-  var html =
-  '<div class="post" style="width:'+z.w+'px;height:'+z.h+'px;background:'+s.bg+';color:'+s.fg+'">'
-  + '<img class="signwm" src="'+A+'la63.svg" style="position:absolute;right:-'+Math.round(z.sign*0.34)+'px;bottom:-'+Math.round(z.sign*0.30)+'px;width:'+z.sign+'px;opacity:'+s.signOp+';z-index:1;pointer-events:none" alt="">'
-  + '<img class="creek" src="'+A+s.creek+'" style="position:absolute;left:-30px;bottom:'+Math.round(z.pad*1.5)+'px;width:'+z.creek+'px;opacity:.22;z-index:2" alt="">'
-  + '<div class="pad" style="padding:'+z.pad+'px">'
-  +   '<div>'
-  +     '<img class="mark" src="'+A+s.mark+'" style="width:'+z.mark+'px;margin-bottom:'+Math.round(z.pad*0.62)+'px" alt="">'
-  +     (eyebrow ? '<div class="eyebrow" style="font-size:'+z.eye+'px;color:'+s.eyebrow+';margin-bottom:'+Math.round(z.pad*0.30)+'px">'+esc(eyebrow)+'</div>' : '')
-  +     '<h2 class="head" style="font-size:'+z.head+'px;max-width:15ch">'+nl(head)+'</h2>'
-  +     (body ? '<p class="body" style="font-size:'+z.body+'px;color:'+s.sub+';max-width:26ch;margin-top:'+Math.round(z.pad*0.34)+'px">'+nl(body)+'</p>' : '')
-  +   '</div>'
-  +   '<div class="foot">'
-  +     '<div>'
-  +       '<div class="rule" style="width:64px;height:4px;background:'+s.rule+';margin-bottom:'+Math.round(z.pad*0.26)+'px"></div>'
-  +       (m1 ? '<div class="meta" style="font-size:'+z.meta+'px;color:'+s.fg+'">'+esc(m1)+'</div>' : '')
-  +       (m2 ? '<div class="meta" style="font-size:'+z.meta+'px;color:'+s.sub+';margin-top:6px">'+esc(m2)+'</div>' : '')
-  +     '</div>'
-    +   '</div>'
-  + '</div></div>';
+  // --- the 63, three ways ---
+  var sign = "";
+  if (signMode === "watermark") {
+    sign = '<img src="'+A+'la63.svg" style="position:absolute;right:-'+Math.round(z.sign*0.34)+'px;bottom:-'+Math.round(z.sign*0.30)+'px;width:'+z.sign+'px;opacity:'+s.signOp+';z-index:1;pointer-events:none" alt="">';
+  } else if (signMode === "badge") {
+    sign = '<img src="'+A+'la63.svg" style="position:absolute;right:'+Math.round(pad*0.78)+'px;bottom:'+Math.round(pad*0.78)+'px;width:'+Math.round(z.mark*1.32)+'px;z-index:4;filter:drop-shadow(0 6px 16px rgba(0,0,0,.3))" alt="Louisiana Highway 63">';
+  }
 
-  $("card").innerHTML = html;
+  // --- the creek brushstroke: carries the cards that have no sign ---
+  var creekOp = (signMode === "none") ? 0.34 : 0.20;
+  var creek = '<img src="'+A+s.creek+'" style="position:absolute;left:-30px;bottom:'+Math.round(pad*1.5)+'px;width:'+z.creek+'px;opacity:'+creekOp+';z-index:2" alt="">';
 
-  // scale the preview to fit its column
+  var mark = '<img src="'+A+s.mark+'" style="width:'+z.mark+'px;display:block;'+(mid?'margin:0 auto '+Math.round(pad*0.5)+'px;':'margin-bottom:'+Math.round(pad*0.62)+'px;')+'" alt="">';
+  var eyeEl = eyebrow ? '<div class="eyebrow'+(mid?' mid':'')+'" style="font-size:'+z.eye+'px;color:'+s.eyebrow+';margin-bottom:'+Math.round(pad*0.30)+'px">'+esc(eyebrow)+'</div>' : '';
+  var headSize = (layout === "quote") ? Math.round(z.head*0.92) : z.head;
+  var headEl = '<h2 class="head" style="font-size:'+headSize+'px;max-width:'+(mid?'17ch':'15ch')+';'+(mid?'margin:0 auto;':'')+'">'+nl(head)+'</h2>';
+  var bodyEl = body ? '<p class="body" style="font-size:'+z.body+'px;color:'+s.sub+';max-width:'+(mid?'30ch':'26ch')+';'+(mid?'margin:'+Math.round(pad*0.34)+'px auto 0;':'margin-top:'+Math.round(pad*0.34)+'px;')+'">'+nl(body)+'</p>' : '';
+
+  var metaEl =
+      '<div class="rule" style="width:64px;height:4px;background:'+s.rule+';margin:0 '+(mid?'auto':'0')+' '+Math.round(pad*0.26)+'px"></div>'
+    + (m1 ? '<div class="meta" style="font-size:'+z.meta+'px;color:'+s.fg+'">'+esc(m1)+'</div>' : '')
+    + (m2 ? '<div class="meta" style="font-size:'+z.meta+'px;color:'+s.sub+';margin-top:6px">'+esc(m2)+'</div>' : '');
+
+  var inner;
+  if (layout === "centered") {
+    inner = '<div class="pad" style="padding:'+pad+'px;justify-content:center;text-align:center">'
+          + '<div>'+mark+eyeEl+headEl+bodyEl
+          + '<div style="margin-top:'+Math.round(pad*0.7)+'px">'+metaEl+'</div></div></div>';
+  } else if (layout === "bottom") {
+    inner = '<div class="pad" style="padding:'+pad+'px;justify-content:flex-end">'
+          + '<div>'+mark+eyeEl+headEl+bodyEl
+          + '<div style="margin-top:'+Math.round(pad*0.55)+'px">'+metaEl+'</div></div></div>';
+  } else if (layout === "banner") {
+    inner = '<div class="pad" style="padding:'+pad+'px 0 0">'
+          + '<div style="padding:0 '+pad+'px">'+mark+eyeEl+headEl+bodyEl+'</div>'
+          + '<div style="background:'+s.band+';padding:'+Math.round(pad*0.62)+'px '+pad+'px;position:relative;z-index:3">'
+          +   (m1 ? '<div class="meta" style="font-size:'+Math.round(z.meta*1.08)+'px;color:'+s.bandFg+'">'+esc(m1)+'</div>' : '')
+          +   (m2 ? '<div class="meta" style="font-size:'+z.meta+'px;color:'+s.bandFg+';opacity:.78;margin-top:6px">'+esc(m2)+'</div>' : '')
+          + '</div></div>';
+  } else if (layout === "quote") {
+    inner = '<div class="pad" style="padding:'+pad+'px">'
+          + '<div><div style="font-family:Bitter,serif;font-weight:700;font-size:'+Math.round(z.head*1.5)+'px;line-height:.72;color:'+s.rule+';opacity:.45;margin-bottom:'+Math.round(pad*0.12)+'px">&ldquo;</div>'
+          + eyeEl+headEl+bodyEl+'</div>'
+          + '<div>'+metaEl+'</div></div>';
+  } else {
+    inner = '<div class="pad" style="padding:'+pad+'px">'
+          + '<div>'+mark+eyeEl+headEl+bodyEl+'</div>'
+          + '<div class="foot"><div>'+metaEl+'</div></div></div>';
+  }
+
+  $("card").innerHTML =
+    '<div class="post" style="width:'+z.w+'px;height:'+z.h+'px;background:'+s.bg+';color:'+s.fg+'">'
+    + sign + creek + inner + '</div>';
+
   var stageW = document.querySelector(".stage").clientWidth - 44;
   var scale = Math.min(1, stageW / z.w, 560 / z.h);
   $("card").style.transform = "scale("+scale+")";
@@ -239,11 +292,12 @@ function loadTemplate(k){
   cur = k; var t = TEMPLATES[k];
   $("eyebrow").value = t.eyebrow; $("head").value = t.head;
   $("body").value = t.body.replace(/&amp;/g,"&"); $("meta1").value = t.meta1; $("meta2").value = t.meta2;
+  $("layout").value = t.layout; $("signmode").value = t.sign;
   render();
 }
 
 sel.addEventListener("change", function(){ loadTemplate(sel.value) });
-["size","eyebrow","head","body","meta1","meta2"].forEach(function(id){
+["size","layout","signmode","eyebrow","head","body","meta1","meta2"].forEach(function(id){
   $(id).addEventListener("input", render);
 });
 $("reset").addEventListener("click", function(){ loadTemplate(cur) });
