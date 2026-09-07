@@ -11,6 +11,8 @@
   <link rel="stylesheet" href="care.css">
   <link rel="stylesheet" href="office-content.css">
   <link rel="stylesheet" href="signups.css">
+  <link rel="stylesheet" href="followups.css">
+  <link rel="stylesheet" href="reminder-calendar.css">
 </head>
 <body>
   <noscript><main class="center"><section class="auth-card"><h1>Creek Office needs JavaScript.</h1><p>Enable JavaScript to sign in to the private staff workspace.</p><a href="../">Return to Home @ the Creek</a></section></main></noscript>
@@ -44,6 +46,7 @@
       <a class="office-brand" href="#dashboard"><img src="../assets/logo.png" alt=""><span>Creek Office<small>Church operations</small></span></a>
       <nav id="workspace-nav" aria-label="Workspace">
         <a href="#dashboard" data-view="dashboard">Overview</a>
+        <a href="#followups" data-view="followups" data-private-module>My follow-ups <span id="followup-badge" class="personal-nav-badge"></span></a>
         <a href="#calendar" data-view="calendar">Staff calendar</a>
         <a href="#announcements" data-view="announcements" data-private-module>Announcements</a>
         <a href="#slides" data-view="slides" data-private-module>Sunday slides</a>
@@ -64,6 +67,11 @@
       <p id="notice" class="notice hidden" role="status"></p>
 
       <section id="dashboard-view" class="view">
+        <section class="panel personal-dashboard" data-private-module aria-labelledby="personal-dashboard-title">
+          <div class="panel-head"><div><p class="eyebrow">Your people. Your next step.</p><h2 id="personal-dashboard-title">Make room to reach out.</h2></div><a href="#followups">My follow-ups →</a></div>
+          <p id="dashboard-followup-status" role="status">Loading your personal reminders…</p>
+          <div id="dashboard-followup-list"></div>
+        </section>
         <div class="metrics">
           <article><span>Upcoming events</span><b id="event-count">—</b></article>
           <article><span>People records</span><b id="people-count">—</b></article>
@@ -87,6 +95,10 @@
       </section>
 
       <section id="history-view" class="view hidden"></section>
+      <section id="followups-view" class="view hidden">
+        <div id="followups-module"></div>
+        <section class="panel personal-calendar"><div><p class="eyebrow">Keep it in view</p><h2>A weekly moment for your leaders.</h2><p>Set aside time to open this list, pray for your leaders, and choose who to call. Add a recurring check-in to your personal calendar.</p></div><button type="button" class="quiet" id="weekly-reminder">Weekly calendar reminder</button></section>
+      </section>
       <section id="care-view" class="view hidden"></section>
       <section id="signups-view" class="view hidden"></section>
       <section id="announcements-view" class="view hidden"></section>
@@ -113,6 +125,8 @@
   <script src="care.js"></script>
   <script src="office-content.js"></script>
   <script src="signups.js"></script>
+  <script src="followups.js"></script>
+  <script src="reminder-calendar.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

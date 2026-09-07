@@ -5,7 +5,7 @@ Creek Office is the private staff side of Home @ the Creek. It provides staff si
 ## Backend setup
 
 1. Create a church-owned Supabase project. Do not use a personal project.
-2. Run `supabase/schema.sql`, followed by `supabase/migrations/20260907_membership_care.sql`, `supabase/migrations/20260907_office_content.sql`, then `supabase/migrations/20260907164733_app_connections_care_roles.sql`, in that explicit order in the project's SQL editor. See [signup/care setup](../docs/signup-care-maintenance.md) for migration-order and activation details.
+2. Run `supabase/schema.sql`, followed by `supabase/migrations/20260907_membership_care.sql`, `supabase/migrations/20260907_office_content.sql`, `supabase/migrations/20260907164733_app_connections_care_roles.sql`, then `supabase/migrations/20260907171014_leader_followups.sql`, in that explicit order in the project's SQL editor. See [signup/care setup](../docs/signup-care-maintenance.md) for migration-order and activation details.
 3. In Supabase Auth, create the first staff user. Public sign-up is not exposed by Creek Office.
 4. Copy that user's UUID and run the final commented `insert into public.staff_roles` statement as `admin`.
 5. Copy `config.example.js` to `config.js`. Add the project URL and **publishable** key. Never put a secret or `service_role` key in this repository.
@@ -42,3 +42,7 @@ The September 7 extension adds expanded People fields, append-only member histor
 ## Optional app signup and ongoing care
 
 The public `connection.html` flow is separate from staff sign-in. It verifies email, accepts voluntary personal-contact details, and sends submissions/updates to App signups for admin/editor review. It does not grant staff access or church membership. Public configuration remains blank. Staff review can link an existing person or create a visitor and one-time welcome task. Deacon and Sunday school plans have separate quarterly/monthly deadlines. See [maintenance, access and activation details](../docs/signup-care-maintenance.md).
+
+## My follow-ups
+
+Each admin/editor has a personal leadership contact list, visible only to that owner through the staff API. Recurring dates, snooze/pause and contact history appear in My follow-ups and on Overview. A generic weekly calendar file can be prepared and imported by the owner; no calendar notification is activated automatically. See [leadership follow-up maintenance](../docs/leadership-followups.md).

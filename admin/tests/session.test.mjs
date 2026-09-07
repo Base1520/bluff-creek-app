@@ -36,6 +36,7 @@ function fixture(t,options={}) {
     async createSignedUrl(){calls.push({op:'signedUrl'});if(options.signedDeferred)return options.signedDeferred.promise;return {data:{signedUrl:'https://files.example.invalid/synthetic?token=test'}};}
   };}}};
   function emit(next,event='TEST'){current=next;insideCallback=true;const returned=callback(event,next);insideCallback=false;assert.equal(returned,undefined);}
+  if (options.followups) w.CreekFollowups = { create(moduleOptions) { options.followups.options = moduleOptions; return { load: async () => moduleOptions.onSummary(options.followups.summary), render() {}, clear() { moduleOptions.onSummary({ due:null, overdue:null, upcoming:null, items:[] }); }, openNew() {} }; } };
   let created=0; w.CREEK_OFFICE_CONFIG=options.config||{supabaseUrl:'https://project.example.invalid',publishableKey:'sb_publishable_synthetic'};
   w.supabase={createClient(){created++;return client;}};w.eval(app);
   const el=id=>w.document.getElementById(id);
@@ -62,7 +63,7 @@ test('late table fetch after logout cannot repopulate private DOM',async t=>{
 test('same-account token events preserve unsaved edits; viewer cannot open editor',async t=>{
   const f=fixture(t);await pause();f.el('people-list').querySelector('button').click();f.el('editor-fields').querySelector('[name=notes]').value='Synthetic unsaved edit';f.emit(session('a'));await pause();assert.equal(f.el('editor').open,true);assert.equal(f.el('editor-fields').querySelector('[name=notes]').value,'Synthetic unsaved edit');
   const v=fixture(t,{roles:{a:'viewer'}});await pause();v.w.location.hash='#people';await pause();assert.equal(v.el('primary-action').classList.contains('hidden'),true);v.el('primary-action').click();assert.equal(v.el('editor').open,false);assert.equal(v.el('people-list').querySelector('button'),null);
-  for(const view of ['history','care','signups','announcements','committees','slides','prayers']) {
+  for(const view of ['history','care','signups','followups','announcements','committees','slides','prayers']) {
     v.w.location.hash='#'+view;await pause();
     assert.equal(v.el(view+'-view').classList.contains('hidden'),true);
     assert.equal(v.w.document.querySelector('[data-view="'+view+'"]').classList.contains('hidden'),true);
@@ -107,4 +108,15 @@ test('document expiry removes the signed URL visibly',async t=>{
 });
 test('text rendered into editor values cannot create markup or event attributes',async t=>{
   const f=fixture(t,{initial:null});await pause();f.delayed.push(q=>q.table==='contacts');f.emit(session('a'));await pause();f.pending[0].resolve({data:[{...f.rows('a').contacts[0],first_name:'Synthetic" autofocus onfocus="alert(1)'}]});await pause();f.el('people-list').querySelector('button').click();const input=f.el('editor-fields').querySelector('[name=first_name]');assert.equal(input.hasAttribute('onfocus'),false);assert.equal(input.value,'Synthetic" autofocus onfocus="alert(1)');
+});
+
+test('personal dashboard shows due leaders and clears names and badge on sign-out', async t => {
+  const personal = { summary: { due:1, overdue:1, upcoming:2, items:[{display_name:'Synthetic Leader A', due_on:'2026-09-07'}] } };
+  const f=fixture(t,{followups:personal}); await pause();
+  assert.equal(f.el('followup-badge').textContent,'2'); assert.match(f.el('dashboard-followup-list').textContent,/Synthetic Leader A/);
+  personal.options.onSummary({due:null,overdue:null,upcoming:null,items:[]});
+  assert.match(f.el('dashboard-followup-status').textContent,/unavailable/); assert.equal(f.el('followup-badge').textContent,'');
+  personal.options.onSummary(personal.summary); f.emit(null);
+  assert.equal(f.el('dashboard-followup-list').textContent,''); assert.equal(f.el('dashboard-followup-status').textContent,''); assert.equal(f.el('followup-badge').textContent,''); assert.equal(f.el('followup-badge').hasAttribute('aria-label'),false);
+  personal.options.onSummary(personal.summary); assert.equal(f.el('dashboard-followup-list').textContent,'');
 });

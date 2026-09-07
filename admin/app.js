@@ -3,7 +3,7 @@
   var cfg = window.CREEK_OFFICE_CONFIG || {};
   var els = {};
   var db = null;
-  var membership = null, care = null, officeContent = null, signups = null;
+  var membership = null, care = null, officeContent = null, signups = null, followups = null, reminderCalendar = null;
   var session = null;
   var role = null;
   var authEpoch = 0, loadEpoch = 0, documentEpoch = 0, editorEpoch = 0;
@@ -12,9 +12,9 @@
   var documentExpiryTimer;
   var peopleReady = false;
   var state = { events: [], people: [], documents: [], activity: [] };
-  var titles = { dashboard: "Overview", calendar: "Staff calendar", announcements: "Announcements", committees: "Committee contacts", slides: "Sunday slides", prayers: "Prayer requests", people: "People & membership", history: "Member history", care: "Guests & care", signups: "App signups", documents: "Documents", activity: "Activity" };
+  var titles = { dashboard: "Overview", followups: "My follow-ups", calendar: "Staff calendar", announcements: "Announcements", committees: "Committee contacts", slides: "Sunday slides", prayers: "Prayer requests", people: "People & membership", history: "Member history", care: "Guests & care", signups: "App signups", documents: "Documents", activity: "Activity" };
   var contentViews = ["announcements", "committees", "slides", "prayers"];
-  var privateViews = ["history", "care", "signups"].concat(contentViews);
+  var privateViews = ["history", "care", "signups", "followups"].concat(contentViews);
 
   function el(id) { return document.getElementById(id); }
   function show(id) { ["setup", "login", "loading", "workspace"].forEach(function (name) { el(name).classList.toggle("hidden", name !== id); }); }
@@ -36,6 +36,8 @@
     window.clearTimeout(documentExpiryTimer);
     if (membership) membership.clear(); if (care) care.clear();
     if (officeContent) officeContent.clear(); if (signups) signups.clear();
+    if (followups) followups.clear(); if (reminderCalendar) reminderCalendar.clear();
+    el("dashboard-followup-list").replaceChildren(); el("dashboard-followup-status").textContent = ""; el("followup-badge").textContent = ""; el("followup-badge").removeAttribute("aria-label");
     loadEpoch++; documentEpoch++; peopleReady = false; state = { events: [], people: [], documents: [], activity: [] };
     clearEditor(); if (el("document-dialog").open) el("document-dialog").close(); el("document-result").replaceChildren();
     ["dashboard-events", "events-list", "people-list", "documents-list", "activity-list", "user-label", "role-label"].forEach(function (id) { el(id).replaceChildren(); });
@@ -83,8 +85,15 @@
     if (window.CreekSignups && el("signups-view")) signups = window.CreekSignups.create(Object.assign({}, moduleOptions, {
       root: el("signups-view"), onCount: function (count) { el("signup-count").textContent = count === null ? "—" : String(count); }
     }));
-    // Refresh only the private queue; avoid disturbing unsaved editors elsewhere.
-    window.setInterval(function () { if (signups && canEdit() && session && document.visibilityState === "visible") signups.load(authEpoch); }, 60000);
+    if (window.CreekFollowups) followups = window.CreekFollowups.create(Object.assign({}, moduleOptions, { root: el("followups-module"), onSummary: renderFollowupSummary }));
+    if (window.CreekReminderCalendar) reminderCalendar = window.CreekReminderCalendar.create({ button: el("weekly-reminder"), allowed: function () { return !!session && canEdit(); } });
+    // Refresh these queues without replacing unsaved editors elsewhere.
+    function refreshPersonalQueues() {
+      if (!canEdit() || !session || document.visibilityState !== "visible") return;
+      if (signups) signups.load(authEpoch); if (followups) followups.load(authEpoch);
+    }
+    window.setInterval(refreshPersonalQueues, 60000);
+    document.addEventListener("visibilitychange", refreshPersonalQueues);
     db.auth.onAuthStateChange(function (_event, nextSession) { queueSession(nextSession); });
     var initialEpoch = authEpoch, result = await db.auth.getSession();
     if (initialEpoch !== authEpoch) return;
@@ -169,7 +178,7 @@
     if (!peopleReady) state.people = [];
     var names = ["events", "people", "documents", "activity"];
     results.forEach(function (result, index) { if (result.error) fail(result.error); else state[names[index]] = result.data || []; });
-    if (canEdit()) await Promise.all([membership ? membership.load(epoch) : null, care ? care.load(epoch) : null, officeContent ? officeContent.load(epoch) : null, signups ? signups.load(epoch) : null]);
+    if (canEdit()) await Promise.all([membership ? membership.load(epoch) : null, care ? care.load(epoch) : null, officeContent ? officeContent.load(epoch) : null, signups ? signups.load(epoch) : null, followups ? followups.load(epoch) : null]);
     if (!current(epoch) || request !== loadEpoch) return;
     render();
   }
@@ -205,7 +214,26 @@
     el("activity-list").innerHTML = state.activity.map(activityRow).join("");
     bindRowActions();
     if (membership) membership.render(); if (care) care.render();
-    if (officeContent) officeContent.render(); if (signups) signups.render();
+    if (officeContent) officeContent.render(); if (signups) signups.render(); if (followups) followups.render();
+  }
+
+  function renderFollowupSummary(summary) {
+    var list = el("dashboard-followup-list"), status = el("dashboard-followup-status"), badge = el("followup-badge");
+    list.replaceChildren(); badge.textContent = ""; badge.removeAttribute("aria-label");
+    if (!session || !canEdit()) { status.textContent = ""; return; }
+    if (!summary || typeof summary.due !== "number" || typeof summary.overdue !== "number") { status.textContent = "Your follow-ups are unavailable. Open My follow-ups to refresh."; return; }
+    var due = summary.due + summary.overdue;
+    badge.textContent = due ? String(due) : "";
+    if (due) badge.setAttribute("aria-label", due + " personal follow-up" + (due === 1 ? "" : "s") + " due");
+    status.textContent = due ? due + " leader" + (due === 1 ? " is" : "s are") + " ready for your attention · " + summary.overdue + " overdue." : "No personal follow-ups are due today. Review your upcoming check-ins or add a leader.";
+    (summary.items || []).slice(0, 3).forEach(function (item) {
+      var row = document.createElement("a"); row.href = "#followups"; row.className = "personal-dashboard-row";
+      var name = document.createElement("strong"), date = document.createElement("span");
+      name.textContent = item.display_name || (item.plan && item.plan.display_name) || "Leader follow-up";
+      date.textContent = item.due_on ? "Due " + dateLabel(item.due_on) : "View follow-up";
+      row.onclick = function () { if (followups && followups.showView) followups.showView(item.state === "upcoming" ? "upcoming" : "due"); };
+      row.append(name, date); list.appendChild(row);
+    });
   }
 
   function eventRow(item) {
