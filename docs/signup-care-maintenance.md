@@ -38,14 +38,9 @@ Contacts, care plans and logs are still managed by approved staff admins/editors
 
 ## Prepared database contract and activation
 
-Apply in this explicit order after separate church-backend authorization:
+For a new church project, use the complete **six-file setup sequence** in [Creek Office setup](../admin/README.md#backend-setup), validated by the [office preflight](../tools/office-preflight/README.md#reviewed-sql-order). Project creation alone does not install the office schema. The signup/care migration is step 4; the leadership follow-up and record-recovery migrations at steps 5 and 6 are also required before the current office can enable editing. Do not stop after installing this feature's original four-file dependency subset.
 
-1. `supabase/schema.sql`
-2. `supabase/migrations/20260907_membership_care.sql`
-3. `supabase/migrations/20260907_office_content.sql`
-4. `supabase/migrations/20260907164733_app_connections_care_roles.sql`
-
-The new filename was generated using the Supabase CLI. The two legacy migration filenames share an eight-digit prefix; do not use automatic CLI migration ordering until their versions and any existing migration history have been normalized. The local tests and manual setup instructions use the explicit sequence above.
+The signup/care filename was generated using the Supabase CLI. The two legacy migration filenames share an eight-digit prefix; do not use automatic CLI migration ordering until their versions and any existing migration history have been normalized. Follow the authoritative setup sequence above when schema activation is being performed.
 
 The new migration changes care uniqueness to `(contact_id, care_role)` and adds `care_role` to preserved visits, defaulting historical entries to their original deacon role. Plan identities cannot be changed; create/edit the other role's separate plan. Nullable `cadence_months` overrides `cadence_days`; `first_due_on` and `one_time` support a welcome task.
 
