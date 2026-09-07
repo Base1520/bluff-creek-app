@@ -4,6 +4,8 @@ This feature branch consolidates the public app work already on `main` with Cree
 
 ## Included behavior
 
+- Four private office sidebar editors cover announcements, committee contacts, Sunday slide links/files and prayer requests. Draft/ready status supports preparation; prayer sharing permission is recorded explicitly. These tools do not publish content or receive public prayer submissions automatically. The office-content migration is required after the membership/care migration; see [maintenance details](office-content-maintenance.md).
+
 - Private membership/care expansion: richer People records, preserved history/corrections and page-photo review, guest intake, assigned deacon/contact intervals, visit logs and an on-screen follow-up queue. The intended Google duplicate is not yet accessible, so no real records were imported and no Sheet write-back is claimed. See [membership and care maintenance](membership-care-maintenance.md).
 
 - Grow adds a Home feature and primary tab for the Habakkuk series: dated latest passage, September 13 pause, sourced historical context, chapter guide and reading questions. The pause expires in Central time. Spotify and approved book sections are built; their selections remain pending Cole's playlist URL and book titles. Click-only playback and an external fallback are prepared; no actual audio has been tested. See [Grow maintenance](grow-maintenance.md).
@@ -20,7 +22,7 @@ From the app root, run `node --test tests/*.test.cjs` for public forms, shared c
 
 Browser checks use isolated local profiles and synthetic values where needed. Public drafts are never actually sent. Service-worker checks disable the browser network and verify a controlled reload, a reopened offline tab, validated saved public calendar data, local fonts/scripts and excluded admin/unrelated paths. A cached public calendar can miss a newly approved cancellation until reconnecting.
 
-The iCloud converter has 17 synthetic tests; the HTTP adapter has 15, including real-converter integration. The current public client suite has 40 tests, including Grow link validation and dated series-pause behavior. The staff suite has 45 tests, including membership/care PostgreSQL policies, preserved sources, review forms and due dates. The integrated sample office passes desktop and 375/320-pixel phone checks for edits, photo review, corrections, guest/care workflows and sign-out clearing. The adapter Deno entry type-checks with its pinned parser. These checks did not contact or deploy a church backend.
+The iCloud converter has 17 synthetic tests; the HTTP adapter has 15, including real-converter integration. The current public client suite has 40 tests, including Grow link validation and dated series-pause behavior. The staff suite has 66 tests, including membership/care and office-content PostgreSQL policies, preserved sources, review forms, due dates, sharing approval and verified write results. The integrated sample office passes desktop and 375/320-pixel phone checks for edits, photo review, corrections, guest/care workflows, all four content editors, scrollable sidebar navigation and sign-out clearing. The adapter Deno entry type-checks with its pinned parser. These checks did not contact or deploy a church backend.
 
 ## Required before staff activation
 

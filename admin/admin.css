@@ -6,3 +6,5 @@
 
 @media(max-width:760px){aside{visibility:hidden}aside.open{visibility:visible}.content>header{flex-wrap:wrap;gap:10px}.content>header #primary-action{margin-left:0}.auth-card{padding:26px}}
 .calendar-guide{padding:24px;margin-bottom:30px}.calendar-guide h2{margin-top:8px}.calendar-guide p{max-width:70ch;line-height:1.65}.calendar-guide summary{cursor:pointer;font-weight:800;color:var(--pine,#3C5A45)}.calendar-guide details{padding:12px 0}.calendar-guide .calendar-note{margin-bottom:0}
+
+aside{overflow:hidden}.office-brand,.account{flex-shrink:0}#workspace-nav{flex:1;min-height:0;overflow-y:auto;align-content:start;scrollbar-width:thin;scrollbar-color:#84927e transparent;padding:3px 4px 10px 0}.account{margin-top:16px}

@@ -3,7 +3,7 @@
   var cfg = window.CREEK_OFFICE_CONFIG || {};
   var els = {};
   var db = null;
-  var membership = null, care = null;
+  var membership = null, care = null, officeContent = null;
   var session = null;
   var role = null;
   var authEpoch = 0, loadEpoch = 0, documentEpoch = 0, editorEpoch = 0;
@@ -11,7 +11,9 @@
   var AUTH_STORAGE_KEY = "creek-office-auth", signedOut = false, manualSignInPending = false;
   var documentExpiryTimer;
   var state = { events: [], people: [], documents: [], activity: [] };
-  var titles = { dashboard: "Overview", calendar: "Staff calendar", people: "People & membership", history: "Member history", care: "Guests & deacon care", documents: "Documents", activity: "Activity" };
+  var titles = { dashboard: "Overview", calendar: "Staff calendar", announcements: "Announcements", committees: "Committee contacts", slides: "Sunday slides", prayers: "Prayer requests", people: "People & membership", history: "Member history", care: "Guests & deacon care", documents: "Documents", activity: "Activity" };
+  var contentViews = ["announcements", "committees", "slides", "prayers"];
+  var privateViews = ["history", "care"].concat(contentViews);
 
   function el(id) { return document.getElementById(id); }
   function show(id) { ["setup", "login", "loading", "workspace"].forEach(function (name) { el(name).classList.toggle("hidden", name !== id); }); }
@@ -32,6 +34,7 @@
   function clearPrivate() {
     window.clearTimeout(documentExpiryTimer);
     if (membership) membership.clear(); if (care) care.clear();
+    if (officeContent) officeContent.clear();
     loadEpoch++; documentEpoch++; state = { events: [], people: [], documents: [], activity: [] };
     clearEditor(); if (el("document-dialog").open) el("document-dialog").close(); el("document-result").replaceChildren();
     ["dashboard-events", "events-list", "people-list", "documents-list", "activity-list", "user-label", "role-label"].forEach(function (id) { el(id).replaceChildren(); });
@@ -71,6 +74,11 @@
     var moduleOptions = { db: db, getContext: function () { return { epoch: authEpoch, userId: session && session.user.id, role: role, canEdit: canEdit() }; }, isCurrent: current, refresh: function () { return loadAll(authEpoch); }, notice: notice, people: function () { return state.people; }, documents: function () { return state.documents; } };
     if (window.CreekMembership && el("history-view")) membership = window.CreekMembership.create(Object.assign({}, moduleOptions, { root: el("history-view"), sheetUrl: cfg.membershipSheetUrl || "" }));
     if (window.CreekCare && el("care-view")) care = window.CreekCare.create(Object.assign({}, moduleOptions, { root: el("care-view") }));
+    if (window.CreekOfficeContent) officeContent = window.CreekOfficeContent.create(Object.assign({}, moduleOptions, {
+      roots: { announcements: el("announcements-view"), committees: el("committees-view"), slides: el("slides-view"), prayers: el("prayers-view") },
+      openDocument: openDocument,
+      uploadDocument: function () { location.hash = "documents"; openUpload("ministry"); }
+    }));
     db.auth.onAuthStateChange(function (_event, nextSession) { queueSession(nextSession); });
     var initialEpoch = authEpoch, result = await db.auth.getSession();
     if (initialEpoch !== authEpoch) return;
@@ -153,7 +161,7 @@
     if (!current(epoch) || request !== loadEpoch) return;
     var names = ["events", "people", "documents", "activity"];
     results.forEach(function (result, index) { if (result.error) fail(result.error); else state[names[index]] = result.data || []; });
-    if (canEdit()) await Promise.all([membership ? membership.load(epoch) : null, care ? care.load(epoch) : null]);
+    if (canEdit()) await Promise.all([membership ? membership.load(epoch) : null, care ? care.load(epoch) : null, officeContent ? officeContent.load(epoch) : null]);
     if (!current(epoch) || request !== loadEpoch) return;
     render();
   }
@@ -161,12 +169,12 @@
   function route() {
     if (!session || !role) return;
     var view = (location.hash || "#dashboard").slice(1);
-    if (!titles[view] || (["history", "care"].includes(view) && !canEdit())) view = "dashboard";
+    if (!titles[view] || (privateViews.includes(view) && !canEdit())) view = "dashboard";
     document.querySelectorAll("[data-private-module]").forEach(function (node) { node.classList.toggle("hidden", !canEdit()); });
     document.querySelectorAll(".view").forEach(function (node) { node.classList.toggle("hidden", node.id !== view + "-view"); });
     document.querySelectorAll("aside nav a").forEach(function (node) { node.classList.toggle("active", node.dataset.view === view); });
     el("page-title").textContent = titles[view];
-    var labels = { calendar: "Add staff event", people: "Add person", documents: "Upload document" };
+    var labels = { calendar: "Add staff event", people: "Add person", documents: "Upload document", announcements: "Add announcement", committees: "Add contact", slides: "Add Sunday slides", prayers: "Add prayer request" };
     el("primary-action").textContent = labels[view] || "Add";
     el("primary-action").classList.toggle("hidden", !labels[view] || !canEdit());
     render();
@@ -189,6 +197,7 @@
     el("activity-list").innerHTML = state.activity.map(activityRow).join("");
     bindRowActions();
     if (membership) membership.render(); if (care) care.render();
+    if (officeContent) officeContent.render();
   }
 
   function eventRow(item) {
@@ -207,7 +216,7 @@
     document.querySelectorAll("[data-open-document]").forEach(function (b) { b.onclick = function () { openDocument(b.dataset.openDocument); }; });
   }
 
-  function primaryAction() { var view = (location.hash || "#dashboard").slice(1); if (view === "calendar") openEvent(); if (view === "people") openPerson(); if (view === "documents") openUpload(); }
+  function primaryAction() { var view = (location.hash || "#dashboard").slice(1); if (view === "calendar") openEvent(); if (view === "people") openPerson(); if (view === "documents") openUpload(); if (officeContent && contentViews.includes(view)) officeContent.open(view); }
   function openEditor(kind, title, fields, id) { if (!session || !canEdit()) return; clearEditor(); el("editor-kicker").textContent = kind; el("editor-title").textContent = title; el("editor-fields").innerHTML = fields; el("editor-error").textContent = ""; el("editor-form").dataset.kind = kind; el("editor-form").dataset.id = id || ""; el("editor").showModal(); }
   function input(name, label, type, value, wide) { return '<label class="' + (wide ? "wide" : "") + '">' + label + '<input name="' + name + '" type="' + type + '" value="' + safe(value || "") + '" ' + (["title", "first_name", "starts_at"].indexOf(name) > -1 ? "required" : "") + '></label>'; }
   function select(name, label, options, value) { return '<label>' + label + '<select name="' + name + '">' + options.map(function (x) { return '<option value="' + x + '" ' + (x === value ? "selected" : "") + '>' + x + '</option>'; }).join("") + '</select></label>'; }
@@ -216,7 +225,7 @@
   function openEvent(item) { item = item || {}; openEditor("event", item.id ? "Edit event" : "Add event", '<div class="form-grid">' + input("title", "Title", "text", item.title) + select("tag", "Type", ["Weekly", "Monthly", "Special"], item.tag || "Special") + input("starts_at", "Starts", "datetime-local", localDateTime(item.starts_at)) + input("ends_at", "Ends", "datetime-local", localDateTime(item.ends_at)) + input("location", "Location", "text", item.location, true) + textArea("description", "Details", item.description) + '</div>', item.id); }
   function openPerson(item) { item = item || {}; openEditor("person", item.id ? "Edit person" : "Add person", '<p class="membership-note">Historical dates may be approximate. Preserve the original wording rather than guessing. Archive a person as inactive; history is retained.</p><div class="form-grid">' + input("first_name", "First name", "text", item.first_name) + input("last_name", "Last name", "text", item.last_name) + input("middle_name", "Middle name", "text", item.middle_name) + input("preferred_name", "Preferred name", "text", item.preferred_name) + input("former_names", "Former names / spelling variants", "text", item.former_names, true) + select("status", "Status", ["active", "inactive", "visitor"], item.status || "active") + input("household_name", "Household", "text", item.household_name) + input("membership_number", "Membership number", "text", item.membership_number) + input("legacy_member_id", "Existing ledger MemberID", "text", item.legacy_member_id) + input("email", "Email", "email", item.email) + input("phone", "Phone", "tel", item.phone) + input("address", "Address", "text", item.address, true) + input("birth_date_text", "Birth date as recorded", "text", item.birth_date_text) + input("received_date_text", "Date received as recorded", "text", item.received_date_text) + input("how_received", "How received", "text", item.how_received) + input("baptism_date_text", "Baptism date as recorded", "text", item.baptism_date_text) + input("dismissal_date_text", "Dismissal date as recorded", "text", item.dismissal_date_text) + input("reason_for_decrease", "Reason for removal from active roll", "text", item.reason_for_decrease) + select("needs_review", "Source verification", ["Verified", "Needs review"], (!item.id || item.needs_review) ? "Needs review" : "Verified") + textArea("notes", "Administrative notes (visible to all approved staff roles)", item.notes) + '</div>', item.id); }
 
-  function openUpload() { openEditor("document", "Upload document", '<div class="form-grid">' + input("title", "Title", "text", "") + select("category", "Category", ["policy", "spreadsheet", "form", "minutes", "ministry", "other"], "policy") + '<label class="wide">File<input name="file" type="file" required aria-describedby="upload-help"><span id="upload-help">Maximum file size: 50 MB.</span></label>' + textArea("description", "Description", "") + '</div>'); }
+  function openUpload(category) { openEditor("document", "Upload document", '<div class="form-grid">' + input("title", "Title", "text", "") + select("category", "Category", ["policy", "spreadsheet", "form", "minutes", "ministry", "other"], category || "policy") + '<label class="wide">File<input name="file" type="file" required aria-describedby="upload-help"><span id="upload-help">Maximum file size: 50 MB.</span></label>' + textArea("description", "Description", "") + '</div>'); }
 
   async function saveEditor(event) {
     event.preventDefault();

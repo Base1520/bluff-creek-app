@@ -5,7 +5,7 @@ Creek Office is the private staff side of Home @ the Creek. It provides staff si
 ## Backend setup
 
 1. Create a church-owned Supabase project. Do not use a personal project.
-2. Run `supabase/schema.sql`, followed by `supabase/migrations/20260907_membership_care.sql`, in the project's SQL editor.
+2. Run `supabase/schema.sql`, followed by `supabase/migrations/20260907_membership_care.sql` and `supabase/migrations/20260907_office_content.sql`, in the project's SQL editor.
 3. In Supabase Auth, create the first staff user. Public sign-up is not exposed by Creek Office.
 4. Copy that user's UUID and run the final commented `insert into public.staff_roles` statement as `admin`.
 5. Copy `config.example.js` to `config.js`. Add the project URL and **publishable** key. Never put a secret or `service_role` key in this repository.
@@ -18,7 +18,7 @@ Sessions use this tab's `sessionStorage` under `creek-office-auth`; refreshing t
 ## Roles
 
 - `admin`: full current workspace access; intended for the pastor and designated church administrator.
-- `editor`: can manage events, people, documents, membership history and care records; can read guidelines.
+- `editor`: can manage events, people, documents, membership history, care records, announcements, committee contacts, Sunday slides and prayer requests; can read guidelines.
 - `viewer`: read-only access to the existing calendar, People summaries and general documents. Detailed membership history, care records and historical source images are restricted to editors/admins.
 
 ## Current scope
@@ -26,6 +26,7 @@ Sessions use this tab's `sessionStorage` under `creek-office-auth`; refreshing t
 - Private staff calendar CRUD with weekly/monthly/special labels. It does not publish events to the website or app. The workspace links to iCloud for the church calendar and explains separate Apple editor invitations. The request sheet is intake only; staff enter approved changes in iCloud. `is_public` is reserved metadata and defaults to false.
 - People records with household, status, contact fields, membership identifiers, historical date text and review flags; separate preserved history and source-page review.
 - Guest intake, assigned deacon, visit/contact logs, adjustable on-screen follow-up reminders and admin-maintained guidelines.
+- Announcements, committee contacts, a Sunday slide-deck library and editable private prayer requests. See [office content maintenance](../docs/office-content-maintenance.md) for planning statuses, sharing permissions and current publication limits.
 - Private uploads categorized as policies, spreadsheets, forms, minutes, ministry, or other.
 - Audit entries for database changes.
 

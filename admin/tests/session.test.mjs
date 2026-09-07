@@ -62,6 +62,12 @@ test('late table fetch after logout cannot repopulate private DOM',async t=>{
 test('same-account token events preserve unsaved edits; viewer cannot open editor',async t=>{
   const f=fixture(t);await pause();f.el('people-list').querySelector('button').click();f.el('editor-fields').querySelector('[name=notes]').value='Synthetic unsaved edit';f.emit(session('a'));await pause();assert.equal(f.el('editor').open,true);assert.equal(f.el('editor-fields').querySelector('[name=notes]').value,'Synthetic unsaved edit');
   const v=fixture(t,{roles:{a:'viewer'}});await pause();v.w.location.hash='#people';await pause();assert.equal(v.el('primary-action').classList.contains('hidden'),true);v.el('primary-action').click();assert.equal(v.el('editor').open,false);assert.equal(v.el('people-list').querySelector('button'),null);
+  for(const view of ['history','care','announcements','committees','slides','prayers']) {
+    v.w.location.hash='#'+view;await pause();
+    assert.equal(v.el(view+'-view').classList.contains('hidden'),true);
+    assert.equal(v.w.document.querySelector('[data-view="'+view+'"]').classList.contains('hidden'),true);
+    assert.equal(v.el('page-title').textContent,'Overview');
+  }
 });
 test('document links require a fresh user click and disappear on account change',async t=>{
   const f=fixture(t);await pause();f.w.open=()=>assert.fail('No async popup');f.el('documents-list').querySelector('button').click();await pause();
