@@ -82,12 +82,12 @@ export function configurationPresence(source) {
 }
 
 function validManifest(manifest) {
-  return manifest?.format_version === 1 && /^\d{14}$/.test(manifest.schema_revision || '')
+  return manifest?.format_version === 2 && /^\d{14}$/.test(manifest.schema_revision || '')
     && Array.isArray(manifest.sql_files) && manifest.sql_files.length > 1
-    && manifest.sql_files.every(row => row && allowedPath(row.path) && /^supabase\/.+\.sql$/.test(row.path)
+    && manifest.sql_files.every(row => row && allowedPath(row.path) && /^supabase\/migrations\/\d{14}_[a-z0-9_]+\.sql$/.test(row.path)
       && /^[a-f0-9]{64}$/.test(row.sha256 || '') && Array.isArray(row.depends_on) && row.depends_on.every(allowedPath))
     && new Set(manifest.sql_files.map(row => row.path)).size === manifest.sql_files.length
-    && manifest.sql_files[0].path === 'supabase/schema.sql'
+    && /_office_base\.sql$/.test(manifest.sql_files[0].path)
     && Array.isArray(manifest.required_files) && manifest.required_files.every(allowedPath)
     && [CONFIG_PATH, CLIENT_PATH, 'admin/index.html', 'admin/help.html'].every(path => manifest.required_files.includes(path))
     && Array.isArray(manifest.readiness_modules) && manifest.readiness_modules.length > 0
@@ -116,10 +116,13 @@ export async function runPreflight(rootPath) {
     seen.add(entry.path);
   }
   check('explicit_sql_dependency_order', ordered);
+  const versions = manifest.sql_files.map(row => row.path.match(/\/migrations\/(\d{14})_/)[1]);
+  check('unique_migration_versions', new Set(versions).size === versions.length);
+  check('migration_filename_order_agrees', versions.every((version, index) => index === 0 || versions[index - 1] < version));
   try {
     const entries = await readdir(await containedPath(root, 'supabase/migrations'), { withFileTypes: true });
     const inventory = entries.filter(entry => entry.name.endsWith('.sql')).map(entry => 'supabase/migrations/' + entry.name);
-    const declared = manifest.sql_files.slice(1).map(entry => entry.path);
+    const declared = manifest.sql_files.map(entry => entry.path);
     check('migration_inventory_matches', inventory.length === declared.length && inventory.every(path => declared.includes(path)));
   } catch (_) { check('migration_inventory_matches', false); }
   const sources = new Map();
@@ -144,8 +147,6 @@ export async function runPreflight(rootPath) {
   const prerequisites = recovery.match(/foreach\s+v_table\s+in\s+array\s+array\s*\[([\s\S]*?)\]/i)?.[1] || '';
   check('sql_prerequisite_guard_declared', manifest.prerequisite_tables.every(name => prerequisites.includes("'" + name + "'"))
     && /to_regclass\('public\.'\s*\|\|\s*v_table\)\s+is\s+null/i.test(recovery));
-  const versions = manifest.sql_files.map(row => row.path.match(/\/migrations\/(\d+)_/)?.[1]).filter(Boolean);
-  if (new Set(versions).size !== versions.length) report.warnings.push('Legacy migration versions collide. Use the documented explicit SQL order; normalize migration history before automatic CLI ordering.');
   if (sources.has(CONFIG_PATH)) report.configuration = configurationPresence(sources.get(CONFIG_PATH));
   check('configuration_presence_assessable', ['not_configured', 'supplied_unverified'].includes(report.configuration.status));
   if (report.configuration.status === 'not_configured') report.warnings.push('Office project URL and key are blank. This is a prepared local candidate, not an activated office.');

@@ -15,7 +15,7 @@ All four screens support search and status filters. Existing records remain avai
 
 All four tables and their audit metadata are restricted to current admin/editor staff roles. Viewers, anonymous visitors and unapproved accounts are denied. The sidebar and route guards reflect this rule, while database grants and row-level policies enforce it. Care notes remain private even when a prayer record's sharing permission is marked church-wide; any later publication workflow must explicitly select approved request wording and exclude care notes.
 
-After authorized church-owned backend setup, apply the base schema, the membership/care migration, then `supabase/migrations/20260907_office_content.sql`. See [schema contracts](office-content-schema.md). Keep current configuration blank until activation is approved. No existing committee lists, prayer requests or private decks were imported into code or the preview.
+After authorized church-owned backend setup, apply the base schema, the membership/care migration, then `supabase/migrations/20260907231528_office_content.sql`. See [schema contracts](office-content-schema.md). Keep current configuration blank until activation is approved. No existing committee lists, prayer requests or private decks were imported into code or the preview.
 
 The migration stamps creation/update actors and timestamps in the database and uses the existing metadata-only audit log. Client delete is not granted. Updates preserve record identity and creation metadata. General document access rules still apply to files attached to slide records; their attachment does not turn them into immutable historical source pages. External deck links are not a substitute for the external provider's permissions.
 

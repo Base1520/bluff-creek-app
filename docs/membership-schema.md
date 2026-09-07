@@ -1,6 +1,6 @@
 # Private membership and care records
 
-`supabase/migrations/20260907_membership_care.sql` extends the existing Creek Office schema. Apply it once, **after** `supabase/schema.sql`, through the reviewed database migration process. This branch prepares the migration; it does not apply it to a hosted project, create staff accounts, or import membership data. The migration contains no people, contact details, or invented church policy.
+`supabase/migrations/20260907231527_membership_care.sql` extends the existing Creek Office schema. Apply it once, **after** `supabase/migrations/20260907231507_office_base.sql`, through the reviewed database migration process. This branch prepares the migration; it does not apply it to a hosted project, create staff accounts, or import membership data. The migration contains no people, contact details, or invented church policy.
 
 The later [signup/care migration](signup-care-maintenance.md) extends this base contract to one plan per person and care role, calendar-month intervals, one-time welcome tasks and separate role histories. The `contact_id`-only uniqueness described below applies to the original migration before that extension.
 

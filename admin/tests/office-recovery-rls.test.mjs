@@ -6,7 +6,7 @@ import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 
 const ids = Object.fromEntries(['admin','editor','viewer','member'].map((role, index) => [role, `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`]));
 const denied = (operation, code = '42501') => assert.rejects(operation, error => error.code === code);
-const migrationUrl = new URL('../../supabase/migrations/20260907174301_office_record_recovery.sql', import.meta.url);
+const migrationUrl = new URL('../../supabase/migrations/20260907231533_office_record_recovery.sql', import.meta.url);
 
 test('office recovery adds versioned records, reversible event archives and a bounded schema/role handshake', async t => {
   const pg = new PGlite({ extensions: { pgcrypto } });
@@ -25,7 +25,7 @@ test('office recovery adds versioned records, reversible event archives and a bo
     grant usage on schema public, storage to anon, authenticated;
     grant select, insert, update, delete on storage.objects to anon, authenticated;
   `);
-  for (const name of ['schema.sql','migrations/20260907_membership_care.sql','migrations/20260907_office_content.sql','migrations/20260907164733_app_connections_care_roles.sql','migrations/20260907171014_leader_followups.sql']) {
+  for (const name of ['migrations/20260907231507_office_base.sql','migrations/20260907231527_membership_care.sql','migrations/20260907231528_office_content.sql','migrations/20260907231530_app_connections_care_roles.sql','migrations/20260907231531_leader_followups.sql']) {
     await pg.exec(await readFile(new URL(`../../supabase/${name}`, import.meta.url), 'utf8'));
   }
   for (const [role, id] of Object.entries(ids)) {

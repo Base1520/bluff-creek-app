@@ -43,7 +43,7 @@ Do not copy Amazon destinations into the installed PWA yet. Amazon’s published
 
 The app makes no Spotify request until a visitor clicks **Load Spotify player** or follows **Open in Spotify**. The player is built from the validated playlist ID, with a descriptive title, no autoplay request and a persistent external fallback. It is never represented as successfully playing merely because its frame loaded. **Close player** removes the frame and restores focus. Spotify controls playback, account/region availability and any previews. The real playlist title rendered in the local embed. Spotify’s full player entered playing state with an advancing timer and was paused afterward; this does not establish audible output, full-track access or actual-phone playback. Keep that listening rehearsal on the launch checklist.
 
-The text guide, CSS and both public Grow scripts join the versioned `creek-v10` service-worker shell (19 assets). Music and linked books/Bible resources need internet; no audio or third-party content is cached. Existing private/admin route exclusions remain.
+The text guide, CSS and both public Grow scripts join the versioned `creek-v11` service-worker shell (19 assets). Music and linked books/Bible resources need internet; no audio or third-party content is cached. Existing private/admin route exclusions remain.
 
 ## Verification
 

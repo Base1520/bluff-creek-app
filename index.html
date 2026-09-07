@@ -612,7 +612,12 @@ var CONFIG = {
     ? '<a class="btn pine" href="'+CONFIG.GIVE_URL+'" target="_blank" rel="noopener">Give online securely</a>'+(CONFIG.RECURRING_URL?'<a class="btn ghost" href="'+CONFIG.RECURRING_URL+'" target="_blank" rel="noopener">Set up recurring giving</a>':'')+'<div class="card" style="margin-top:14px"><p class="lead" style="margin:0">You can also give by check on Sunday or by mail to the church. Every gift is recorded by the church treasurer for your year-end statement.</p></div>'
     : '<div class="card"><b style="font-family:Bitter,serif;font-size:16px">Online giving is coming soon.</b><p class="lead" style="margin:6px 0 0">For now, give by check or cash on Sunday, or by mail to the church at 1706 Highway 63, Clinton, LA 70722. Every gift is recorded by the church treasurer for your year-end statement.</p></div>';
   var ca=$('#contactActions'), acts='';
-  if(CONFIG.CHURCH_PHONE) acts+='<a class="btn ghost" href="tel:'+CONFIG.CHURCH_PHONE.replace(/[^0-9+]/g,'')+'">Call the office · '+CONFIG.CHURCH_PHONE+'</a>';
+  if(CONFIG.CHURCH_PHONE){
+    var officePhone=CONFIG.CHURCH_PHONE.replace(/[^0-9+]/g,'');
+    if(/^\d{10}$/.test(officePhone))officePhone='+1'+officePhone;
+    else if(/^1\d{10}$/.test(officePhone))officePhone='+'+officePhone;
+    acts+='<a class="btn ghost" href="tel:'+officePhone+'">Call the office · '+CONFIG.CHURCH_PHONE+'</a>';
+  }
   if(CONFIG.CHURCH_EMAIL) acts+='<a class="btn ghost" href="mailto:'+CONFIG.CHURCH_EMAIL+'">Email the office</a>';
   ca.innerHTML=acts;
 
@@ -625,7 +630,7 @@ var CONFIG = {
 
   // install to home screen
   var deferred=null, standalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
-  var isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  var isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent)||(/Macintosh/i.test(navigator.userAgent)&&navigator.maxTouchPoints>1);
   function installCard(html){$('#installCard').innerHTML=html;$('#installCard').classList.add('on');$('#installCard2').innerHTML=html;$('#installCard2').classList.add('on')}
   function clearInstallCards(){['#installCard','#installCard2'].forEach(function(id){$(id).innerHTML='';$(id).classList.remove('on')})}
   window.addEventListener('beforeinstallprompt',function(e){
@@ -640,7 +645,7 @@ var CONFIG = {
     })});
   });
   window.addEventListener('appinstalled',function(){deferred=null;clearInstallCards()});
-  if(isIOS&&!standalone){ installCard('<b>Add the Creek to your home screen.</b> Tap the <b>Share</b> button below, then <b>Add to Home Screen</b>. It opens like an app.'); }
+  if(isIOS&&!standalone){ installCard('<b>Add the Creek to your home screen.</b> Tap the <b>Share</b> button, then <b>Add to Home Screen</b>. It opens like an app.'); }
   if('serviceWorker' in navigator){
     window.addEventListener('load',function(){
       navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(function(registration){

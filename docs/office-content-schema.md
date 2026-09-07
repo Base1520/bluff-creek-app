@@ -1,6 +1,6 @@
 # Private office content
 
-`supabase/migrations/20260907_office_content.sql` adds announcements, committee contacts, Sunday slides, and staff prayer requests. Apply it once after `supabase/schema.sql` and `supabase/migrations/20260907_membership_care.sql` through the reviewed database migration process. No hosted changes, accounts, personal records, or sample church content are included.
+`supabase/migrations/20260907231528_office_content.sql` adds announcements, committee contacts, Sunday slides, and staff prayer requests. Apply it once after `supabase/migrations/20260907231507_office_base.sql` and `supabase/migrations/20260907231527_membership_care.sql` through the reviewed database migration process. No hosted changes, accounts, personal records, or sample church content are included.
 
 ## Access and common fields
 

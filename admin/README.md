@@ -6,10 +6,10 @@ Creek Office is the private staff side of Home @ the Creek. It provides staff si
 
 Before setup, run `node tools/office-preflight/cli.mjs` from the app repository root. See [the preflight guide](../tools/office-preflight/README.md). A passing local packet is not a configured or verified church backend.
 
-1. Create a church-owned Supabase project. Do not use a personal project.
-2. Run `supabase/schema.sql`, followed by `supabase/migrations/20260907_membership_care.sql`, `supabase/migrations/20260907_office_content.sql`, `supabase/migrations/20260907164733_app_connections_care_roles.sql`, `supabase/migrations/20260907171014_leader_followups.sql`, then `supabase/migrations/20260907174301_office_record_recovery.sql`, in that explicit order in the project's SQL editor. See [signup/care setup](../docs/signup-care-maintenance.md) for migration-order and activation details.
+1. Use the dedicated **Bluff Creek Church Office** project already created in Base1520 (`xzfeumdonxeodqhfirjr`). Project creation is complete; schema activation and staff access still require the reviewed setup instruction. Do not create another project or use an unrelated database.
+2. Run `supabase/migrations/20260907231507_office_base.sql`, followed by `supabase/migrations/20260907231527_membership_care.sql`, `supabase/migrations/20260907231528_office_content.sql`, `supabase/migrations/20260907231530_app_connections_care_roles.sql`, `supabase/migrations/20260907231531_leader_followups.sql`, then `supabase/migrations/20260907231533_office_record_recovery.sql`, in that explicit order through the tracked migration workflow after activation is authorized. Do not paste these migrations into the SQL editor without recording their migration history. See the [migration preparation and activation guide](../docs/office-migrations.md). See [signup/care setup](../docs/signup-care-maintenance.md) for migration-order and activation details.
 3. In Supabase Auth, create the first staff user. Public sign-up is not exposed by Creek Office.
-4. Copy that user's UUID and run the final commented `insert into public.staff_roles` statement as `admin`.
+4. Privately confirm that approved user's UUID and use the commented `insert into public.staff_roles` example at the end of the base migration to grant `admin`. Never commit the real UUID or any seeded staff record.
 5. Copy `config.example.js` to `config.js`. Add the project URL and **publishable** key. Never put a secret or `service_role` key in this repository.
 6. Add each approved staff Auth user to `public.staff_roles` as `admin`, `editor`, or `viewer`.
 

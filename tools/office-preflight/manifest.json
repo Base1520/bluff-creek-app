@@ -1,45 +1,45 @@
 {
-  "format_version": 1,
+  "format_version": 2,
   "schema_revision": "20260907174301",
   "sql_files": [
     {
-      "path": "supabase/schema.sql",
+      "path": "supabase/migrations/20260907231507_office_base.sql",
       "sha256": "8c8a971885d4d2ec60a3f57c4a416ecc2bb6282c4b9065bc67ed87280bc2a28b",
       "depends_on": []
     },
     {
-      "path": "supabase/migrations/20260907_membership_care.sql",
+      "path": "supabase/migrations/20260907231527_membership_care.sql",
       "sha256": "3c2fa9df159b4b7d6c6c84a9d883cac6d4dde411aa01f26df802d9665cee5b53",
       "depends_on": [
-        "supabase/schema.sql"
+        "supabase/migrations/20260907231507_office_base.sql"
       ]
     },
     {
-      "path": "supabase/migrations/20260907_office_content.sql",
+      "path": "supabase/migrations/20260907231528_office_content.sql",
       "sha256": "e4d287bfcfc8f8c6f68b7a217fe2abe87e7f7c337a548bb991dc6bbe441783a7",
       "depends_on": [
-        "supabase/migrations/20260907_membership_care.sql"
+        "supabase/migrations/20260907231527_membership_care.sql"
       ]
     },
     {
-      "path": "supabase/migrations/20260907164733_app_connections_care_roles.sql",
+      "path": "supabase/migrations/20260907231530_app_connections_care_roles.sql",
       "sha256": "41fed80650afca46abb763569173e4a4656610634b60bbd6dd223c7ec103875d",
       "depends_on": [
-        "supabase/migrations/20260907_office_content.sql"
+        "supabase/migrations/20260907231528_office_content.sql"
       ]
     },
     {
-      "path": "supabase/migrations/20260907171014_leader_followups.sql",
+      "path": "supabase/migrations/20260907231531_leader_followups.sql",
       "sha256": "63c1d7400f99bdb1ffff9d616b93affc7321004bff6cac459ba31b4b59cbfc34",
       "depends_on": [
-        "supabase/migrations/20260907164733_app_connections_care_roles.sql"
+        "supabase/migrations/20260907231530_app_connections_care_roles.sql"
       ]
     },
     {
-      "path": "supabase/migrations/20260907174301_office_record_recovery.sql",
+      "path": "supabase/migrations/20260907231533_office_record_recovery.sql",
       "sha256": "c8d53cb0b4025d4d36b03169a50ff30f7d1eb8956357e0b1130e2bfbbbeb8b7b",
       "depends_on": [
-        "supabase/migrations/20260907171014_leader_followups.sql"
+        "supabase/migrations/20260907231531_leader_followups.sql"
       ]
     }
   ],

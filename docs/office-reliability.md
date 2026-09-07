@@ -19,7 +19,7 @@ The operator guide is `admin/help.html`, linked from Overview and setup. People 
 
 ## Migration and readiness contract
 
-Apply every SQL file in the explicit order in `admin/README.md`; the last is `supabase/migrations/20260907174301_office_record_recovery.sql`. Legacy eight-digit filenames still need migration-history normalization before relying on automatic CLI ordering.
+Apply every SQL file in the explicit order in `admin/README.md`; the last is `supabase/migrations/20260907231533_office_record_recovery.sql`. The six filenames are normalized into unique CLI timestamp order, with byte-identical SQL. See [migration preparation](office-migrations.md); remote schema/history must still be checked before activation.
 
 The read-only `office_readiness` RPC checks the current staff role on each call and declares schema revision `20260907174301` and supported modules. Its migration checks prerequisites before installing that declaration. It does not perform a full database integrity audit or test every permission, storage path, authentication email, backup, or delivery channel. Core table reads are checked by the interface; module failures remain visible in their own sections. RLS and server constraints remain the authority for writes.
 

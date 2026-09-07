@@ -59,7 +59,8 @@ test('the real local checkout matches the reviewed setup manifest without claimi
   assert.equal(report.network_used, false);
   assert.equal(report.credential_values_extracted, false);
   assert.equal(report.credential_validity_checked, false);
-  assert.ok(report.warnings.some(message => message.includes('migration versions collide')));
+  assert.equal(check(report, 'unique_migration_versions'), true);
+  assert.equal(check(report, 'migration_filename_order_agrees'), true);
   assert.ok(report.warnings.some(message => message.includes('external assets')));
 });
 
@@ -131,9 +132,43 @@ test('wrong SQL sequence and a missing predecessor fail the explicit dependency 
   await f.saveManifest();
   assert.equal(check(await runPreflight(f.root), 'explicit_sql_dependency_order'), false);
   [f.manifest.sql_files[1], f.manifest.sql_files[2]] = [f.manifest.sql_files[2], f.manifest.sql_files[1]];
-  f.manifest.sql_files[2].depends_on = ['supabase/schema.sql'];
+  f.manifest.sql_files[2].depends_on = [f.manifest.sql_files[0].path];
   await f.saveManifest();
   assert.equal(check(await runPreflight(f.root), 'explicit_sql_dependency_order'), false);
+});
+
+test('duplicate migration versions fail even with distinct filenames and valid dependency order', async t => {
+  const f = await fixture(t);
+  const row=f.manifest.sql_files[2], oldPath=row.path;
+  const version=f.manifest.sql_files[1].path.match(/\/(\d{14})_/)[1];
+  row.path=row.path.replace(/\/\d{14}_/, '/'+version+'_');
+  await f.put(row.path,await readFile(join(f.root,oldPath),'utf8'));
+  await rm(join(f.root,oldPath));
+  f.manifest.sql_files[3].depends_on=[row.path];
+  await f.saveManifest();
+  const report=await runPreflight(f.root);
+  assert.equal(check(report,'explicit_sql_dependency_order'),true);
+  assert.equal(check(report,'migration_inventory_matches'),true);
+  assert.equal(check(report,'unique_migration_versions'),false);
+  assert.equal(report.status,'failed');
+});
+
+test('timestamps must follow dependency order and use the CLI timestamp format', async t => {
+  const f=await fixture(t);
+  const row=f.manifest.sql_files[1], oldPath=row.path;
+  row.path=row.path.replace(/\/\d{14}_/,'/20990101000000_');
+  await f.put(row.path,await readFile(join(f.root,oldPath),'utf8'));
+  await rm(join(f.root,oldPath));
+  f.manifest.sql_files[2].depends_on=[row.path];
+  await f.saveManifest();
+  let report=await runPreflight(f.root);
+  assert.equal(check(report,'explicit_sql_dependency_order'),true);
+  assert.equal(check(report,'unique_migration_versions'),true);
+  assert.equal(check(report,'migration_filename_order_agrees'),false);
+  row.path=row.path.replace('20990101000000','20990101');
+  await f.saveManifest();
+  report=await runPreflight(f.root);
+  assert.equal(check(report,'manifest_structure'),false);
 });
 
 test('unlisted or missing migration files fail the local inventory', async t => {

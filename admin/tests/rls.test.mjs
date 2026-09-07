@@ -20,7 +20,7 @@ test('real PostgreSQL role, row-policy, trigger and storage matrix', async t => 
     ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
     GRANT USAGE ON SCHEMA public, storage TO anon, authenticated;
     GRANT SELECT,INSERT,UPDATE,DELETE ON storage.objects TO anon,authenticated;`);
-  await pg.exec(await readFile(new URL('../../supabase/schema.sql', import.meta.url), 'utf8'));
+  await pg.exec(await readFile(new URL('../../supabase/migrations/20260907231507_office_base.sql', import.meta.url), 'utf8'));
   for (const [role,id] of Object.entries(ids)) {
     await pg.query('INSERT INTO auth.users VALUES ($1)', [id]);
     if(role!=='outsider') await pg.query('INSERT INTO public.staff_roles(user_id,role) VALUES ($1,$2)',[id,role]);
