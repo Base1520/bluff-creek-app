@@ -7,6 +7,8 @@
   <title>Creek Office — Bluff Creek Baptist Church</title>
   <link rel="stylesheet" href="../css/fonts.css">
   <link rel="stylesheet" href="admin.css">
+  <link rel="stylesheet" href="membership.css">
+  <link rel="stylesheet" href="care.css">
 </head>
 <body>
   <noscript><main class="center"><section class="auth-card"><h1>Creek Office needs JavaScript.</h1><p>Enable JavaScript to sign in to the private staff workspace.</p><a href="../">Return to Home @ the Creek</a></section></main></noscript>
@@ -41,7 +43,9 @@
       <nav id="workspace-nav" aria-label="Workspace">
         <a href="#dashboard" data-view="dashboard">Overview</a>
         <a href="#calendar" data-view="calendar">Staff calendar</a>
-        <a href="#people" data-view="people">People</a>
+        <a href="#people" data-view="people">People &amp; membership</a>
+        <a href="#history" data-view="history" data-private-module>Member history</a>
+        <a href="#care" data-view="care" data-private-module>Guests &amp; deacon care</a>
         <a href="#documents" data-view="documents">Documents</a>
         <a href="#activity" data-view="activity">Activity</a>
       </nav>
@@ -69,9 +73,13 @@
       </section>
 
       <section id="people-view" class="view hidden">
-        <div class="toolbar"><input id="people-search" aria-label="Search people" type="search" placeholder="Search people"><select id="people-filter" aria-label="Filter people by status"><option value="">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="visitor">Visitor</option></select></div>
+        <p class="membership-note">Search by name, former name, member number, household or contact details. Keep uncertain historical dates as written; inactive records stay in the archive.</p>
+        <div class="toolbar"><input id="people-search" aria-label="Search people" type="search" placeholder="Name, member number, household…"><select id="people-filter" aria-label="Filter people by status"><option value="">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="visitor">Visitor</option></select></div>
         <div class="panel table-wrap"><table><thead><tr><th>Name</th><th>Status</th><th>Household</th><th>Updated</th><th></th></tr></thead><tbody id="people-list"></tbody></table></div>
       </section>
+
+      <section id="history-view" class="view hidden"></section>
+      <section id="care-view" class="view hidden"></section>
 
       <section id="documents-view" class="view hidden">
         <div class="toolbar"><input id="document-search" aria-label="Search documents" type="search" placeholder="Search documents"><select id="document-filter" aria-label="Filter documents by category"><option value="">All categories</option><option value="policy">Policies</option><option value="spreadsheet">Spreadsheets</option><option value="form">Forms</option><option value="minutes">Minutes</option><option value="ministry">Ministry</option><option value="other">Other</option></select></div>
@@ -88,6 +96,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
   <script src="config.js"></script>
+  <script src="membership.js"></script>
+  <script src="care.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
