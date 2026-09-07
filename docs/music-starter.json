@@ -1,0 +1,311 @@
+{
+  "updated": "2026-09-07",
+  "name": "Songs @ the Creek | Bluff Creek Baptist Church",
+  "description": "Psalms, hymns, and songs of hope for the road between Sundays. Worship centered on Christ and grounded in Scripture.",
+  "playlistUrl": "https://open.spotify.com/playlist/58ciuGp95u3Sq1bWVjSu13",
+  "account_display_name": "Bluff Creek Baptist Church",
+  "status": "saved_public_playlist",
+  "selection_rule": "No Bethel, Hillsong or Elevation compositions/recordings or named publishing ties. Brandon Lake omitted from this starter at the pastor’s direction.",
+  "scope_note": "Specific song/recording credits checked in public sources. No exhaustive audit of unrelated collaborations or downstream royalty recipients is claimed; shared administration alone is not a church tie.",
+  "tracks": [
+    {
+      "order": 1,
+      "title": "Doxology / / Amen (Live)",
+      "artist": "Phil Wickham",
+      "research_recording": "Singalong 3 (Live)",
+      "research_spotify_url": "https://open.spotify.com/track/2yIdw8zYCO2JWJ0sJtY8qK",
+      "writers": "Phil Wickham; Thomas Ken; Louis Bourgeois",
+      "theme": "Praise of Father, Son and Holy Spirit, with thanksgiving for Christ’s victory.",
+      "sources": [
+        "https://integrityworship.com/songs/doxology-amen-phil-wickham/",
+        "https://essentialmusicpublishing.com/songs/doxology-amen/"
+      ],
+      "credit_note": "The composition’s published notices identify Phil Wickham Music, Seems Like Music, Sing My Songs and Songs for Karyn Publishing. Traditional hymn credits appear on the Integrity page.",
+      "saved_spotify_url": "https://open.spotify.com/track/2yIdw8zYCO2JWJ0sJtY8qK",
+      "saved_recording": "Singalong 3 (Live)"
+    },
+    {
+      "order": 2,
+      "title": "Speak O Lord",
+      "artist": "Keith & Kristyn Getty",
+      "research_recording": "In Christ Alone",
+      "research_spotify_url": "https://open.spotify.com/track/5S3KGLRJlrwZq0xfT3VLdV",
+      "writers": "Keith Getty; Stuart Townend",
+      "theme": "Scripture shaping faith, obedience and the life of the church.",
+      "sources": [
+        "https://www.stuarttownend.co.uk/song/speak-o-lord/"
+      ],
+      "credit_note": "The writer’s page identifies Thankyou Music.",
+      "saved_spotify_url": "https://open.spotify.com/track/5S3KGLRJlrwZq0xfT3VLdV",
+      "saved_recording": "In Christ Alone"
+    },
+    {
+      "order": 3,
+      "title": "Psalm 63 (Better Than Life)",
+      "artist": "Shane & Shane",
+      "research_recording": "Psalms, Vol. 2",
+      "research_spotify_url": "https://open.spotify.com/track/43rVaC703YCbLSUBeGW9Jo",
+      "writers": "Shane Barnard",
+      "theme": "Treasuring God when outward provision is scarce.",
+      "sources": [
+        "https://www.multitracks.com/songs/Shane-and-Shane/Psalms-Vol.-2/Psalm-63-%28Better-Than-Life%29/overview/",
+        "https://app.theworshipinitiative.com/songs/psalm-63-better-than-life/instrument/chart"
+      ],
+      "credit_note": "Authorized recording-resource credits identify Songs From Wellhouse.",
+      "saved_spotify_url": "https://open.spotify.com/track/43rVaC703YCbLSUBeGW9Jo",
+      "saved_recording": "Psalms, Vol. 2"
+    },
+    {
+      "order": 4,
+      "title": "Come Behold the Wondrous Mystery",
+      "artist": "Matt Boswell",
+      "research_recording": "Come Behold the Wondrous Mystery (2013 single)",
+      "research_spotify_url": "https://open.spotify.com/track/191TpctWpKVr86es9Q2heJ",
+      "writers": "Matt Boswell; Matt Papa; Michael Bleecker",
+      "theme": "Christ’s incarnation, sinless life, substitutionary death and resurrection.",
+      "sources": [
+        "https://gettymusic.store/products/come-behold-the-wondrous-mystery"
+      ],
+      "credit_note": "Getty credits include Getty entities, Love Your Enemies Publishing, McKinney Music and Bleecker Publishing.",
+      "saved_spotify_url": "https://open.spotify.com/track/191TpctWpKVr86es9Q2heJ",
+      "saved_recording": "Come Behold the Wondrous Mystery - Single"
+    },
+    {
+      "order": 5,
+      "title": "In Christ Alone",
+      "artist": "Keith & Kristyn Getty",
+      "research_recording": "Worship From Home (compilation)",
+      "research_spotify_url": "https://open.spotify.com/track/6y360VFcnr5KdT7KnHmwOF",
+      "writers": "Keith Getty; Stuart Townend",
+      "theme": "Christ’s completed saving work and the believer’s security in him.",
+      "sources": [
+        "https://www.stuarttownend.co.uk/song/in-christ-alone/"
+      ],
+      "credit_note": "The writer’s page identifies Thankyou Music. This Spotify reference is a compilation recording.",
+      "saved_spotify_url": "https://open.spotify.com/track/2hQxLiI93xdjqENJuKeXjO",
+      "saved_recording": "In Christ Alone"
+    },
+    {
+      "order": 6,
+      "title": "His Mercy Is More - Live",
+      "artist": "Keith & Kristyn Getty; Matt Boswell; Matt Papa; Sing!",
+      "research_recording": "Sing! Psalms: Ancient + Modern",
+      "research_spotify_url": "https://open.spotify.com/track/4K397gXe52Vcdot6tQ9mg3",
+      "writers": "Matt Boswell; Matt Papa",
+      "theme": "God’s mercy toward sinners, grounded in Christ’s costly redemption.",
+      "sources": [
+        "https://gettymusic.store/products/his-mercy-is-more-feat-matt-boswell-matt-papa"
+      ],
+      "credit_note": "Getty publisher notice identifies Getty entities, Messenger Hymns and Love Your Enemies Publishing.",
+      "saved_spotify_url": "https://open.spotify.com/track/7FDBlRq6lLk7noSoDHLgLs",
+      "saved_recording": "His Mercy Is More (Live)",
+      "recording_sources": [
+        "https://www.universalmusic.it/popular-music/album/his-mercy-is-more_33750017889/"
+      ],
+      "recording_note": "Saved 4:28 live single; official distributor identifies the Nashville 2019 performance released in 2020. Do not equate it with the separately researched shorter album recording."
+    },
+    {
+      "order": 7,
+      "title": "Yet Not I but Through Christ in Me",
+      "artist": "CityAlight",
+      "research_recording": "Yet Not I but Through Christ in Me (2018 single)",
+      "research_spotify_url": "https://open.spotify.com/track/11xb0daw7LtfcsJ9G5UTXZ",
+      "writers": "Jonny Robinson; Rich Thompson; Michael Farren",
+      "theme": "Grace, dependence on Christ and persevering faith.",
+      "sources": [
+        "https://cityalight.com/song/yet-not-i-but-through-christ-in-me/",
+        "https://cityalight.com/wp-content/uploads/2022/06/Yet-Not-I-But-Through-Christ-In-Me-Chord-Chart.pdf"
+      ],
+      "credit_note": "Official score identifies CityAlight Music.",
+      "saved_spotify_url": "https://open.spotify.com/track/7sxPwx9sBZVD6LR4oEwnc6",
+      "saved_recording": "Yet Not I"
+    },
+    {
+      "order": 8,
+      "title": "Psalm 23 (Surely Goodness, Surely Mercy)",
+      "artist": "Shane & Shane",
+      "research_recording": "Psalms, Vol. 2",
+      "research_spotify_url": "https://open.spotify.com/track/2Zxili8AmCuqiomg9HzTgH",
+      "writers": "Shane Barnard",
+      "theme": "Confidence in the Shepherd through danger and uncertainty.",
+      "sources": [
+        "https://worship.lifeway.com/findAndBuy/songPage/Psalm23%28SurelyGoodness%2CSurelyMercy%29?rowNum=22&searchString=Psalm+23&versionId=94455"
+      ],
+      "credit_note": "Lifeway’s song listing identifies Songs From Wellhouse, administered by Right Angle Music.",
+      "saved_spotify_url": "https://open.spotify.com/track/2Zxili8AmCuqiomg9HzTgH",
+      "saved_recording": "Psalms, Vol. 2"
+    },
+    {
+      "order": 9,
+      "title": "Lord From Sorrows Deep I Call (Psalm 42)",
+      "artist": "Matt Boswell; Matt Papa",
+      "research_recording": "His Mercy Is More: The Hymns of Matt Boswell and Matt Papa",
+      "research_spotify_url": "https://open.spotify.com/track/6Ybh6dw3UCnIb5EGTsOSm4",
+      "writers": "Matt Boswell; Matt Papa",
+      "theme": "Honest lament joined to renewed hope in God.",
+      "sources": [
+        "https://gettymusic.store/products/lord-from-sorrows-deep-i-call-single"
+      ],
+      "credit_note": "Getty publisher notice identifies Getty entities, Messenger Hymns and Love Your Enemies Publishing.",
+      "saved_spotify_url": "https://open.spotify.com/track/6Ybh6dw3UCnIb5EGTsOSm4",
+      "saved_recording": "His Mercy Is More: The Hymns Of Matt Boswell And Matt Papa"
+    },
+    {
+      "order": 10,
+      "title": "I Will Wait for You (Psalm 130) [Live]",
+      "artist": "Shane & Shane",
+      "research_recording": "Hymns Live",
+      "research_spotify_url": "https://open.spotify.com/track/4FwOCO9W6aH5QSh7dix8ey",
+      "writers": "Jordan Kauflin; Matt Merker; Keith Getty; Stuart Townend",
+      "theme": "Waiting on God amid darkness, with hope in his redemption.",
+      "sources": [
+        "https://gettymusic.store/products/i-will-wait-for-you-psalm-134"
+      ],
+      "credit_note": "Despite the legacy URL suffix, the publisher page is for Psalm 130. Listed publishers: Getty Music Publishing, Jordan Kauflin Music, Matthew Merker Music and Townend Songs.",
+      "saved_spotify_url": "https://open.spotify.com/track/4FwOCO9W6aH5QSh7dix8ey",
+      "saved_recording": "Hymns Live"
+    },
+    {
+      "order": 11,
+      "title": "Christ the Sure and Steady Anchor",
+      "artist": "Matt Boswell; Matt Papa",
+      "research_recording": "His Mercy Is More: The Hymns of Matt Boswell and Matt Papa",
+      "research_spotify_url": "https://open.spotify.com/track/67NLxyDtqxXwMirh4zL6gQ",
+      "writers": "Matt Boswell; Matt Papa",
+      "theme": "Christ’s faithfulness through temptation, suffering, doubt and death.",
+      "sources": [
+        "https://gettymusic.store/products/christ-the-sure-and-steady-anchor"
+      ],
+      "credit_note": "Getty publisher notice identifies Getty entities, Messenger Hymns and Love Your Enemies Publishing.",
+      "saved_spotify_url": "https://open.spotify.com/track/67NLxyDtqxXwMirh4zL6gQ",
+      "saved_recording": "His Mercy Is More: The Hymns Of Matt Boswell And Matt Papa"
+    },
+    {
+      "order": 12,
+      "title": "Psalm 46 (Lord of Hosts)",
+      "artist": "Shane & Shane",
+      "research_recording": "Psalms, Vol. 2 — vocal recording to verify",
+      "research_spotify_url": "https://open.spotify.com/track/1YD7Ap5qxsj65v2TMHReWE",
+      "writers": "Shane Barnard; Jennie Lee Riddle; Josiah Warneking; Josh Miller",
+      "theme": "God’s rule and presence amid turmoil.",
+      "sources": [
+        "https://www.peopleandsongs.com/blog/simple-album-kaleb-frazier-a-simple-collection",
+        "https://app.theworshipinitiative.com/songs/psalm-46-lord-of-hosts/instrument/chart"
+      ],
+      "credit_note": "Writer/publisher notice identifies Songs From Wellhouse, Tent Peg Music and Jennie Lee Riddle Music. Research Spotify reference is the vocal track on an accompaniment release; prefer the matching regular-album vocal recording when available.",
+      "saved_spotify_url": "https://open.spotify.com/track/6obkbpih6pYSgjPyoI75Xp",
+      "saved_recording": "Psalms, Vol. 2"
+    },
+    {
+      "order": 13,
+      "title": "Ancient of Days",
+      "artist": "CityAlight",
+      "research_recording": "Yet Not I",
+      "research_spotify_url": "https://open.spotify.com/track/7hZys7m4XeYP8svtukAG8l",
+      "writers": "Jonny Robinson; Rich Thompson; Michael Farren; Jesse Reeves",
+      "theme": "Trust in God’s enduring rule amid fear and an uncertain future.",
+      "sources": [
+        "https://cityalight.com/song/ancient-of-days/",
+        "https://cityalight.com/wp-content/uploads/2022/06/Ancient-of-days-Full-Score.pdf"
+      ],
+      "credit_note": "Official score identifies CityAlight Music and CityAlight Publishing.",
+      "saved_spotify_url": "https://open.spotify.com/track/7hZys7m4XeYP8svtukAG8l",
+      "saved_recording": "Yet Not I"
+    },
+    {
+      "order": 14,
+      "title": "Jesus, Strong and Kind",
+      "artist": "CityAlight; Colin Buchanan",
+      "research_recording": "Jesus, Strong and Kind (single)",
+      "research_spotify_url": "https://open.spotify.com/track/7lE9AsH8YADFeykexnXK4u",
+      "writers": "Rich Thompson; Jonny Robinson; Michael Farren; Colin Buchanan",
+      "theme": "Jesus’ faithfulness and welcome in weakness and fear.",
+      "sources": [
+        "https://cityalight.com/song/jesus-strong-and-kind/",
+        "https://cityalight.com/wp-content/uploads/2022/06/Jesus-Strong-and-Kind-PVG.pdf"
+      ],
+      "credit_note": "Official score identifies CityAlight Music.",
+      "saved_spotify_url": "https://open.spotify.com/track/75943vJwyBFBSxQg8RPDgU",
+      "saved_recording": "Jesus, Strong and Kind"
+    },
+    {
+      "order": 15,
+      "title": "He Will Hold Me Fast (Hymns Version)",
+      "artist": "Shane & Shane",
+      "research_recording": "He Will Hold Me Fast (Hymns Version) [The Worship Initiative Accompaniment]",
+      "research_spotify_url": "https://open.spotify.com/track/7pNxEb3ruTJqItiJKwKDlI",
+      "writers": "Ada Habershon; Matt Merker",
+      "theme": "Assurance that Christ preserves struggling believers.",
+      "sources": [
+        "https://gettymusic.store/products/he-will-hold-me-fast-single"
+      ],
+      "credit_note": "Publisher notice identifies Getty Music Publishing and Matt Merker Music; Habershon’s original text is acknowledged.",
+      "saved_spotify_url": "https://open.spotify.com/track/7pNxEb3ruTJqItiJKwKDlI",
+      "saved_recording": "He Will Hold Me Fast (Hymns Version) [The Worship Initiative Accompaniment]",
+      "recording_sources": [
+        "https://music.apple.com/us/album/he-will-hold-me-fast-hymns-version-the-worship/1435515901"
+      ],
+      "recording_note": "The matching release distinguishes the unqualified song title from separate Accompaniment Track and Instrumental entries. The saved track is the unqualified 4:56 entry, supporting a vocal companion recording; a brief audible check remains. Research album labeling was corrected from Hymns, Vol. 1 to the actual accompaniment release. Official composition credits are retained; a secondary retailer additionally credits Keith and Kristyn Getty, an unresolved recording-credit discrepancy that introduces no excluded entity."
+    },
+    {
+      "order": 16,
+      "title": "Christ Our Hope in Life and Death",
+      "artist": "Keith & Kristyn Getty; Matt Papa; Sing!",
+      "research_recording": "Good Friday (compilation)",
+      "research_spotify_url": "https://open.spotify.com/track/6T5Sdms4czeVmvtWVgetgO",
+      "writers": "Keith Getty; Matt Boswell; Jordan Kauflin; Matt Merker; Matt Papa",
+      "theme": "Christian assurance and resurrection hope in life and death.",
+      "sources": [
+        "https://www.mattpapa.com/songs/christ-our-hope-in-life-and-death"
+      ],
+      "credit_note": "Published credits identify Getty entities, Messenger Hymns, Love Your Enemies Publishing, Jordan Kauflin Music and Matthew Merker Music. Spotify reference is a compilation release.",
+      "saved_spotify_url": "https://open.spotify.com/track/0iYaBOYiWTPt2A7JMNK6eO",
+      "saved_recording": "Sing! The Life Of Christ Quintology",
+      "recording_sources": [
+        "https://gettymusic.store/products/quintology-resurrection"
+      ],
+      "recording_note": "Getty’s Quintology release lists this song with Matt Papa under Getty Music Label. Saved compilation/version is recorded separately; no claim of identical audio to the research link."
+    }
+  ],
+  "held_for_review": [
+    {
+      "title": "Psalm 34 (Taste and See)",
+      "reason": "Conflicting writer notices under the same CCLI number; arrangement difference unresolved.",
+      "sources": [
+        "https://www.worshiptogether.com/songs/psalm-34-taste-and-see-shane-shane/",
+        "https://worship.lifeway.com/findAndBuy/songPage/Psalm34%28TasteandSee%29?rowNum=12&searchString=psalm+34&versionId=94448"
+      ]
+    },
+    {
+      "title": "Psalm 42 (Loudest Praise); Psalm 27 (One Thing); Psalm 90 (Satisfy Us with Your Love)",
+      "reason": "Additional recording/publisher confirmation left for a later expansion; not required for this starter."
+    }
+  ],
+  "excluded_examples": [
+    {
+      "title": "Gratitude",
+      "reason": "Bethel publishing credits",
+      "source": "https://bethelmusic.com/resources/house-of-miracles/gratitude"
+    },
+    {
+      "title": "Hymn of Heaven",
+      "reason": "Bethel writing/publishing credits; applies to covers",
+      "source": "https://bethelmusic.com/resources/homecoming-live/hymn-of-heaven"
+    },
+    {
+      "title": "Praise (feat. Brandon Lake, Chris Brown & Chandler Moore)",
+      "reason": "Elevation recording",
+      "source": "https://www.elevationworship.com/music/praise"
+    }
+  ],
+  "verification": {
+    "date": "2026-09-07",
+    "method": "Spotify browser UI; reloaded saved playlist and inspected rendered track and album links",
+    "track_count": 16,
+    "displayed_duration": "1 hr 14 min",
+    "public": true,
+    "saved_order_verified": true,
+    "playback": "Player entered playing state and elapsed timer advanced; paused afterward. Audible output, full-track playback and real-phone playback not independently verified.",
+    "app_preview": "Fresh local preview: correct title and playlist link; zero Spotify frames before click; click loaded the real playlist title in its embed; Close player removed the frame and returned focus to Load Spotify player. No autoplay request. 54 public tests passed."
+  }
+}

@@ -15,9 +15,9 @@ var CREEK_GROW_CONTENT = {
     }
   },
   spotify: {
-    title: 'Carry Sunday into your week.',
-    description: 'A place for the songs we’re singing and music to listen to between Sundays.',
-    playlistUrl: ''
+    title: 'Songs @ the Creek',
+    description: 'Psalms, hymns, and songs of hope. Worship centered on Christ and grounded in Scripture.',
+    playlistUrl: 'https://open.spotify.com/playlist/58ciuGp95u3Sq1bWVjSu13'
   },
   books: []
 };
