@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
   <title>Creek Office — Bluff Creek Baptist Church</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:wght@500;600;700&family=Nunito+Sans:wght@400;600;700;800&display=swap">
+  <link rel="stylesheet" href="../css/fonts.css">
   <link rel="stylesheet" href="admin.css">
 </head>
 <body>
+  <noscript><main class="center"><section class="auth-card"><h1>Creek Office needs JavaScript.</h1><p>Enable JavaScript to sign in to the private staff workspace.</p><a href="../">Return to Home @ the Creek</a></section></main></noscript>
+  <main id="loading" class="center hidden" aria-live="polite"><section class="auth-card"><h1>Opening your workspace.</h1><p>Checking staff access…</p></section></main>
   <main id="setup" class="center hidden">
     <section class="auth-card">
       <img src="../assets/logo.png" alt="Bluff Creek Baptist Church">
@@ -29,7 +29,7 @@
       <form id="login-form">
         <label>Email<input id="email" type="email" autocomplete="email" required></label>
         <label>Password<input id="password" type="password" autocomplete="current-password" required></label>
-        <button type="submit">Sign in</button>
+        <button id="login-submit" type="submit">Sign in</button>
         <p id="login-error" class="error" role="alert"></p>
       </form>
     </section>
@@ -38,9 +38,9 @@
   <div id="workspace" class="shell hidden">
     <aside>
       <a class="office-brand" href="#dashboard"><img src="../assets/logo.png" alt=""><span>Creek Office<small>Church operations</small></span></a>
-      <nav aria-label="Workspace">
+      <nav id="workspace-nav" aria-label="Workspace">
         <a href="#dashboard" data-view="dashboard">Overview</a>
-        <a href="#calendar" data-view="calendar">Calendar</a>
+        <a href="#calendar" data-view="calendar">Staff calendar</a>
         <a href="#people" data-view="people">People</a>
         <a href="#documents" data-view="documents">Documents</a>
         <a href="#activity" data-view="activity">Activity</a>
@@ -49,7 +49,7 @@
     </aside>
 
     <section class="content">
-      <header><button id="menu" class="menu" aria-label="Open menu">☰</button><div><p class="eyebrow">Bluff Creek Baptist Church</p><h1 id="page-title">Overview</h1></div><button id="primary-action">Add</button></header>
+      <header><button id="menu" class="menu" aria-label="Workspace menu" aria-controls="workspace-nav" aria-expanded="false">☰</button><div><p class="eyebrow">Bluff Creek Baptist Church</p><h1 id="page-title">Overview</h1></div><button id="primary-action">Add</button></header>
       <p id="notice" class="notice hidden" role="status"></p>
 
       <section id="dashboard-view" class="view">
@@ -62,17 +62,18 @@
       </section>
 
       <section id="calendar-view" class="view hidden">
-        <div class="toolbar"><input id="event-search" type="search" placeholder="Search calendar"><select id="event-filter"><option value="">All types</option><option>Weekly</option><option>Monthly</option><option>Special</option></select></div>
+        <p class="calendar-note">This calendar is for staff planning. Changes here do not publish to the website or app. Manage approved public events in the <a href="https://docs.google.com/spreadsheets/d/13PVdvLzOd02hiL1My1cY0ZzGrwGxYdAaogNOwWRGe_c/edit" target="_blank" rel="noopener">church calendar sheet</a>.</p>
+        <div class="toolbar"><input id="event-search" aria-label="Search staff calendar" type="search" placeholder="Search calendar"><select id="event-filter" aria-label="Filter events by type"><option value="">All types</option><option>Weekly</option><option>Monthly</option><option>Special</option></select></div>
         <div class="panel"><div id="events-list" class="rows"></div></div>
       </section>
 
       <section id="people-view" class="view hidden">
-        <div class="toolbar"><input id="people-search" type="search" placeholder="Search people"><select id="people-filter"><option value="">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="visitor">Visitor</option></select></div>
+        <div class="toolbar"><input id="people-search" aria-label="Search people" type="search" placeholder="Search people"><select id="people-filter" aria-label="Filter people by status"><option value="">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="visitor">Visitor</option></select></div>
         <div class="panel table-wrap"><table><thead><tr><th>Name</th><th>Status</th><th>Household</th><th>Updated</th><th></th></tr></thead><tbody id="people-list"></tbody></table></div>
       </section>
 
       <section id="documents-view" class="view hidden">
-        <div class="toolbar"><input id="document-search" type="search" placeholder="Search documents"><select id="document-filter"><option value="">All categories</option><option value="policy">Policies</option><option value="spreadsheet">Spreadsheets</option><option value="form">Forms</option><option value="minutes">Minutes</option><option value="ministry">Ministry</option><option value="other">Other</option></select></div>
+        <div class="toolbar"><input id="document-search" aria-label="Search documents" type="search" placeholder="Search documents"><select id="document-filter" aria-label="Filter documents by category"><option value="">All categories</option><option value="policy">Policies</option><option value="spreadsheet">Spreadsheets</option><option value="form">Forms</option><option value="minutes">Minutes</option><option value="ministry">Ministry</option><option value="other">Other</option></select></div>
         <div class="panel table-wrap"><table><thead><tr><th>Document</th><th>Category</th><th>Updated</th><th></th></tr></thead><tbody id="documents-list"></tbody></table></div>
       </section>
 
@@ -80,7 +81,9 @@
     </section>
   </div>
 
-  <dialog id="editor"><form id="editor-form"><header><div><p class="eyebrow" id="editor-kicker"></p><h2 id="editor-title"></h2></div><button class="icon" type="button" data-close-editor aria-label="Close">×</button></header><div id="editor-fields"></div><footer><button class="quiet" type="button" data-close-editor>Cancel</button><button id="save" type="submit">Save</button></footer><p id="editor-error" class="error" role="alert"></p></form></dialog>
+  <dialog id="editor" aria-labelledby="editor-title"><form id="editor-form"><header><div><p class="eyebrow" id="editor-kicker"></p><h2 id="editor-title"></h2></div><button class="icon" type="button" data-close-editor aria-label="Close">×</button></header><div id="editor-fields"></div><footer><button class="quiet" type="button" data-close-editor>Cancel</button><button id="save" type="submit">Save</button></footer><p id="editor-error" class="error" role="alert"></p></form></dialog>
+
+  <dialog id="document-dialog" aria-labelledby="document-title"><div class="document-sheet"><h2 id="document-title">Open document</h2><div id="document-result" role="status"></div><button id="close-document" class="quiet" type="button">Close</button></div></dialog>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
   <script src="config.js"></script>

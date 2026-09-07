@@ -1,40 +1,139 @@
-/* Bluff Creek app — service worker: cache the shell so the app opens instantly and offline. */
-const CACHE = 'creek-v3';
+/* Cache only the public Creek app. Private and unrelated routes use the network. */
+const CACHE_PREFIX = 'creek-';
+const CACHE = 'creek-v4';
+const SCOPE = new URL(self.registration.scope);
+importScripts(new URL('./js/calendar-feed.js', SCOPE).href);
+const APP_URL = new URL('./index.html', SCOPE).href;
+const EVENTS_URL = new URL('./events.json', SCOPE).href;
+const ADMIN_PATH = new URL('./admin', SCOPE).pathname;
+const PUBLIC_CALENDAR_URL = CreekCalendar.CSV_URL;
 const SHELL = [
-  './', './index.html', './events.json', './manifest.webmanifest',
+  './index.html', './manifest.webmanifest',
+  './js/calendar-feed.js', './js/app-forms.js', './css/fonts.css',
+  './assets/fonts/bitter-latin-normal-v42.woff2',
+  './assets/fonts/bitter-latin-italic-500-v42.woff2',
+  './assets/fonts/nunito-sans-latin-normal-v19.woff2',
   './assets/logo.png', './assets/creek.png', './assets/la63.svg',
-  './assets/icon-192.png', './assets/icon-512.png', './assets/apple-touch-icon.png', './assets/favicon-32.png'
-];
-self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  './assets/icon-192.png', './assets/icon-512.png',
+  './assets/apple-touch-icon.png', './assets/favicon-32.png'
+].map(path => new URL(path, SCOPE).href);
+const ASSET_URLS = new Set(SHELL.filter(url => url !== APP_URL));
+
+self.addEventListener('install', event => {
+  // Wait for existing app windows to close so unfinished forms survive an update.
+  // The live feeds are optional and must not prevent the offline shell installing.
+  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)));
 });
-self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+
+self.addEventListener('activate', event => {
+  event.waitUntil(caches.keys().then(keys => Promise.all(
+    keys.filter(key => key.startsWith(CACHE_PREFIX) && key !== CACHE)
+      .map(key => caches.delete(key))
+  )));
 });
-self.addEventListener('fetch', e => {
-  const req = e.request;
-  if (req.method !== 'GET') return;
-  // Creek Office contains private data and must never enter the public app shell cache.
-  if (new URL(req.url).pathname.includes('/admin/')) return;
-  // network-first for the page (so updates land), cache-first for assets/fonts
-  if (req.mode === 'navigate') {
-    e.respondWith(fetch(req).then(r => { const copy = r.clone(); caches.open(CACHE).then(c => c.put('./index.html', copy)); return r; })
-      .catch(() => caches.match('./index.html')));
-    return;
+
+function isAppURL(url) {
+  return url.origin === SCOPE.origin &&
+    (url.pathname === SCOPE.pathname || url.pathname === new URL(APP_URL).pathname);
+}
+
+function isHTML(response) {
+  return response.ok &&
+    (response.headers.get('content-type') || '').split(';')[0].trim().toLowerCase() === 'text/html' &&
+    (!response.url || isAppURL(new URL(response.url)));
+}
+
+async function remember(url, response) {
+  try {
+    const cache = await caches.open(CACHE);
+    await cache.put(url, response.clone());
+  } catch (_) {
+    // Storage failure must not hide a successful network response.
   }
-  // The events feed must never be served stale: it is how the calendar reaches
-  // phones that already installed the app. Network first, cache only as a fallback.
-  if (req.url.includes('events.json')) {
-    e.respondWith(fetch(req).then(r => {
-      if (r.ok) { const copy = r.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
-      return r;
-    }).catch(() => caches.match(req).then(hit => hit || caches.match('./events.json'))));
-    return;
+}
+
+async function cached(url, offline = false) {
+  try {
+    const cache = await caches.open(CACHE);
+    const response = await cache.match(url);
+    if (!response || !offline) return response;
+    const headers = new Headers(response.headers);
+    headers.set('X-Creek-Cache', 'offline');
+    return new Response(response.body, {
+      status: response.status, statusText: response.statusText, headers
+    });
+  } catch (_) {
+    return undefined;
   }
-  e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(r => {
-    if (r.ok && (req.url.includes('/assets/') || req.url.includes('fonts.gstatic.com') || req.url.includes('fonts.googleapis.com'))) {
-      const copy = r.clone(); caches.open(CACHE).then(c => c.put(req, copy));
+}
+
+async function validEvents(response) {
+  if (!response.ok) return false;
+  try {
+    const data = await response.clone().json();
+    // Keep recurring definitions and all other metadata; an empty array is valid.
+    return data !== null && typeof data === 'object' && Array.isArray(data.events);
+  } catch (_) {
+    return false;
+  }
+}
+
+async function validCSV(response) {
+  if (!response.ok || /text\/html/i.test(response.headers.get('content-type') || '')) return false;
+  try {
+    // Use the same required headers and quoted-field parser as the calendar UI.
+    CreekCalendar.communityRows(await response.clone().text());
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+async function networkFirst(request, cacheURL, validate) {
+  let response;
+  let failure;
+  try {
+    response = await fetch(request, { cache: 'no-cache' });
+    if (await validate(response)) {
+      // respondWith waits for this promise, including the cache write.
+      await remember(cacheURL, response);
+      return response;
     }
-    return r;
-  }).catch(() => hit)));
+  } catch (error) {
+    failure = error;
+  }
+  const fallback = await cached(cacheURL, true);
+  if (fallback) return fallback;
+  if (response) return response;
+  throw failure || new Error('The app is offline and no saved response is available.');
+}
+
+async function shellAsset(request) {
+  const hit = await cached(request.url);
+  if (hit) return hit;
+  const response = await fetch(request);
+  if (response.ok) await remember(request.url, response);
+  return response;
+}
+
+self.addEventListener('fetch', event => {
+  const request = event.request;
+  if (request.method !== 'GET') return;
+  const url = new URL(request.url);
+  if (url.href === PUBLIC_CALENDAR_URL && request.mode !== 'navigate') {
+    event.respondWith(networkFirst(request, PUBLIC_CALENDAR_URL, validCSV));
+    return;
+  }
+  if (url.origin !== SCOPE.origin) return;
+  if (url.pathname === ADMIN_PATH || url.pathname.startsWith(ADMIN_PATH + '/')) return;
+
+  if (request.mode === 'navigate') {
+    if (isAppURL(url)) event.respondWith(networkFirst(request, APP_URL, isHTML));
+    return;
+  }
+  if (url.pathname === new URL(EVENTS_URL).pathname) {
+    event.respondWith(networkFirst(request, EVENTS_URL, validEvents));
+    return;
+  }
+  if (ASSET_URLS.has(url.href)) event.respondWith(shellAsset(request));
 });

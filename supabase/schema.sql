@@ -24,7 +24,8 @@ create table public.events (
   ends_at timestamptz,
   location text,
   description text,
-  is_public boolean not null default true,
+  -- Reserved metadata only: this private staff calendar does not publish a feed.
+  is_public boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   created_by uuid references auth.users(id),
@@ -55,7 +56,7 @@ create table public.documents (
   storage_path text not null unique,
   file_name text not null,
   mime_type text,
-  size_bytes bigint not null check (size_bytes >= 0),
+  size_bytes bigint not null check (size_bytes between 1 and 52428800),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   uploaded_by uuid not null references auth.users(id)
@@ -160,7 +161,9 @@ using (private.current_staff_role() in ('admin', 'editor'));
 create policy staff_can_read_documents on public.documents for select to authenticated
 using (private.current_staff_role() is not null);
 create policy editors_can_insert_documents on public.documents for insert to authenticated
-with check (private.current_staff_role() in ('admin', 'editor'));
+with check (private.current_staff_role() in ('admin', 'editor')
+  and uploaded_by = (select auth.uid())
+  and split_part(storage_path, '/', 1) = (select auth.uid())::text);
 create policy editors_can_update_documents on public.documents for update to authenticated
 using (private.current_staff_role() in ('admin', 'editor'))
 with check (private.current_staff_role() in ('admin', 'editor'));
@@ -176,7 +179,8 @@ on conflict (id) do nothing;
 create policy staff_can_read_files on storage.objects for select to authenticated
 using (bucket_id = 'church-documents' and private.current_staff_role() is not null);
 create policy editors_can_upload_files on storage.objects for insert to authenticated
-with check (bucket_id = 'church-documents' and private.current_staff_role() in ('admin', 'editor'));
+with check (bucket_id = 'church-documents' and private.current_staff_role() in ('admin', 'editor')
+  and split_part(name, '/', 1) = (select auth.uid())::text);
 create policy editors_can_update_files on storage.objects for update to authenticated
 using (bucket_id = 'church-documents' and private.current_staff_role() in ('admin', 'editor'))
 with check (bucket_id = 'church-documents' and private.current_staff_role() in ('admin', 'editor'));
