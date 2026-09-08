@@ -52,7 +52,7 @@ function fixture(t,options={}) {
   function emit(next,event='TEST'){current=next;insideCallback=true;const returned=callback(event,next);insideCallback=false;assert.equal(returned,undefined);}
   if (options.membership) w.CreekMembership = { create(moduleOptions) { options.membership.options = moduleOptions; return { load: async () => {}, render() {}, clear() {} }; } };
   if (options.sheetControls) { w.eval(membershipSource); const sheetLink=w.CreekMembership.sheetLink; w.CreekMembership={sheetLink,create(){return {load:async()=>{},render(){},clear(){}}}}; }
-  if (options.care) w.CreekCare = { create() { return { load: async () => {}, render() {}, clear() {}, selectPerson(id) { options.care.selected.push(id); return options.care.accepted !== false; } }; } };
+  if (options.care) w.CreekCare = { create(moduleOptions) { options.care.options=moduleOptions; return { load: async () => { moduleOptions.onSummary(options.care.summary || null); }, render() {}, clear() { moduleOptions.onSummary(null); }, selectPerson(id) { (options.care.selected ||= []).push(id); return options.care.accepted !== false; }, openQueue(kind) { (options.care.queues ||= []).push(kind); return options.care.queueAccepted !== false; } }; } };
   if (options.followups) w.CreekFollowups = { create(moduleOptions) { options.followups.options = moduleOptions; return { load: async () => moduleOptions.onSummary(options.followups.summary), render() {}, clear() { moduleOptions.onSummary({ due:null, overdue:null, upcoming:null, items:[] }); }, openNew() {} }; } };
   let created=0; w.CREEK_OFFICE_CONFIG=options.config||{supabaseUrl:'https://project.example.invalid',publishableKey:'sb_publishable_synthetic'};
   w.supabase={createClient(){created++;return client;}};w.eval(app);
@@ -397,4 +397,33 @@ test('membership spreadsheet shortcut rejects unsafe configuration and clears on
   let blocked=false;const f=fixture(t,{sheetControls:true,config:{supabaseUrl:'https://project.example.invalid',publishableKey:'sb_publishable_synthetic',membershipSheetUrl:'https://docs.google.com/spreadsheets/d/Synthetic_123/edit'},onQuery:q=>blocked&&q.table==='contacts'?{error:{code:'NETWORK'}}:undefined});
   await until(()=>!f.el('people-sheet-tools').hidden,'sheet shortcut ready');blocked=true;f.el('workspace-refresh').click();await until(()=>f.el('workspace').dataset.connection==='blocked','workspace blocked');
   assert.equal(f.el('people-sheet-tools').hidden,true);assert.equal(f.el('people-sheet-link').getAttribute('href'),null);
+});
+
+
+test('Overview care totals open the requested queue only after safe navigation is accepted',async t=>{
+  const care={summary:{duePlans:4,overduePlans:2,unassignedPlans:1,coverageGaps:3},queueAccepted:false},f=fixture(t,{care});
+  await until(()=>f.el('care-due-count').textContent==='4','care summary ready');
+  assert.equal(f.el('care-unassigned-count').textContent,'1');assert.equal(f.el('care-gaps-count').textContent,'3');assert.match(f.el('dashboard-care-status').textContent,/2 overdue/);
+  const button=f.w.document.querySelector('[data-care-queue=due]');button.click();assert.deepEqual(care.queues,['due']);assert.notEqual(f.w.location.hash,'#care');
+  care.queueAccepted=true;button.click();assert.equal(f.w.location.hash,'#care');
+  f.w.document.querySelector('[data-care-queue=coverage]').click();assert.equal(care.queues.at(-1),'coverage');
+  button.dataset.careQueue='invalid';const count=care.queues.length;button.click();assert.equal(care.queues.length,count);
+  f.emit(null);care.options.onSummary(care.summary);assert.equal(f.el('care-due-count').textContent,'—');assert.equal(f.el('dashboard-care-status').textContent,'');assert.equal(button.disabled,true);
+});
+
+test('unavailable or invalid care counts never become a false all-clear and viewers cannot open care queues',async t=>{
+  const care={},f=fixture(t,{care});await until(()=>f.el('people-list').querySelector('button'),'office ready');
+  assert.equal(f.el('care-due-count').textContent,'—');assert.match(f.el('dashboard-care-status').textContent,/unavailable/);
+  for(const summary of [{duePlans:-1,overduePlans:0,unassignedPlans:0,coverageGaps:0},{duePlans:0,overduePlans:1,unassignedPlans:0,coverageGaps:0},{duePlans:0,overduePlans:0,unassignedPlans:NaN,coverageGaps:0}]){care.options.onSummary(summary);assert.equal(f.el('care-due-count').textContent,'—');}
+  care.options.onSummary({duePlans:0,overduePlans:0,unassignedPlans:0,coverageGaps:0});assert.equal(f.el('care-due-count').textContent,'0');
+  const viewerCare={summary:{duePlans:9,overduePlans:9,unassignedPlans:9,coverageGaps:9}},v=fixture(t,{roles:{a:'viewer'},care:viewerCare});await until(()=>v.el('role-label').textContent==='viewer','viewer ready');viewerCare.options.onSummary(viewerCare.summary);
+  assert.equal(v.el('care-due-count').textContent,'—');const button=v.w.document.querySelector('[data-care-queue=due]');assert.equal(button.disabled,true);button.click();assert.equal(viewerCare.queues,undefined);
+});
+
+
+test('a core workspace failure removes care dashboard counts before a stale summary can repaint them',async t=>{
+  let blocked=false;const care={summary:{duePlans:2,overduePlans:1,unassignedPlans:1,coverageGaps:4}},f=fixture(t,{care,onQuery:q=>blocked&&q.table==='contacts'?{error:{code:'NETWORK'}}:undefined});
+  await until(()=>f.el('care-due-count').textContent==='2','care summary loaded');blocked=true;f.el('workspace-refresh').click();await until(()=>f.el('workspace').dataset.connection==='blocked','workspace blocked');
+  care.options.onSummary(care.summary);for(const id of ['care-due-count','care-unassigned-count','care-gaps-count'])assert.equal(f.el(id).textContent,'—');
+  for(const button of f.w.document.querySelectorAll('[data-care-queue]'))assert.equal(button.disabled,true);
 });

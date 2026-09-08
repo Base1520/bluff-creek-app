@@ -1,6 +1,6 @@
 /* Cache only the public Creek app. Private and unrelated routes use the network. */
 const CACHE_PREFIX = 'creek-';
-const CACHE = 'creek-v11';
+const CACHE = 'creek-v12';
 const SCOPE = new URL(self.registration.scope);
 importScripts(new URL('./js/calendar-feed.js', SCOPE).href);
 importScripts(new URL('./js/calendar-config.js', SCOPE).href);
@@ -13,6 +13,7 @@ const SHELL = [
   './index.html', './manifest.webmanifest',
   './js/calendar-feed.js', './js/calendar-config.js', './js/app-forms.js', './css/fonts.css',
   './js/grow-content.js', './js/grow.js', './css/grow.css',
+  './js/app-status.js', './css/app-status.css',
   './assets/fonts/bitter-latin-normal-v42.woff2',
   './assets/fonts/bitter-latin-italic-500-v42.woff2',
   './assets/fonts/nunito-sans-latin-normal-v19.woff2',

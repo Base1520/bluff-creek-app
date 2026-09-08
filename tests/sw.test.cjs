@@ -108,6 +108,8 @@ for (const scope of ['https://app.example.test/', 'http://localhost:8080/church/
     assert(worker.installed.includes(new URL('js/calendar-feed.js', scope).href));
     assert(worker.installed.includes(new URL('js/app-forms.js', scope).href));
     assert(worker.installed.includes(new URL('css/fonts.css', scope).href));
+    assert(worker.installed.includes(new URL('js/app-status.js', scope).href));
+    assert(worker.installed.includes(new URL('css/app-status.css', scope).href));
     assert(!worker.installed.some(url => url.includes('events.json') || url.includes('/admin')));
     assert.equal(worker.skipWaiting, 0);
   });

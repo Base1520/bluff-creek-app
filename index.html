@@ -16,6 +16,7 @@
 <link rel="preload" href="assets/fonts/bitter-latin-normal-v42.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/grow.css">
+<link rel="stylesheet" href="css/app-status.css">
 <style>
   :root{
     --ivory:#F5EFE3;--surface:#FFFFFF;--surface2:#FBF6EC;--ink:#221F1A;--ink2:#5E574C;--ink3:#938a79;
@@ -76,7 +77,7 @@
   .back{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;color:var(--pine);background:none;border:0;font-family:inherit;padding:0 0 10px;cursor:pointer}
 
   .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
-  .qa{appearance:none;border:1px solid var(--line);background:var(--surface);border-radius:16px;padding:12px 6px 10px;display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;color:var(--ink);font-family:inherit;box-shadow:var(--shadow);transition:transform .15s ease,border-color .15s ease}
+  .qa{appearance:none;border:1px solid var(--line);background:var(--surface);border-radius:16px;padding:12px 6px 10px;display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;color:var(--ink);font-family:inherit;text-decoration:none;box-shadow:var(--shadow);transition:transform .15s ease,border-color .15s ease}
   .qa:active{transform:scale(.97)} .qa:focus-visible{outline:2px solid var(--pine);outline-offset:2px}
   .qa .ic{width:34px;height:34px;display:grid;place-items:center;border-radius:11px;background:var(--pine-tint);color:var(--pine)}
   .qa.gold .ic{background:var(--wheat-tint);color:var(--wheat)}
@@ -185,7 +186,11 @@
   </header>
 
   <main>
-    <p class="note" id="appUpdate" role="status" aria-live="polite" hidden></p>
+    <aside class="app-status" id="appStatus" aria-label="App status" role="status" aria-live="polite" hidden>
+      <p id="appOffline" hidden></p>
+      <p id="appUpdate" hidden></p>
+      <p id="appSaveStatus" hidden></p>
+    </aside>
     <noscript><div class="card"><p>The Creek app needs JavaScript for its tabs and calendar. You can also <a href="https://www.bluffcreekbaptistchurch.org/">visit the church website</a> for services, directions, and contact details.</p></div></noscript>
     <!-- HOME -->
     <section class="screen on" data-screen="home">
@@ -203,8 +208,9 @@
           <button class="qa" data-go="new"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span>I'm New</span></button>
           <button class="qa" data-go="prayer"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.35-7-10a4 4 0 0 1 7-2.65A4 4 0 0 1 19 11c0 5.65-7 10-7 10z"/></svg></span><span>Prayer</span></button>
           <button class="qa gold" data-go="give"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-7M2 8h20v4H2zM12 8v12M12 8S10.5 3 7.5 3 5 8 12 8zM12 8s1.5-5 4.5-5S19 8 12 8z"/></svg></span><span>Give</span></button>
-          <button class="qa blue" id="watchBtn"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></span><span>Watch</span></button>
+          <a class="qa blue" id="watchBtn" href="https://www.youtube.com/channel/UC75FUMm1TckzTRpfYHd_ILQ/live" target="_blank" rel="noopener"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></span><span>Watch</span></a>
         </div>
+        <p class="note watch-note">No service live? <a id="watchArchive" href="https://www.youtube.com/channel/UC75FUMm1TckzTRpfYHd_ILQ" target="_blank" rel="noopener">Browse our YouTube channel ↗</a></p>
       </div>
 
       <div class="sec">
@@ -385,7 +391,7 @@
         <div class="book-tools" id="growBookTools" hidden><label for="growBookSearch">Find your next book</label><input type="search" id="growBookSearch" placeholder="Title, author or topic…" aria-controls="growBooks" autocomplete="off"><div class="book-search-status"><p id="growBookCount" role="status" aria-live="polite"></p><button type="button" class="link" id="growBookClear" hidden>Clear search</button></div></div>
         <div class="grow-shelf" id="growBooks"></div><p id="growBooksEmpty" hidden>No books match your search. Try a title, author or another topic.</p>
       </div></div>
-      <p class="note grow-footnote">The reading guide stays available in the installed app after it has loaded. Music and linked resources need an internet connection.</p>
+      <p class="note grow-footnote">Previously saved reading pages may be available offline. Music and linked resources need an internet connection.</p>
     </section>
 
     <!-- MORE -->
@@ -520,6 +526,7 @@
 <script src="js/app-forms.js"></script>
 <script src="js/grow-content.js"></script>
 <script src="js/grow.js"></script>
+<script src="js/app-status.js"></script>
 <script>
 /* =========================================================================
    Public app settings. Shared calendar rules live in events.json.
@@ -606,11 +613,14 @@ var CONFIG = {
 
   // watch / give / contact actions from config
   if(CONFIG.YT_CHANNEL_ID){ CONFIG.WATCH_URL='https://www.youtube.com/channel/'+CONFIG.YT_CHANNEL_ID+'/live'; }
-  $('#watchBtn').addEventListener('click',function(){ if(CONFIG.WATCH_URL) window.open(CONFIG.WATCH_URL,'_blank','noopener'); else ping('Live stream link coming soon'); });
+  $('#watchBtn').href=CONFIG.WATCH_URL;
+  $('#watchBtn').hidden=!CONFIG.WATCH_URL;
+  $('#watchArchive').href=CONFIG.YT_CHANNEL_ID?'https://www.youtube.com/channel/'+CONFIG.YT_CHANNEL_ID:CONFIG.WATCH_URL;
+  $('#watchArchive').parentElement.hidden=!CONFIG.YT_CHANNEL_ID;
   var ga=$('#giveActions');
   ga.innerHTML = CONFIG.GIVE_URL
-    ? '<a class="btn pine" href="'+CONFIG.GIVE_URL+'" target="_blank" rel="noopener">Give online securely</a>'+(CONFIG.RECURRING_URL?'<a class="btn ghost" href="'+CONFIG.RECURRING_URL+'" target="_blank" rel="noopener">Set up recurring giving</a>':'')+'<div class="card" style="margin-top:14px"><p class="lead" style="margin:0">You can also give by check on Sunday or by mail to the church. Every gift is recorded by the church treasurer for your year-end statement.</p></div>'
-    : '<div class="card"><b style="font-family:Bitter,serif;font-size:16px">Online giving is coming soon.</b><p class="lead" style="margin:6px 0 0">For now, give by check or cash on Sunday, or by mail to the church at 1706 Highway 63, Clinton, LA 70722. Every gift is recorded by the church treasurer for your year-end statement.</p></div>';
+    ? '<a class="btn pine" href="'+CONFIG.GIVE_URL+'" target="_blank" rel="noopener">Give online securely</a>'+(CONFIG.RECURRING_URL?'<a class="btn ghost" href="'+CONFIG.RECURRING_URL+'" target="_blank" rel="noopener">Set up recurring giving</a>':'')+'<div class="card" style="margin-top:14px"><p class="lead" style="margin:0">You can also give by check on Sunday or by mail to the church.</p></div>'
+    : '<div class="card"><b style="font-family:Bitter,serif;font-size:16px">Online giving is coming soon.</b><p class="lead" style="margin:6px 0 0">For now, give by check or cash on Sunday, or by mail to the church at 1706 Highway 63, Clinton, LA 70722.</p></div>';
   var ca=$('#contactActions'), acts='';
   if(CONFIG.CHURCH_PHONE){
     var officePhone=CONFIG.CHURCH_PHONE.replace(/[^0-9+]/g,'');
@@ -646,15 +656,7 @@ var CONFIG = {
   });
   window.addEventListener('appinstalled',function(){deferred=null;clearInstallCards()});
   if(isIOS&&!standalone){ installCard('<b>Add the Creek to your home screen.</b> Tap the <b>Share</b> button, then <b>Add to Home Screen</b>. It opens like an app.'); }
-  if('serviceWorker' in navigator){
-    window.addEventListener('load',function(){
-      navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(function(registration){
-        function updateReady(){var note=$('#appUpdate');note.textContent='An app update is ready. When you have finished with any drafts, close all Creek app windows and reopen the app.';note.hidden=false}
-        if(registration.waiting)updateReady();
-        registration.addEventListener('updatefound',function(){var worker=registration.installing;if(worker)worker.addEventListener('statechange',function(){if(worker.state==='installed'&&navigator.serviceWorker.controller)updateReady()})});
-      }).catch(function(){});
-    });
-  }
+  CreekAppStatus.initialize(document);
 })();
 </script>
 </body>

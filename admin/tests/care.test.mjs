@@ -30,11 +30,11 @@ test('attempts do not reset contact cadence; latest explicit date wins and pause
 function fixture(t, opts={}) {
   const dom = new JSDOM('<section id="care-view"></section>', {url:'https://office.example.invalid/admin/',runScripts:'outside-only'}), w=dom.window;
   t.after(()=>w.close()); w.confirm=()=>true; w.eval(source);
-  const host=w.document.querySelector('#care-view'), calls=[], notices=[];
+  const host=w.document.querySelector('#care-view'), calls=[], notices=[], summaries=[];
   let ctx={epoch:1,userId:'synthetic-user',canEdit:true,workspaceReady:true,role:opts.role||'editor'}, module, refreshes=0;
   const people=opts.people||[{id:'person-synthetic',first_name:'Sample',last_name:'Person',household_name:'Test household',status:'active'}];
   const rows={care_assignments:(opts.assignments||[]).map(row=>({version:1,...row})),care_visits:opts.visits||[],guest_intakes:(opts.guests||[]).map(row=>({version:1,...row})),care_guidelines:opts.guidelines?{version:1,...opts.guidelines}:null};
-  const controller={hold:null,error:null,emptySave:false,ready:true,ensureReady:null,respond:null}, checks=[];
+  const controller={hold:null,error:null,emptySave:false,ready:true,peopleReady:true,ensureReady:null,respond:null}, checks=[];
   function execute(query) {
     const all=query.table==='care_guidelines'?(rows[query.table]?[rows[query.table]]:[]):rows[query.table];
     const matching=all.filter(row=>Object.entries(query.filters||{}).every(([key,value])=>row[key]===value));
@@ -63,12 +63,87 @@ function fixture(t, opts={}) {
       return Promise.resolve(result).then(resolve,reject);
     }}; return chain;
   }};
-  module=w.CreekCare.create({root:host,db,requestTimeoutMs:opts.requestTimeoutMs,getContext:()=>ctx,isCurrent:epoch=>!!ctx.userId&&ctx.epoch===epoch,ensureReady:async epoch=>{checks.push(epoch);return controller.ensureReady?controller.ensureReady(epoch):controller.ready;},people:()=>people,notice:(text,bad)=>notices.push({text,bad}),refresh:async()=>{refreshes++;await module.load(ctx.epoch);}});
+  module=w.CreekCare.create({root:host,db,requestTimeoutMs:opts.requestTimeoutMs,getContext:()=>ctx,isCurrent:epoch=>!!ctx.userId&&ctx.epoch===epoch,ensureReady:async epoch=>{checks.push(epoch);return controller.ensureReady?controller.ensureReady(epoch):controller.ready;},people:()=>people,peopleReady:()=>controller.peopleReady,notice:(text,bad)=>notices.push({text,bad}),onSummary:opts.omitSummary?undefined:value=>summaries.push(value===null?null:JSON.parse(JSON.stringify(value))),refresh:async()=>{refreshes++;await module.load(ctx.epoch);}});
   const click=selector=>host.querySelector(selector).click();
   function set(name,value) { const el=host.querySelector('[name="'+name+'"]'); if(el.type==='checkbox')el.checked=value;else el.value=value;return el; }
   function submit() {host.querySelector('form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));}
-  return {w,host,module,calls,notices,rows,controller,checks,execute,click,set,submit,ctx,setContext:value=>ctx=value,refreshes:()=>refreshes};
+  return {w,host,module,calls,notices,summaries,rows,controller,checks,execute,click,set,submit,ctx,setContext:value=>ctx=value,refreshes:()=>refreshes};
 }
+test('overview care totals use all authorized people and distinguish due, completed, paused and coverage needs', async t => {
+  const date=today(), later=addMonths(date,1), previous=addMonths(date,-1);
+  const people=[{id:'person-synthetic',display_name:'First fixture private name',status:'active'},{id:'person-other',display_name:'Other fixture private name',status:'active'},{id:'person-visitor',display_name:'Visitor fixture',status:'visitor'}];
+  const f=fixture(t,{people,assignments:[
+    {...assignment,care_role:'deacon',cadence_months:3,first_due_on:date,assigned_to:'First team'},
+    {...assignment,id:'monthly-plan',care_role:'sunday_school',cadence_months:1,first_due_on:previous,assigned_to:'   '},
+    {...assignment,id:'welcome-plan',care_role:'welcome',one_time:true,started_on:date,first_due_on:date},
+    {...assignment,id:'paused-plan',care_role:'pastoral',paused:true,first_due_on:previous},
+    {...assignment,id:'other-plan',contact_id:'person-other',care_role:'deacon',cadence_months:3,first_due_on:later,assigned_to:'Other team'},
+    {...assignment,id:'visitor-plan',contact_id:'person-visitor',care_role:'custom',first_due_on:later,notes:'Private fixture note'},
+    {...assignment,id:'orphan-plan',contact_id:'person-no-longer-loaded',care_role:'deacon',first_due_on:previous}
+  ],visits:[{...visit(date),care_role:'welcome'}, {...visit(date,'attempted'),care_role:'sunday_school'}, {...visit(later),care_role:'deacon'}]});
+  await f.module.load(1);
+  assert.equal(f.summaries[0],null);
+  const total={duePlans:2,overduePlans:1,unassignedPlans:2,coverageGaps:2};assert.deepEqual(f.summaries.at(-1),total);
+  const initialEmissions=f.summaries.length;
+  const filter=(selector,value,event='change')=>{const node=f.host.querySelector(selector);node.value=value;node.dispatchEvent(new f.w.Event(event,{bubbles:true}));};
+  filter('[data-care-search]','nobody matches','input');filter('[data-care-deacon]','First team');filter('[data-care-role-filter]','custom');filter('[data-care-plan-status]','unassigned');
+  assert.equal(f.host.querySelectorAll('[data-care-list="assignments"] .care-row').length,0);
+  f.module.render();assert.equal(f.summaries.length,initialEmissions);assert.deepEqual(f.summaries.at(-1),total);
+  assert.equal(f.module.selectPerson('person-synthetic'),true);assert.equal(f.host.querySelector('[data-care-plan-status]').value,'');assert.deepEqual(f.summaries.at(-1),total);
+  assert.equal(f.module.openQueue('due'),true);assert.equal(f.host.querySelectorAll('[data-care-list="assignments"] .care-row').length,2);assert.equal(f.host.querySelector('[data-care-plan-status]').value,'due');
+  assert.equal(f.host.querySelector('[data-care-plan-status-label]').hidden,false);assert.equal(f.host.querySelector('.care-person-selection').hidden,true);
+  assert.equal(f.module.openQueue('unassigned'),true);assert.equal(f.host.querySelectorAll('[data-care-list="assignments"] .care-row').length,2);assert.equal(f.host.querySelectorAll('[data-care-list="paused"] .care-row').length,0);
+  assert.equal(f.module.openQueue('coverage'),true);assert.equal(f.host.querySelector('[data-care-panel="coverage"]').hidden,false);assert.equal(f.host.querySelectorAll('[data-care-list="coverage"] .care-row').length,2);assert.equal(f.host.querySelector('[data-care-plan-status-label]').hidden,true);
+  assert.equal(f.host.querySelector('[data-care-plan-status]').value,'');assert.deepEqual(f.summaries.at(-1),total);
+  assert.doesNotMatch(JSON.stringify(f.summaries),/private name|Private fixture note|First team|person-synthetic/);
+  people.splice(0,1);f.module.render();assert.deepEqual(f.summaries.at(-1),{duePlans:0,overduePlans:0,unassignedPlans:1,coverageGaps:1});
+});
+test('overview summaries become unavailable on refresh, error and auth loss without stale or false-zero updates', async t => {
+  const f=fixture(t,{assignments:[assignment]});await f.module.load(1);assert.equal(f.summaries.at(-1).duePlans,1);
+  const pending=[];f.controller.hold=()=>new Promise(resolve=>pending.push(resolve));const old=f.module.load(1);await tick();
+  assert.equal(f.summaries.at(-1),null);assert.equal(f.module.openQueue('due'),false);
+  f.controller.hold=null;f.rows.care_assignments=[];await f.module.load(1);const current={duePlans:0,overduePlans:0,unassignedPlans:0,coverageGaps:2};assert.deepEqual(f.summaries.at(-1),current);
+  pending.forEach(resolve=>resolve({data:[assignment],error:null}));await old;assert.deepEqual(f.summaries.at(-1),current);
+  f.controller.error='Synthetic failed refresh';assert.equal(await f.module.load(1),false);assert.equal(f.summaries.at(-1),null);assert.equal(f.module.openQueue('coverage'),false);
+  f.controller.error=null;await f.module.load(1);assert.deepEqual(f.summaries.at(-1),current);
+  f.controller.peopleReady=false;f.module.render();assert.equal(f.summaries.at(-1),null);assert.equal(f.module.openQueue('due'),false);
+  f.controller.peopleReady=true;f.module.render();assert.deepEqual(f.summaries.at(-1),current);
+  f.setContext({...f.ctx,workspaceReady:false});f.module.render();assert.equal(f.summaries.at(-1),null);assert.equal(f.module.openQueue('unassigned'),false);
+  f.setContext({...f.ctx});f.module.render();assert.deepEqual(f.summaries.at(-1),current);
+  f.setContext({...f.ctx,role:'viewer',canEdit:false});f.module.render();assert.equal(f.summaries.at(-1),null);assert.equal(f.host.textContent,'');
+  const v=fixture(t,{role:'viewer'});assert.equal(await v.module.load(1),false);assert.deepEqual(v.summaries,[null]);
+  const optional=fixture(t,{omitSummary:true});assert.equal(await optional.module.load(1),true);optional.module.clear();assert.equal(optional.host.textContent,'');
+});
+test('late summaries cannot return after clear or a changed session and queues reject stale entry points', async t => {
+  const f=fixture(t,{assignments:[assignment]});assert.equal(f.module.openQueue('due'),false);await f.module.load(1);
+  const pending=[];f.controller.hold=()=>new Promise(resolve=>pending.push(resolve));const old=f.module.load(1);await tick();
+  f.setContext({epoch:2,userId:'other-fixture',canEdit:true,workspaceReady:true,role:'editor'});f.module.clear();
+  const count=f.summaries.length;pending.forEach(resolve=>resolve({data:[assignment],error:null}));await old;
+  assert.equal(f.summaries.length,count);assert.equal(f.summaries.at(-1),null);assert.equal(f.module.openQueue('due'),false);
+  f.controller.hold=null;await f.module.load(2);assert.equal(f.module.openQueue('due'),true);
+  f.module.clear();assert.equal(f.summaries.at(-1),null);assert.equal(f.host.textContent,'');
+});
+test('overview queue navigation resets all filters and respects unsaved care edits and post-confirmation session checks', async t => {
+  const f=fixture(t,{assignments:[{...assignment,assigned_to:'Fixture team'}]});await f.module.load(1);f.module.selectPerson('person-synthetic');
+  const filter=(selector,value,event='change')=>{const node=f.host.querySelector(selector);node.value=value;node.dispatchEvent(new f.w.Event(event,{bubbles:true}));};
+  filter('[data-care-search]','Sample','input');filter('[data-care-deacon]','Fixture team');filter('[data-care-role-filter]','deacon');
+  f.click('[data-care-action="assignment"]');f.set('notes','Unsaved fixture draft');let prompts=0;f.w.confirm=()=>{prompts++;return false;};
+  for(const kind of ['unknown','',null,undefined,{},1])assert.equal(f.module.openQueue(kind),false);assert.equal(prompts,0);
+  assert.equal(f.module.openQueue('unassigned'),false);assert.equal(prompts,1);assert.equal(f.host.querySelector('[name="notes"]').value,'Unsaved fixture draft');assert.equal(f.host.querySelector('[data-care-search]').value,'Sample');
+  f.w.confirm=()=>true;assert.equal(f.module.openQueue('due'),true);assert.equal(f.host.querySelector('[data-care-form]'),null);
+  for(const selector of ['[data-care-search]','[data-care-deacon]','[data-care-role-filter]'])assert.equal(f.host.querySelector(selector).value,'');
+  assert.equal(f.host.querySelector('.care-person-selection').hidden,true);assert.equal(f.host.querySelector('[data-care-plan-status]').value,'due');
+  f.click('[data-care-action="assignment"]');f.set('notes','Retain after changed session');f.w.confirm=()=>{f.setContext({...f.ctx,epoch:2,userId:'another-fixture'});return true;};
+  assert.equal(f.module.openQueue('coverage'),false);assert.equal(f.host.querySelector('[name="notes"]').value,'Retain after changed session');
+  f.module.render();assert.equal(f.summaries.at(-1),null);assert.equal(f.host.querySelector('[data-care-form]'),null);
+});
+test('overview queues preserve a saving or uncertain care draft until its result is reconciled', async t => {
+  const f=fixture(t);await f.module.load(1);f.click('[data-care-action="guest"]');f.set('contact_id','person-synthetic');f.set('notes','Keep uncertain fixture draft');
+  let finish;f.controller.hold=()=>new Promise(resolve=>finish=resolve);f.submit();await tick();
+  let prompts=0;f.w.confirm=()=>{prompts++;return true;};assert.equal(f.module.openQueue('due'),false);assert.equal(prompts,0);
+  finish({data:null,error:null});await tick();assert.equal(f.module.openQueue('coverage'),false);assert.equal(prompts,0);assert.equal(f.host.querySelector('[name="notes"]').value,'Keep uncertain fixture draft');
+  f.controller.hold=null;await f.module.load(1);assert.equal(f.module.openQueue('unassigned'),true);assert.equal(prompts,1);assert.equal(f.host.querySelector('[data-care-form]'),null);
+});
 test('viewer fails closed and clear removes notes, form values, filters, and late responses', async t => {
   const v=fixture(t,{role:'viewer'});assert.equal(await v.module.load(1),false);v.module.render();assert.equal(v.calls.length,0);assert.equal(v.host.textContent,'');
   const f=fixture(t,{assignments:[{...assignment,notes:'Synthetic private planning note'}]});await f.module.load(1);

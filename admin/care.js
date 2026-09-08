@@ -64,7 +64,8 @@
     var host = options.root, doc = host.ownerDocument, db = options.db;
     var state = { assignments: [], visits: [], guests: [], guidelines: null };
     var mounted = false, mountedEpoch = null, mountedOwner = null, dataEpoch = null, request = 0, formVersion = 0, formEpoch = null;
-    var view = 'followup', search = '', deacon = '', careRole = '', selectedPerson = '', ready = false, failed = false, saving = false;
+    var view = 'followup', search = '', deacon = '', careRole = '', selectedPerson = '', planStatus = '', ready = false, loading = false, failed = false, saving = false;
+    var summaryKey;
     var activeForm = null, returnFocus = null, draft = null;
     function context() { return options.getContext() || {}; }
     function allowed(ctx) { return !!ctx.userId && (ctx.canEdit === true || ctx.workspaceReady === false) && ['admin', 'editor'].indexOf(ctx.role) !== -1 && options.isCurrent(ctx.epoch); }
@@ -79,6 +80,25 @@
     function safe(value) { var el = doc.createElement('span'); el.textContent = value == null ? '' : String(value); return el.innerHTML.replace(/"/g, '&quot;'); }
     function dateLabel(value) { return validDate(value) ? new Date(value + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : 'Not set'; }
     function people() { return Array.isArray(options.people()) ? options.people() : []; }
+    function peopleAvailable() { return Array.isArray(options.people()) && (typeof options.peopleReady !== 'function' || options.peopleReady() === true); }
+    function publishSummary() {
+      if (typeof options.onSummary !== 'function') return;
+      var ctx = context(), summary = null;
+      if (writable() && peopleAvailable() && ready && !loading && dataEpoch === ctx.epoch && mountedEpoch === ctx.epoch && mountedOwner === ctx.userId) {
+        var currentPeople = people(), ids = new Set(currentPeople.map(function (person) { return person.id; }));
+        var plans = state.assignments.filter(function (plan) { return ids.has(plan.contact_id); });
+        summary = { duePlans: 0, overduePlans: 0, unassignedPlans: 0, coverageGaps: coverageFor(currentPeople, plans).length };
+        plans.forEach(function (plan) {
+          var due = dueFor(plan, state.visits);
+          if (due.paused || due.completed) return;
+          if (due.state === 'due' || due.state === 'overdue') summary.duePlans++;
+          if (due.state === 'overdue') summary.overduePlans++;
+          if (!String(plan.assigned_to || '').trim()) summary.unassignedPlans++;
+        });
+      }
+      var key = JSON.stringify(summary);
+      if (key !== summaryKey) { summaryKey = key; options.onSummary(summary); }
+    }
     function personName(id) {
       var person = people().find(function (item) { return item.id === id; });
       return person ? (person.display_name || person.name || [person.first_name, person.last_name].filter(Boolean).join(' ') || 'Unnamed person') : 'Person unavailable';
@@ -91,7 +111,7 @@
       host.innerHTML = '<div class="care-intro"><p class="eyebrow">Know people. Stay in touch.</p><h2>Care that continues.</h2><p>Plan a follow-up, record a visit, and help guests find their next step.</p></div>' +
         '<nav class="care-nav" aria-label="Care areas">' + [['followup', 'Follow-up'], ['coverage', 'Care coverage'], ['guests', 'Guests'], ['visitation', 'Visitation'], ['guidelines', 'Guidelines']].map(function (item) { return '<button type="button" data-care-view="' + item[0] + '" aria-pressed="false">' + item[1] + '</button>'; }).join('') + '</nav>' +
         '<p class="care-load-status" role="status"></p><div class="care-person-selection care-section-head" hidden><p data-care-person-label role="status"></p>' + button('clear-person', 'Show everyone', null, true) + '</div><div class="care-editor panel" hidden></div>' +
-        '<div class="care-filters"><label>Search people<input type="search" data-care-search autocomplete="off" placeholder="Name or household"></label><label>Assigned person<select data-care-deacon><option value="">All assignments</option></select></label><label>Care role<select data-care-role-filter><option value="">All care roles</option>' + ROLES.map(function (role) { return '<option value="' + role + '">' + ROLE_LABELS[role] + '</option>'; }).join('') + '</select></label></div>' +
+        '<div class="care-filters"><label>Search people<input type="search" data-care-search autocomplete="off" placeholder="Name or household"></label><label>Assigned person<select data-care-deacon><option value="">All assignments</option></select></label><label>Care role<select data-care-role-filter><option value="">All care roles</option>' + ROLES.map(function (role) { return '<option value="' + role + '">' + ROLE_LABELS[role] + '</option>'; }).join('') + '</select></label><label data-care-plan-status-label>Plan status<select data-care-plan-status><option value="">All plans</option><option value="due">Due or overdue</option><option value="unassigned">Unassigned</option></select></label></div>' +
         '<section data-care-panel="followup" aria-label="Follow-up"><div class="care-section-head"><div><h3>Follow-up reminders</h3><p>Due dates use the church’s Central time. These reminders stay in Creek Office.</p></div>' + button('assignment', 'Set up follow-up') + '</div><div class="care-metrics"></div><p class="care-note">Deacons: every 3 months. Sunday school teachers: every month. Each role has its own plan and contact history. An attempted contact does not restart either schedule. Welcome visits can be one-time follow-ups.</p><div data-care-list="assignments" class="care-list"></div><details class="care-paused"><summary></summary><div data-care-list="paused" class="care-list"></div></details></section>' +
         '<section data-care-panel="coverage" aria-label="Care coverage" hidden><div class="care-section-head"><div><h3>No one overlooked.</h3><p>Active people who still need a recurring deacon or Sunday school plan, an assigned person, an unpaused plan, or an interval within the care goal. Historical inactive records and visitors are excluded.</p></div></div><div data-care-list="coverage" class="care-list"></div></section>' +
         '<section data-care-panel="guests" aria-label="Guests" hidden><div class="care-section-head"><div><h3>Welcome into the life of the church.</h3><p>Choose an existing person to start a guest follow-up record. Add someone new in <a href="#people">People</a> with visitor status.</p></div>' + button('guest', 'Add guest follow-up') + '</div><div data-care-list="guests" class="care-list"></div></section>' +
@@ -105,7 +125,7 @@
     }
     function matchingAssignment(item) {
       var name = item && item.assigned_to ? item.assigned_to : '';
-      return (!careRole || (item && roleOf(item) === careRole)) && (!deacon || (deacon === '__unassigned' ? !name : name === deacon));
+      return (!careRole || (item && roleOf(item) === careRole)) && (!deacon || (deacon === '__unassigned' ? !String(name).trim() : name === deacon));
     }
     function matchingContact(contactId, role) {
       var plans = state.assignments.filter(function (item) { return item.contact_id === contactId && (!role || roleOf(item) === role); });
@@ -117,13 +137,19 @@
       var label = due.state === 'overdue' ? 'Overdue · ' + due.daysOverdue + (due.daysOverdue === 1 ? ' day' : ' days') : due.state === 'due' ? 'Due today' : due.state === 'upcoming' ? 'Next · ' + dateLabel(due.due) : 'Choose a start date';
       return '<span class="care-tag ' + (due.state === 'overdue' ? 'care-overdue' : '') + '">' + safe(label) + '</span>';
     }
+    function matchingPlanStatus(item) {
+      if (!planStatus) return true;
+      var due = dueFor(item, state.visits);
+      if (due.paused || due.completed) return false;
+      return planStatus === 'due' ? due.state === 'due' || due.state === 'overdue' : !String(item.assigned_to || '').trim();
+    }
     function assignmentRow(item) {
       var due = dueFor(item, state.visits);
-      return '<article class="care-row"><div class="care-row-main"><div class="care-row-title"><h4>' + safe(personName(item.contact_id)) + '</h4>' + dueTag(due) + '</div><p>' + safe(ROLE_LABELS[roleOf(item)]) + ' · ' + safe(item.assigned_to || 'No person assigned') + ' · ' + (item.one_time ? 'One-time follow-up' : 'Every ' + (due.months || due.cadence) + (due.months ? (due.months === 1 ? ' month' : ' months') : ' days')) + '</p><p class="care-small">' + (due.neverContacted ? 'Never contacted in this record' : 'Last successful contact · ' + dateLabel(due.lastContact)) + (due.explicit ? ' · Next date chosen in the latest contact record' : '') + '</p>' + (item.notes ? '<details><summary>Planning note</summary><p class="care-preserve">' + safe(item.notes) + '</p></details>' : '') + '</div><div class="care-row-actions">' + button('visit', 'Record contact', item.contact_id, false, roleOf(item)) + button('assignment', 'Edit plan', item.contact_id, true, roleOf(item)) + '</div></article>';
+      return '<article class="care-row"><div class="care-row-main"><div class="care-row-title"><h4>' + safe(personName(item.contact_id)) + '</h4>' + dueTag(due) + '</div><p>' + safe(ROLE_LABELS[roleOf(item)]) + ' · ' + safe(String(item.assigned_to || '').trim() || 'No person assigned') + ' · ' + (item.one_time ? 'One-time follow-up' : 'Every ' + (due.months || due.cadence) + (due.months ? (due.months === 1 ? ' month' : ' months') : ' days')) + '</p><p class="care-small">' + (due.neverContacted ? 'Never contacted in this record' : 'Last successful contact · ' + dateLabel(due.lastContact)) + (due.explicit ? ' · Next date chosen in the latest contact record' : '') + '</p>' + (item.notes ? '<details><summary>Planning note</summary><p class="care-preserve">' + safe(item.notes) + '</p></details>' : '') + '</div><div class="care-row-actions">' + button('visit', 'Record contact', item.contact_id, false, roleOf(item)) + button('assignment', 'Edit plan', item.contact_id, true, roleOf(item)) + '</div></article>';
     }
     function renderLists() {
       if (!mounted) return;
-      var visible = state.assignments.filter(function (item) { return matching(item.contact_id) && matchingAssignment(item); });
+      var visible = state.assignments.filter(function (item) { return matching(item.contact_id) && matchingAssignment(item) && matchingPlanStatus(item); });
       var active = visible.filter(function (item) { return !item.paused; }).sort(function (a, b) { return String(dueFor(a, state.visits).due || '9999').localeCompare(String(dueFor(b, state.visits).due || '9999')); });
       var paused = visible.filter(function (item) { return item.paused; });
       var due = active.filter(function (item) { return ['due', 'overdue'].indexOf(dueFor(item, state.visits).state) !== -1; });
@@ -191,11 +217,13 @@
       q('.care-person-selection').hidden = !selectedPerson || view === 'guidelines';
       q('[data-care-person-label]').textContent = selectedPerson ? 'Showing care for ' + personName(selectedPerson) + '.' : '';
       q('[data-care-search]').value = search;
-      var names = Array.from(new Set(state.assignments.filter(function (item) { return (!selectedPerson || item.contact_id === selectedPerson) && people().some(function (person) { return person.id === item.contact_id; }); }).map(function (item) { return item.assigned_to; }).filter(Boolean))).sort();
+      var names = Array.from(new Set(state.assignments.filter(function (item) { return (!selectedPerson || item.contact_id === selectedPerson) && people().some(function (person) { return person.id === item.contact_id; }); }).map(function (item) { return item.assigned_to; }).filter(function (name) { return !!String(name || '').trim(); }))).sort();
       q('[data-care-deacon]').innerHTML = '<option value="">All assignments</option><option value="__unassigned">Unassigned</option>' + names.map(function (name) { return '<option value="' + safe(name) + '">' + safe(name) + '</option>'; }).join('');
       if (deacon && deacon !== '__unassigned' && names.indexOf(deacon) === -1) deacon = '';
       q('[data-care-deacon]').value = deacon;
       q('[data-care-role-filter]').value = careRole;
+      q('[data-care-plan-status]').value = planStatus;
+      q('[data-care-plan-status-label]').hidden = view !== 'followup';
       q('.care-load-status').textContent = context().workspaceReady === false ? 'Workspace connection unavailable. Drafts are retained; refresh before editing.' : failed ? 'Care records could not load. Use Refresh care to try again.' : !ready ? 'Loading care records…' : '';
       var retry = q('.care-load-status + button[data-care-action="retry"]');
       if (failed && !retry) q('.care-load-status').insertAdjacentHTML('afterend', button('retry', 'Refresh care', null, true));
@@ -203,7 +231,7 @@
       renderLists(); renderGuidelines();
       host.querySelectorAll('.care-section-head button[data-care-action]').forEach(function (node) { node.disabled = !ready || !writable(); });
       q('[data-care-action="clear-person"]').disabled = false;
-      syncDraft();
+      syncDraft(); publishSummary();
     }
     async function allRows(table, epoch, token) {
       var rows = [], offset = 0;
@@ -218,9 +246,9 @@
       return { data: [] };
     }
     async function load(epoch) {
-      if (!current(epoch)) { if (!allowed(context())) clear(); return false; }
+      if (!current(epoch)) { if (!allowed(context())) clear(); else publishSummary(); return false; }
       if (mounted && mountedEpoch !== epoch) clear();
-      var token = ++request;
+      var token = ++request; loading = true; publishSummary();
       try {
         var results = await Promise.all([
           allRows('care_assignments', epoch, token), allRows('care_visits', epoch, token),
@@ -230,11 +258,11 @@
         var failedResult = results.find(function (result) { return result.error; });
         if (failedResult) throw failedResult.error;
         state = { assignments: results[0].data || [], visits: results[1].data || [], guests: results[2].data || [], guidelines: results[3].data || null };
-        dataEpoch = epoch; ready = true; failed = false; reconcileDraft(); render(); return true;
+        dataEpoch = epoch; ready = true; loading = false; failed = false; reconcileDraft(); render(); return true;
       } catch (error) {
         if (!current(epoch) || token !== request) return false;
         if (authError(error)) { clear(); tell('Care access could not be confirmed. Sign in again before opening these records.', true); return false; }
-        state = { assignments: [], visits: [], guests: [], guidelines: null }; dataEpoch = epoch; ready = false; failed = true; render();
+        state = { assignments: [], visits: [], guests: [], guidelines: null }; dataEpoch = epoch; ready = false; loading = false; failed = true; render();
         tell('Care records could not load. Please try again.', true); return false;
       }
     }
@@ -269,9 +297,17 @@
         if (!mayDiscard(false) || !eligible()) return false;
         closeEditor(false);
       }
-      selectedPerson = id; view = 'followup'; search = ''; deacon = ''; careRole = '';
+      selectedPerson = id; view = 'followup'; search = ''; deacon = ''; careRole = ''; planStatus = '';
       render();
       return true;
+    }
+    function openQueue(kind) {
+      var ctx = context();
+      function eligible() { return ['due', 'unassigned', 'coverage'].indexOf(kind) !== -1 && current(ctx.epoch, ctx.userId) && writable() && peopleAvailable() && ready && !loading && dataEpoch === ctx.epoch && mountedEpoch === ctx.epoch && mountedOwner === ctx.userId; }
+      if (!eligible() || !mayDiscard(false) || !eligible()) { publishSummary(); return false; }
+      closeEditor(false); selectedPerson = ''; search = ''; deacon = ''; careRole = '';
+      view = kind === 'coverage' ? 'coverage' : 'followup'; planStatus = kind === 'coverage' ? '' : kind;
+      render(); return true;
     }
     function clearPerson() {
       var ctx = context();
@@ -372,8 +408,8 @@
     function clear() {
       request++; formVersion++; activeForm = null; formEpoch = null; saving = false; draft = null; returnFocus = null;
       state = { assignments: [], visits: [], guests: [], guidelines: null };
-      view = 'followup'; search = ''; deacon = ''; careRole = ''; selectedPerson = ''; ready = false; failed = false; dataEpoch = null; mountedEpoch = null; mountedOwner = null; mounted = false;
-      host.replaceChildren();
+      view = 'followup'; search = ''; deacon = ''; careRole = ''; selectedPerson = ''; planStatus = ''; ready = false; loading = false; failed = false; dataEpoch = null; mountedEpoch = null; mountedOwner = null; mounted = false;
+      host.replaceChildren(); publishSummary();
     }
     host.addEventListener('click', function (event) {
       var target = event.target.closest('button');
@@ -392,6 +428,7 @@
       if (!allowed(context()) || saving || draft && draft.requiresRefresh) return;
       if (event.target.matches('[data-care-deacon]')) { deacon = event.target.value; renderLists(); }
       if (event.target.matches('[data-care-role-filter]')) { careRole = event.target.value; renderLists(); }
+      if (event.target.matches('[data-care-plan-status]')) { planStatus = ['due', 'unassigned'].indexOf(event.target.value) !== -1 ? event.target.value : ''; renderLists(); }
       if (event.target.matches('[name="cadence_unit"]')) q('[name="cadence_value"]').max = event.target.value === 'months' ? '12' : '365';
       if ((event.target.matches('[name="contact_id"]') || event.target.matches('[name="care_role"]')) && ['assignment', 'guest'].indexOf(activeForm) !== -1) {
         var id = q('[name="contact_id"]').value, role = q('[name="care_role"]') ? q('[name="care_role"]').value : null;
@@ -400,7 +437,7 @@
       }
     });
     host.addEventListener('submit', save);
-    return { load: load, render: render, clear: clear, selectPerson: selectPerson };
+    return { load: load, render: render, clear: clear, selectPerson: selectPerson, openQueue: openQueue };
   }
   return { create: create, dueFor: dueFor, today: today, validDate: validDate, addMonths: addMonths, coverageFor: coverageFor };
 }));

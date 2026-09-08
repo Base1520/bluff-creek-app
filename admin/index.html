@@ -81,6 +81,15 @@
             <li><a href="#care"><span class="journey-number" aria-hidden="true">03</span><span><strong>Guests &amp; care <span aria-hidden="true">→</span></strong><span class="journey-description">Assign the next contact, choose when it is due, and record each visit or call.</span></span></a></li>
           </ol>
         </section>
+        <section class="panel office-care-dashboard" data-private-module aria-labelledby="office-care-title">
+          <div class="panel-head"><div><p class="eyebrow">Keep care moving</p><h2 id="office-care-title">Who needs our attention?</h2></div><a href="#care">Guests &amp; care →</a></div>
+          <p id="dashboard-care-status" class="membership-note" role="status">Loading the care queues…</p>
+          <div class="office-care-actions">
+            <button type="button" data-care-queue="due" disabled><span>Due care plans</span><b id="care-due-count">—</b><small>Open due &amp; overdue →</small></button>
+            <button type="button" data-care-queue="unassigned" disabled><span>Unassigned plans</span><b id="care-unassigned-count">—</b><small>Choose a care owner →</small></button>
+            <button type="button" data-care-queue="coverage" disabled><span>Coverage gaps</span><b id="care-gaps-count">—</b><small>Review monthly &amp; quarterly care →</small></button>
+          </div>
+        </section>
         <section class="panel personal-dashboard" data-private-module aria-labelledby="personal-dashboard-title">
           <div class="panel-head"><div><p class="eyebrow">Your people. Your next step.</p><h2 id="personal-dashboard-title">Make room to reach out.</h2></div><a href="#followups">My follow-ups →</a></div>
           <p id="dashboard-followup-status" role="status">Loading your personal reminders…</p>

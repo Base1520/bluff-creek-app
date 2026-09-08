@@ -66,7 +66,7 @@
     el("dashboard-followup-list").replaceChildren(); el("dashboard-followup-status").textContent = ""; el("followup-badge").textContent = ""; el("followup-badge").removeAttribute("aria-label");
     loadEpoch++; documentEpoch++; peopleReady = false; state = { events: [], people: [], documents: [], activity: [] };
     workspaceReady = false; readinessOK = false; refreshing = false; readinessEpoch++;
-    syncMembershipSheet();
+    syncMembershipSheet(); renderCareSummary(null);
     clearEditor(true); if (el("document-dialog").open) el("document-dialog").close(); el("document-result").replaceChildren();
     ["dashboard-events", "events-list", "people-list", "documents-list", "activity-list", "user-label", "role-label"].forEach(function (id) { el(id).replaceChildren(); });
     ["event-count", "people-count", "document-count", "signup-count"].forEach(function (id) { el(id).textContent = "—"; });
@@ -112,7 +112,7 @@
     bind();
     var moduleOptions = { db: db, getContext: function () { return { epoch: authEpoch, userId: session && session.user.id, role: role, canEdit: canEdit(), workspaceReady: workspaceReady }; }, isCurrent: current, ensureReady: ensureReady, refresh: function () { return loadAll(authEpoch); }, notice: notice, people: function () { return state.people; }, peopleReady: function () { return peopleReady; }, documents: function () { return state.documents; } };
     if (window.CreekMembership && el("history-view")) membership = window.CreekMembership.create(Object.assign({}, moduleOptions, { root: el("history-view"), sheetUrl: cfg.membershipSheetUrl || "", documentUrl: documentUrl }));
-    if (window.CreekCare && el("care-view")) care = window.CreekCare.create(Object.assign({}, moduleOptions, { root: el("care-view") }));
+    if (window.CreekCare && el("care-view")) care = window.CreekCare.create(Object.assign({}, moduleOptions, { root: el("care-view"), onSummary: renderCareSummary }));
     if (window.CreekOfficeContent) officeContent = window.CreekOfficeContent.create(Object.assign({}, moduleOptions, {
       roots: { announcements: el("announcements-view"), committees: el("committees-view"), slides: el("slides-view"), prayers: el("prayers-view") },
       openDocument: openDocument,
@@ -146,6 +146,11 @@
     window.addEventListener("hashchange", route);
     document.querySelectorAll("aside nav a").forEach(function (link) { link.addEventListener("click", function () { document.querySelector("aside").classList.remove("open"); el("menu").setAttribute("aria-expanded", "false"); }); });
     el("primary-action").addEventListener("click", primaryAction);
+    document.querySelectorAll("[data-care-queue]").forEach(function (button) { button.addEventListener("click", function () {
+      var queue = button.dataset.careQueue;
+      if (button.disabled || !session || !canEdit() || !care || typeof care.openQueue !== "function" || !["due", "unassigned", "coverage"].includes(queue)) return;
+      if (care.openQueue(queue)) { location.hash = "care"; route(); }
+    }); });
     if (el("people-sheet-link")) el("people-sheet-link").addEventListener("click", function (event) {
       var target = window.CreekMembership && window.CreekMembership.sheetLink ? window.CreekMembership.sheetLink(cfg.membershipSheetUrl) : null;
       if (!session || !canEdit() || !target || event.currentTarget.getAttribute("href") !== target) event.preventDefault();
@@ -224,7 +229,7 @@
     el("followup-badge").textContent = ""; el("followup-badge").removeAttribute("aria-label"); el("dashboard-followup-status").textContent = "Follow-ups are unavailable until the workspace refreshes.";
     el("primary-action").disabled = true;
     privateViews.forEach(function (name) { var view = el(name + "-view"); if (view) view.classList.add("hidden"); });
-    syncMembershipSheet(); freezeOtherDialogs(true); syncEditor(); health(message, setup);
+    syncMembershipSheet(); renderCareSummary(null); freezeOtherDialogs(true); syncEditor(); health(message, setup);
   }
   function authFailure(error) { return error && (error.status === 401 || ["PGRST301", "PGRST302", "PGRST303"].includes(error.code)); }
   async function verifyReadiness(epoch) {
@@ -347,6 +352,15 @@
     bindRowActions();
     if (membership) membership.render(); if (care) care.render();
     if (officeContent) officeContent.render(); if (signups) signups.render(); if (followups) followups.render();
+  }
+
+  function renderCareSummary(summary) {
+    var status = el("dashboard-care-status");
+    if (!status) return;
+    var valid = !!session && canEdit() && summary && ["duePlans", "overduePlans", "unassignedPlans", "coverageGaps"].every(function (key) { return Number.isSafeInteger(summary[key]) && summary[key] >= 0; }) && summary.overduePlans <= summary.duePlans;
+    [["care-due-count", "duePlans"], ["care-unassigned-count", "unassignedPlans"], ["care-gaps-count", "coverageGaps"]].forEach(function (item) { el(item[0]).textContent = valid ? String(summary[item[1]]) : "—"; });
+    document.querySelectorAll("[data-care-queue]").forEach(function (button) { button.disabled = !valid || !care || typeof care.openQueue !== "function"; });
+    status.textContent = !session || !canEdit() ? "" : !valid ? "Care counts are unavailable. Open Guests & care to refresh." : "Based on loaded office records · " + summary.overduePlans + " overdue. Deacon and Sunday school plans count separately.";
   }
 
   function renderFollowupSummary(summary) {
