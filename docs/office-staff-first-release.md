@@ -2,15 +2,15 @@
 
 Prepared September 8, 2026, after Cole reported the Allen demonstration went well. The next increment is a small, private staff pilot. The historical archive can follow in reviewed batches.
 
-## Ready for the next decision
+## Hosted schema applied September 8
 
-Apply the **seven migrations in the committed preflight manifest**, in order, to the existing **Bluff Creek Church Office** project (`xzfeumdonxeodqhfirjr`). The first six hashes are unchanged; the seventh pauses public profile creation/updates by revoking both submission-function grants. Preserve the tracked migration history. Recheck the empty target immediately before starting and stop if it no longer matches.
+After Cole's explicit schema-only approval, all **seven reviewed migrations** were applied in order to **Bluff Creek Church Office** (`xzfeumdonxeodqhfirjr`). Hosted history contains seven entries, each with one statement whose SHA-256 exactly matches the approved SQL. The connected migration tool recorded new timestamp versions; the current filenames and manifest now match those versions. The original-to-recorded mapping is preserved in `tools/office-preflight/hosted-history-map.json`. Do not reapply the original versions or repair history blindly.
 
-This proposed schema-only step creates the office structure, private document bucket, permissions and recovery controls. It does not create or invite staff, import church records, send messages, change Auth settings, change DNS/hosting or publish the site/app. Those actions remain separate. Cole's earlier no-deploy/account/PII instruction is why this concrete activation step needs his approval.
+The office structure, private document bucket, permissions and recovery controls now exist in the hosted project. Catalog verification confirmed all 17 office tables have RLS, anonymous table grants are absent, the private bucket has all eight intended Storage policies, and both public/private profile-write functions deny browser execution. All 27 application functions match their intended security mode, empty search path and public/anonymous privilege boundaries. The hosted security advisor returned no findings. Auth, office and storage record counts remain zero.
 
-September 8 read-only target evidence: healthy; 0 public tables, 0 Auth users, 0 buckets; no migration-history table or office-readiness function. A fresh public Auth settings GET returned 200, `disable_signup=false`, `mailer_autoconfirm=false`. The database pause is **prepared code**, not yet an applied hosted setting. It does not disable Auth signup or email sending.
+Before application the target was rechecked as healthy and empty. The last Auth settings GET returned 200, `disable_signup=false`, `mailer_autoconfirm=false`. No Auth setting changed. The database profile-write pause is now applied; Auth signup and email configuration remain separate. Two intended administrators were supplied privately after schema approval; no Auth users, staff roles or invitations have been created.
 
-After schema application, verify all seven history entries, all office table RLS/grants, private bucket policy, readiness function, both denied submission grants, retained staff review access and hosted advisors. These catalog checks are followed by actual hosted role/file/recovery tests once pilot identities and email are authorized. Do not mistake successful SQL application for accepted daily use.
+Hosted catalog checks are complete. Actual signed-in role/file/recovery tests follow staff and email setup. The performance advisor reported informational missing-FK-index and unused-index notices on the empty database; review actual workload before changing indexes. See [the dated hosted verification](office-hosted-verification-2026-09-08.md) for evidence and limits. Daily office use and public release are not yet accepted.
 
 ## Complete static package
 
@@ -20,7 +20,7 @@ The proposed HTTPS origin is the existing `https://app.bluffcreekbaptistchurch.o
 
 ## What follows, in order
 
-1. **Staff ownership:** privately identify the first administrator and backup; agree who receives admin/editor/viewer. Editors currently have broad care/prayer/committee access. A deacon or teacher assignment is not an access restriction.
+1. **Staff ownership:** the first two intended administrators are identified privately. Use the reviewed [staff access preparation](../tools/office-access/README.md) to match approved emails to actual Auth user IDs before granting either role. Agree the wider admin/editor/viewer access boundary. Editors currently have broad care/prayer/committee access. A deacon or teacher assignment is not an access restriction.
 2. **Email:** configure an approved custom SMTP provider and exact callback. Test invitation, reset, expired links and access removal with specifically authorized recipients. Keep public signup disabled in Auth for the staff-only pilot when that setting change is approved; the SQL pause separately blocks profile writes.
 3. **Recovery:** choose a church-controlled off-device location, retention and two operators. Prove both database and original uploaded files restore before real records. The earlier successful local six-migration restore is historical evidence, not a seven-migration hosted restore.
 4. **Private pilot:** primary and backup each save/search a fictional person, review a source photo, record a contact, recover an interrupted edit and open the original file. Record actual results and resolve failures.

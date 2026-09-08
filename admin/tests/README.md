@@ -9,7 +9,7 @@ npm test
 
 Exact development dependencies are pinned in `package.json` and `package-lock.json`. `node_modules` is ignored. These tools are not loaded by the public app or admin page.
 
-`rls.test.mjs` starts in-memory PostgreSQL through PGlite with its `pgcrypto` extension and executes `supabase/migrations/20260907231507_office_base.sql` unchanged. Minimal local `auth.users`, `auth.uid()` and Storage tables represent Supabase dependencies. SQL runs under real `anon` and `authenticated` roles using synthetic UUIDs. The matrix covers anonymous/nonstaff denial, viewer reads and write denial, editor/admin writes, bucket boundaries, upload ownership and size, audit restrictions, and immediate staff-role revocation.
+`rls.test.mjs` starts in-memory PostgreSQL through PGlite with its `pgcrypto` extension and executes `supabase/migrations/20260908220558_office_base.sql` unchanged. Minimal local `auth.users`, `auth.uid()` and Storage tables represent Supabase dependencies. SQL runs under real `anon` and `authenticated` roles using synthetic UUIDs. The matrix covers anonymous/nonstaff denial, viewer reads and write denial, editor/admin writes, bucket boundaries, upload ownership and size, audit restrictions, and immediate staff-role revocation.
 
 `session.test.mjs` runs the actual browser script against a DOM and synthetic Supabase client. It covers auth callbacks outside the auth lock, account switching, late responses, clearing private DOM/dialogs, failed sign-out and late-token lockout, manual sign-in after lockout, owned storage cleanup, viewer controls, oversized uploads, interrupted upload metadata, document link expiry, secret-key rejection, and editor attribute escaping.
 

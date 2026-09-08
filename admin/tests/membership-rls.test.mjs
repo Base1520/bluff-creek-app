@@ -33,10 +33,10 @@ test('membership and care migration enforces database privileges, preservation a
     grant usage on schema public, storage to anon, authenticated;
     grant select, insert, update, delete on storage.objects to anon, authenticated;
   `);
-  await pg.exec(await readFile(new URL('../../supabase/migrations/20260907231507_office_base.sql', import.meta.url), 'utf8'));
+  await pg.exec(await readFile(new URL('../../supabase/migrations/20260908220558_office_base.sql', import.meta.url), 'utf8'));
   // Model pre-2026 broad defaults: the migration must explicitly remove them.
   await pg.exec('alter default privileges in schema public grant all on tables to anon, authenticated');
-  await pg.exec(await readFile(new URL('../../supabase/migrations/20260907231527_membership_care.sql', import.meta.url), 'utf8'));
+  await pg.exec(await readFile(new URL('../../supabase/migrations/20260908220613_membership_care.sql', import.meta.url), 'utf8'));
   for (const [role, id] of Object.entries(ids)) {
     await pg.query('insert into auth.users(id) values ($1)', [id]);
     if (role !== 'outsider') await pg.query('insert into public.staff_roles(user_id,role) values ($1,$2)', [id, role]);

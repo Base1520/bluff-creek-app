@@ -1,14 +1,14 @@
 # Creek Office migration preparation
 
-September 8, 2026. **Seven-file staff-first setup packet prepared; no hosted SQL applied.**
+September 8, 2026. **Local filenames now match the seven versions recorded during the authorized hosted application.** All seven SQL byte hashes and the capability revision remain unchanged. See the current hosted-history alignment appended below; earlier preparation and rehearsal evidence retains its original filenames and scope.
 
 The earlier packet had two migrations with the same eight-digit version, and its base schema lived outside the directory consumed by the migration tool. An automatic run could skip that foundation or encounter conflicting versions. The repaired baseline contains six unique, ascending 14-digit filenames in `supabase/migrations`, created with the official Supabase CLI 2.117.0 `migration new` command. They preserve the existing six-step dependency order.
 
 All six baseline SQL files remain **byte-for-byte identical** to the prior packet. The original SHA-256 values were checked before and after the move and retained in `tools/office-preflight/manifest.json` and `migration-history-map.json`. The original filename repair changed no policies, grants, tables, functions, seed records or staff permissions. The separate seventh migration below intentionally narrows submission privileges. The client/schema capability revision remains `20260907174301`; it is not the new file timestamp. Historical filename comments in the SQL are retained; use this mapping and the current manifest for paths.
 
-## File mapping
+## Historical preparation mapping
 
-| Previous path | Current tracked migration |
+| Previous path | Prepared filename before hosted application |
 | --- | --- |
 | `supabase/schema.sql` | `supabase/migrations/20260907231507_office_base.sql` |
 | `supabase/migrations/20260907_membership_care.sql` | `supabase/migrations/20260907231527_membership_care.sql` |
@@ -33,7 +33,7 @@ Current preflight verification passes 19/19 tests and 43/43 local checks. The co
 
 Historical September 7 verification: the six-file preflight passed 16/16 tests and 39/39 local checks. The SQL regression suite in `admin/tests` now uses the new paths and passes 51/51 checks, executing the complete SQL with synthetic records in PGlite. This checks PostgreSQL behavior and the existing role/recovery matrix. It does not replace a clean rehearsal on a Supabase local stack or the hosted Auth/Storage/advisor checks. The initial full staff run stalled because macOS had offloaded a jsdom dependency file. Restoring the exact locked packages with npm ci --ignore-scripts resolved the import. A subsequent run exposed a fixed-delay assumption in the first session test; its setup now waits for the rendered record with a two-second bound, preserving all immediate logout/privacy assertions. The targeted session suite passes 28/28 and the complete staff suite now passes 183/183 under Node 24.19.0. Package and lockfile hashes are unchanged. These fresh local results do not establish hosted service behavior.
 
-## Before the first hosted application
+## Historical checklist before the first hosted application
 
 The [local stack guide](../tools/office-local-stack/README.md) now provides a separate, unlinked rehearsal directory, verified migration copying and a loopback-only browser preview. The [HTTP rehearsal](../tools/office-rehearsal/README.md) uses fictional users and actual Auth/REST/Storage services, refuses hosted targets and keeps privileged keys in memory. Its guard tests establish safe tool behavior; only a recorded real service run establishes a local service pass. Production browser configs remain blank.
 
@@ -50,3 +50,25 @@ No automatic deployment workflow, account connection, secret, staff seed, migrat
 Current [Supabase migration documentation](https://supabase.com/docs/guides/deployment/database-migrations) describes timestamp-ordered migrations and history reconciliation. Official CLI 2.117.0 archive/checksum verification and local help were captured in this task's tool-setup evidence. The launcher uses its supported `SUPABASE_HOME` override to keep tool state under this task's work directory; no global installation is needed.
 
 The current changelog was reviewed. [Explicit Data API grants](https://supabase.com/changelog/45329-breaking-change-tables-not-exposed-to-data-and-graphql-api-automatically) remain required independently of RLS; the existing migrations already declare grants/revokes. The base uses unversioned `create extension if not exists pgcrypto`, so the [extension-version change](https://supabase.com/changelog/extension-version-pinning-ignored) requires no SQL alteration. The historical path-only change did not modify authorization semantics. The seventh migration intentionally revokes profile-submission privileges; no local check certifies eventual hosted configuration.
+
+## Current hosted-history alignment — September 8, 2026
+
+The authorized application used the connected Supabase migration tool, which recorded the versions below. The recorded versions were read back from hosted history. Each recorded statement SHA-256 was separately compared with the approved source, and all seven match exactly. See [hosted verification](office-hosted-verification-2026-09-08.md). The local CLI was not signed in; no remote migration-history repair, replay or hosted SQL action was performed by this alignment.
+
+| Approved filename before application | Current tracked filename / recorded version |
+| --- | --- |
+| `20260907231507_office_base.sql` | `20260908220558_office_base.sql` |
+| `20260907231527_membership_care.sql` | `20260908220613_membership_care.sql` |
+| `20260907231528_office_content.sql` | `20260908220623_office_content.sql` |
+| `20260907231530_app_connections_care_roles.sql` | `20260908220645_app_connections_care_roles.sql` |
+| `20260907231531_leader_followups.sql` | `20260908220658_leader_followups.sql` |
+| `20260907231533_office_record_recovery.sql` | `20260908220707_office_record_recovery.sql` |
+| `20260908193401_pause_public_app_intake.sql` | `20260908220718_pause_public_app_intake.sql` |
+
+All paths above are inside `supabase/migrations/`. Each file was hashed before and after the local rename against its approved manifest SHA-256. All seven matched exactly. Order and dependencies are unchanged; `office_readiness` still declares capability revision `20260907174301`. The current manifest, runnable SQL tests and setup references use the recorded versions. This is filename alignment to existing hosted history, not a new SQL change or permission change.
+
+After alignment, the focused preflight suite passed 19/19 tests, the current packet passed 43/43 local checks with seven migrations, and all SQL suites passed 57/57 tests using the new paths. These are fresh local checks; no hosted statement, role, storage or email check was performed by the filename-alignment work.
+
+The machine-readable [hosted history map](../tools/office-preflight/hosted-history-map.json) preserves each old approved path, current path, recorded version and expected SQL SHA-256. The earlier six-file [preparation map](../tools/office-preflight/migration-history-map.json) remains unchanged, providing the preceding provenance step. Dated local rehearsal/restore evidence is not relabeled: the older six-file service and restore checks still describe their original baseline. The fixed historical restore runner does not establish recovery acceptance for this current seven-version hosted baseline.
+
+Do not replay the old filenames or mark remote history repaired to make a local listing agree. Before any later migration, compare the current tracked list and hosted history, then review the new pending change. Hosted role/storage/intake grants, Auth settings, staff provisioning, backups, delivery and acceptance remain separate checks; a local hash match does not verify them.

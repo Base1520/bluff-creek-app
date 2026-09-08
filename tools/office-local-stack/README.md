@@ -18,6 +18,8 @@ supabase start --workdir ../office-rehearsal-stack --network-id bcbc-office-rehe
 
 The prepare command accepts only a new directory outside this repository, verifies every migration against the reviewed manifest, then copies the six unchanged baseline files plus the seventh intake-pause migration. It refuses existing destinations. Reuse an existing verified local stack by starting it directly; do not reset it to hide failed checks. Never link this directory to a hosted project. Do not use `db push`, migration repair or a hosted connection for this rehearsal.
 
+The current manifest uses the versions recorded during the authorized hosted application; see [the hosted history map](../office-preflight/hosted-history-map.json). A new current-baseline rehearsal copies those exact seven filenames and hashes. The preserved six-file demonstration and historical restore stack retain their original history: do not rename/reset that existing data to make it resemble this packet. Earlier service evidence remains scoped to its recorded revision.
+
 The CLI's startup/status output can contain **local privileged keys**. Capture it privately and never paste it into logs, commits, screenshots or shared reports. Verify service health, the seven recorded migrations and actual host listeners before adding any fixtures. Published ports must bind only loopback. Review local advisors with `supabase db advisors --local --workdir ../office-rehearsal-stack`; do not omit `--local`.
 
 ## Rehearse HTTP access and browser use

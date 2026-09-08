@@ -39,12 +39,12 @@ test('private office content enforces roles, archive workflow, field constraints
     grant usage on schema public,storage to anon,authenticated;
     grant select,insert,update,delete on storage.objects to anon,authenticated;
   `);
-  for (const file of ['migrations/20260907231507_office_base.sql', 'migrations/20260907231527_membership_care.sql']) {
+  for (const file of ['migrations/20260908220558_office_base.sql', 'migrations/20260908220613_membership_care.sql']) {
     await pg.exec(await readFile(new URL(`../../supabase/${file}`, import.meta.url), 'utf8'));
   }
   // Simulate older project defaults so missing explicit revokes cannot pass unnoticed.
   await pg.exec('alter default privileges in schema public grant all on tables to public,anon,authenticated');
-  await pg.exec(await readFile(new URL('../../supabase/migrations/20260907231528_office_content.sql', import.meta.url), 'utf8'));
+  await pg.exec(await readFile(new URL('../../supabase/migrations/20260908220623_office_content.sql', import.meta.url), 'utf8'));
   for (const [role, id] of Object.entries(ids)) {
     await pg.query('insert into auth.users(id) values ($1)', [id]);
     if (role !== 'outsider') await pg.query('insert into public.staff_roles(user_id,role) values ($1,$2)', [id, role]);

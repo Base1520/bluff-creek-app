@@ -24,9 +24,9 @@ test('app connection intake and care roles remain private, verified and reviewab
     grant usage on schema public, storage to anon, authenticated;
     grant select, insert, update, delete on storage.objects to anon, authenticated;
   `);
-  await pg.exec(await readFile(new URL('../../supabase/migrations/20260907231507_office_base.sql', import.meta.url), 'utf8'));
-  await pg.exec(await readFile(new URL('../../supabase/migrations/20260907231527_membership_care.sql', import.meta.url), 'utf8'));
-  await pg.exec(await readFile(new URL('../../supabase/migrations/20260907231528_office_content.sql', import.meta.url), 'utf8'));
+  await pg.exec(await readFile(new URL('../../supabase/migrations/20260908220558_office_base.sql', import.meta.url), 'utf8'));
+  await pg.exec(await readFile(new URL('../../supabase/migrations/20260908220613_membership_care.sql', import.meta.url), 'utf8'));
+  await pg.exec(await readFile(new URL('../../supabase/migrations/20260908220623_office_content.sql', import.meta.url), 'utf8'));
   for (const [role, id] of Object.entries(ids)) {
     await pg.query(`insert into auth.users(id,email,email_confirmed_at,is_anonymous) values ($1,$2,$3,$4)`, [id, `${role}@example.invalid`, role === 'unverified' ? null : '2026-09-07', role === 'anonymous']);
     if (['admin','editor','viewer'].includes(role)) await pg.query('insert into public.staff_roles(user_id,role) values ($1,$2)', [id, role]);
@@ -42,7 +42,7 @@ test('app connection intake and care roles remain private, verified and reviewab
   const legacyPlan = (await as('editor', `insert into public.care_assignments(contact_id,assigned_to,cadence_days) values ($1,'Fixture deacon',90) returning *`, [person.id])).rows[0];
   const legacyVisit = (await as('editor', `insert into public.care_visits(contact_id,visitor_name,contacted_on) values ($1,'Fixture deacon','2026-09-01') returning *`, [person.id])).rows[0];
   await pg.exec('alter default privileges in schema public grant all on tables to anon, authenticated');
-  await pg.exec(await readFile(new URL('../../supabase/migrations/20260907231530_app_connections_care_roles.sql', import.meta.url), 'utf8'));
+  await pg.exec(await readFile(new URL('../../supabase/migrations/20260908220645_app_connections_care_roles.sql', import.meta.url), 'utf8'));
   const save = (role, overrides = {}) => {
     const profile = { first_name: 'Synthetic', last_name: 'Signup', phone: '', preferred_contact: 'email', contact_permission: true, sunday_school: null, ...overrides };
     return as(role, 'select public.save_app_connection($1,$2,$3,$4,$5,$6) as result', Object.values(profile)).then(result => result.rows[0].result);

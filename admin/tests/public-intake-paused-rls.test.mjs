@@ -6,7 +6,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 
 const manifest = JSON.parse(await readFile(new URL('../../tools/office-preflight/manifest.json', import.meta.url), 'utf8'));
-const pausePath = 'supabase/migrations/20260908193401_pause_public_app_intake.sql';
+const pausePath = 'supabase/migrations/20260908220718_pause_public_app_intake.sql';
 const ids = Object.fromEntries(['admin', 'editor', 'viewer', 'member', 'other', 'anonymous'].map((role, index) => [role, `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`]));
 const denied = operation => assert.rejects(operation, error => error.code === '42501');
 

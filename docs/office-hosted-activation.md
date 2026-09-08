@@ -1,6 +1,6 @@
 # Creek Office: after-demo activation
 
-Prepared September 8, 2026. This is the wiring and acceptance path for the private office. Preparing files does not apply schema, grant staff access, enable signup or deploy the app. Today's local demonstration remains available separately.
+Updated September 8, 2026 after the approved hosted schema application. This is the wiring and acceptance path for the private office. Staff access, email, hosted acceptance and release remain open. Today's local demonstration remains available separately.
 
 ## Reviewed destination
 
@@ -10,7 +10,9 @@ Prepared September 8, 2026. This is the wiring and acceptance path for the priva
 - Staff page: `/admin/`. Password recovery and first-password callback: `/admin/recovery.html`.
 - Public connection callback: `/connection.html`, only included in a separately selected public-signup configuration.
 
-September 8 read-only inventory: ACTIVE_HEALTHY; **zero public tables, zero Auth users and zero storage buckets**; no migration-history table and no `office_readiness()` function. This is a dated observation, not a lock against later changes. Recheck before applying the first migration. The existing modern publishable key was retrieved for private local staging; no key was created or rotated. A read-only Auth settings request with that key returned HTTP200. It reported `disable_signup: false` and `mailer_autoconfirm: false`: new-user signup is currently allowed and automatic email confirmation is off. No setting was changed; this does not prove hosted mail delivery or accept public signup.
+September 8 hosted update: following explicit schema-only approval and a fresh empty-target check, all seven migrations were applied. The hosted project now has **17 office tables, seven migration-history entries and one private document bucket**. All seven hosted SQL SHA-256 values match the approved source exactly; current local migration versions match the tool-recorded history. RLS, table/RPC privileges, Storage policies and readiness definition passed catalog verification; the security advisor returned no findings. All office tables, Auth users/identities/sessions and stored objects remain empty. [Dated evidence and limits](office-hosted-verification-2026-09-08.md).
+
+The existing modern publishable key was retrieved for private local staging; no key was created or rotated. The last read-only Auth settings GET returned HTTP200 with `disable_signup: false` and `mailer_autoconfirm: false`. No Auth setting was changed. This does not prove hosted mail delivery or accept public signup. Two intended administrator identities have been supplied privately; accounts, roles and invitations have not been created.
 
 ## Wiring prepared
 
@@ -18,7 +20,7 @@ Use the [offline wiring tool](../tools/office-wiring/README.md) with a private J
 
 The first packet is **staff browser configuration only**: `publicSignupEnabled` is false, so member connection settings stay blank and only the staff callback is proposed. An opaque publishable key cannot be matched to a project offline; its provenance and actual hosted behavior must be checked separately. The local staged key was retrieved from the intended project's API, but hosted sign-in is still untested.
 
-A blank public configuration makes the member connection page unavailable. It does **not** disable Supabase signup or the authenticated profile-submission functions. The seventh migration now pauses both profile-submission functions by default for staff-first activation. This is effective only after application and grant verification; the hosted project is still empty. Auth signup and email settings remain separate. Review hosted Auth's new-signup policy explicitly. Never copy the local rehearsal's signup-enabled Auth configuration, loopback origins, captured-mail settings or fictional login into the hosted project.
+A blank public configuration makes the member connection page unavailable. It does **not** disable Supabase signup or change database privileges. The seventh migration has now been applied and both profile-submission function grants were verified denied for browser roles. Auth signup and email settings remain separate. Review hosted Auth's new-signup policy explicitly. Never copy the local rehearsal's signup-enabled Auth configuration, loopback origins, captured-mail settings or fictional login into the hosted project.
 
 The private spreadsheet identifier is intentionally excluded from generated browser assets. The optional shortcut does not synchronize Google Sheets and Google permissions remain independent. Agree a suitable access path before configuring a real source link in a public static release.
 
@@ -26,8 +28,8 @@ The private spreadsheet identifier is intentionally excluded from generated brow
 
 | Step | Work and evidence required | Current state |
 | --- | --- | --- |
-| 1. Owners and visibility | Name a primary and backup administrator privately; choose initial roles. Admin/editor accounts currently have broad office access. Assigned-deacon/teacher-only access is not built. | Church decision |
-| 2. Exact schema | Recheck destination and empty schema/history, review the six unchanged baseline hashes plus the seventh intake-pause migration and pending list, then apply the approved tracked sequence. Stop and reconcile unexpected objects/history. | Local sequence passed; hosted apply pending |
+| 1. Owners and visibility | Two intended administrators are supplied privately. Use the identity-bound access preparation path; wider staff roles still need selection. Admin/editor accounts currently have broad office access. Assigned-deacon/teacher-only access is not built. | Initial identities selected; wider visibility decision open |
+| 2. Exact schema | All seven approved migrations applied after empty-target recheck. Hosted statement hashes match approved SQL; local versions aligned with recorded history, preserving provenance. | Hosted schema applied and catalog verified |
 | 3. Hosted sign-in | Review exact HTTPS origin and `/admin/recovery.html` callback. Configure the approved email provider and signup posture, then assign approved real identities through the reviewed access process. | Staged browser settings; hosted configuration and invitations pending |
 | 4. Hosted verification | Rehearse fictional viewer/editor/admin/nonstaff and revoked-access cases; password reset/first password; private source uploads/downloads; stale/interrupted saves and separate personal leadership notes. | Local service passed; hosted evidence pending |
 | 5. Recovery | Establish database **and original uploaded-file** copies, approved separate restore destination, retention and operators. Restore both and compare records/policies/source bytes; record loss window and recovery time. | Local restore passed; hosted/off-device arrangement pending |
