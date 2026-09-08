@@ -30,3 +30,7 @@ Later September 7 local-development update: **185/185 staff tests pass**, includ
 Staff recovery verification: **196/196 staff tests pass**, including 11 reset/invitation tests. The local service rehearsal additionally passed 38 HTTP checks, eight browser password-reset checks and seven browser invitation/first-password checks. These actual local Auth/Mailpit/Storage results remain separate from hosted delivery and backup/restore acceptance. The setup preflight now requires the two recovery files and passes 41 checks with 16 tests.
 
 Public signup browser verification: **7/7 checks passed** through the actual local Auth email link, with one synthetic pending profile, no staff role, scrubbed callback and private state cleared on reload. Separate browser cleanup confirmed no staff role and an Auth ban for all three distinct registered browser identities; their isolated sessions were closed. Protected fictional history remains in the disposable stack.
+
+## Staff-first intake pause
+
+`public-intake-paused-rls.test.mjs` applies all seven manifest migrations with synthetic PostgreSQL records. It verifies revoked submission access at both function boundaries, unchanged rows/capability revision, retained own-profile privacy and admin/editor review. The earlier recovery and signup SQL tests target the first six migrations; their results are baseline behavior, not evidence that public intake stays open after the seventh step.

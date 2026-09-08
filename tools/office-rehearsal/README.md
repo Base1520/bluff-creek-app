@@ -1,5 +1,7 @@
 # Local office HTTP rehearsal
 
+**Baseline scope:** this historical signup-enabled harness targets the first six migrations. The staff-first seven-file baseline now pauses profile submissions, so those signup scenarios are expected to fail there. It does not automatically grant access or skip those failures. Use the new SQL intake-pause tests for that change; a fresh real-service staff-first rehearsal remains pending.
+
 This dependency-free Node 24+ harness exercises the actual local Auth, PostgREST and Storage HTTP services after the six existing office migrations are applied to the disposable task stack. It does not start or configure a stack, apply migrations, alter schema/privileges, change migration history, or test the hosted church project. A narrowly restricted local SQL helper sets up and removes only registered synthetic fixtures; all application permission assertions still use the real user HTTP paths.
 
 **Only `http://127.0.0.1:55321` is accepted.** The port belongs to the task's `bcbc-office-rehearsal` stack. Both the input validator and transport pin this exact origin. The built-in Node HTTP transport has no DNS lookup, inherited proxy, redirect following, or caller-supplied agent/host. This intentionally avoids an SDK download or added dependencies.

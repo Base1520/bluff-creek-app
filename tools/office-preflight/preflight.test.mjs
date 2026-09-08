@@ -12,6 +12,7 @@ const repository = fileURLToPath(new URL('../../', import.meta.url));
 const cli = fileURLToPath(new URL('./cli.mjs', import.meta.url));
 const manifestPath = 'tools/office-preflight/manifest.json';
 const template = JSON.parse(await readFile(join(repository, manifestPath), 'utf8'));
+const pauseFixture = 'begin; revoke execute on function public.save_app_connection(text,text,text,text,boolean,text), private.save_app_connection(text,text,text,text,boolean,text) from public,anon,authenticated; commit;';
 const blankConfig = 'window.CREEK_OFFICE_CONFIG = {supabaseUrl: "", publishableKey: "", membershipSheetUrl: ""};';
 const digest = source => createHash('sha256').update(source).digest('hex');
 const check = (report, name) => report.checks.find(item => item.name === name)?.ok;
@@ -30,14 +31,14 @@ async function fixture(t) {
   await put('admin/index.html', '<script src="https://assets.invalid/sdk.js"></script>');
   await put('admin/app.js', `const REQUIRED_REVISION = "${manifest.schema_revision}";\ndb.rpc("office_readiness");\nconst modules = ${JSON.stringify(manifest.readiness_modules)};`);
   for (const [index, row] of manifest.sql_files.entries()) {
-    const source = index < manifest.sql_files.length - 1 ? '-- synthetic ordered SQL fixture ' + index + '\n'
+    const source = row.path === manifest.intake_pause_sql_file ? pauseFixture : row.path !== manifest.readiness_sql_file ? '-- synthetic ordered SQL fixture ' + index + '\n'
       : `do $$ begin foreach v_table in array array[${manifest.prerequisite_tables.map(name => "'" + name + "'").join(',')}] loop\nif to_regclass('public.' || v_table) is null then raise exception 'missing dependency'; end if;\nend loop; end $$;\ncreate function public.office_readiness() returns jsonb language plpgsql stable security invoker as $$ begin return jsonb_build_object('schema_revision', '${manifest.schema_revision}', 'supported_modules', array[${manifest.readiness_modules.map(name => "'" + name + "'").join(',')}]); end $$;`;
     row.sha256 = digest(source);
     await put(row.path, source);
   }
   await saveManifest();
-  async function alterSql(transform) {
-    const row = manifest.sql_files.at(-1);
+  async function alterSql(transform, path = manifest.readiness_sql_file) {
+    const row = manifest.sql_files.find(entry => entry.path === path);
     const next = transform(await readFile(join(root, row.path), 'utf8'));
     await put(row.path, next); row.sha256 = digest(next); await saveManifest();
   }
@@ -52,7 +53,8 @@ test('the real local checkout matches the reviewed setup manifest without claimi
   const report = await runPreflight(repository);
   assert.equal(report.status, 'passed', textReport(report));
   assert.equal(report.schema_revision, '20260907174301');
-  assert.equal(report.sql_apply_order.length, 6);
+  assert.equal(report.sql_apply_order.length, 7);
+  assert.equal(check(report, 'staff_first_intake_pause_declared'), true);
   assert.ok(['not_configured', 'supplied_unverified'].includes(report.configuration.status));
   assert.equal(report.hosted_services, 'not_assessed');
   assert.equal(report.sql_applied, false);
@@ -255,4 +257,40 @@ test('CLI has useful exit codes and sanitized text/JSON without accepting servic
   result = await invoke(['--help']);
   assert.equal(result.code, 0);
   assert.ok(result.stdout.includes('Reads local manifests/files only'));
+});
+
+
+test('staff-first pause cannot be omitted from the declared packet even when inventory is changed with it', async t => {
+  const f = await fixture(t);
+  await rm(join(f.root, f.manifest.intake_pause_sql_file));
+  f.manifest.sql_files.pop();
+  await f.saveManifest();
+  assert.equal(check(await runPreflight(f.root), 'manifest_structure'), false);
+});
+
+test('the readiness source is explicit and remains separate from the final privilege-only migration', async t => {
+  const f = await fixture(t);
+  let report = await runPreflight(f.root);
+  assert.equal(check(report, 'readiness_revision_agrees'), true);
+  assert.equal(check(report, 'staff_first_intake_pause_declared'), true);
+  f.manifest.readiness_sql_file = f.manifest.intake_pause_sql_file;
+  await f.saveManifest();
+  report = await runPreflight(f.root);
+  assert.equal(check(report, 'manifest_structure'), false);
+});
+
+test('both submission signatures and every browser grant must be revoked without adding an enabling command', async t => {
+  const f = await fixture(t);
+  for (const source of [
+    pauseFixture.replace('private.save_app_connection(text,text,text,text,boolean,text)', 'private.other_function(text,text,text,text,boolean,text)'),
+    pauseFixture.replace('public.save_app_connection(text,text,text,text,boolean,text), ', ''),
+    pauseFixture.replace('public,anon,authenticated', 'public,anon'),
+    pauseFixture + ' grant execute on function public.save_app_connection(text,text,text,text,boolean,text) to authenticated;'
+  ]) {
+    await f.alterSql(() => source, f.manifest.intake_pause_sql_file);
+    const report = await runPreflight(f.root);
+    assert.equal(report.checks.filter(row => row.name === 'sql_digest_matches').every(row => row.ok), true);
+    assert.equal(check(report, 'staff_first_intake_pause_declared'), false);
+    assert.equal(report.status, 'failed');
+  }
 });

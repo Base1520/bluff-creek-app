@@ -78,7 +78,9 @@ export function createArtifacts(input) {
     target: { project_ref: config.projectRef, supabase_url: config.supabaseUrl, app_origin: config.appOrigin },
     mode: signup ? 'staff and public signup browser configuration' : 'staff browser configuration only',
     public_signup_ui_staged: signup,
-    hosted_auth_signup_posture: 'unverified', opaque_key_project_match: 'not_verified_offline',
+    hosted_auth_signup_posture: 'unverified',
+    reviewed_database_intake_default: 'paused_after_complete_migration_sequence',
+    hosted_database_intake_state: 'unverified', opaque_key_project_match: 'not_verified_offline',
     project_ownership_and_dns: 'not_verified_offline', hosted_services: 'not_assessed',
     schema_applied: false, accounts_changed: false, files_deployed: false, network_used: false,
     membership_link_staged: false,
@@ -103,12 +105,12 @@ ${signup ? '- Public signup callback: ' + signupCallback + '\n' : ''}
 ## Review before any activation
 
 1. Confirm this is the approved church project and app origin. Compare the publishable key privately against that project. Its opaque value cannot be matched to a project by this offline tool. DNS ownership, public address resolution and the actual HTTPS origin are not verified here.
-2. Review the complete six-file migration manifest in tools/office-preflight/manifest.json and the setup sequence in admin/README.md and docs/office-migrations.md. Run the separate local packet preflight; its pass is not hosted readiness. Obtain the concrete setup/release instruction before applying or deploying anything.
+2. Review the complete seven-file migration manifest in tools/office-preflight/manifest.json and the setup sequence in admin/README.md and docs/office-migrations.md. Run the separate local packet preflight; its pass is not hosted readiness. Obtain the concrete setup/release instruction before applying or deploying anything.
 3. Review the exact Auth redirect allowlist: ${report.redirect_allowlist_for_review.join(' and ')}. No wildcards, query redirects or alternate origins are staged. Review the hosted Auth Site URL against the approved app origin above; do not replace existing URL settings blindly.
-4. Explicitly choose and review hosted Auth's allow-new-signups setting. Do not copy the local rehearsal setting auth.enable_signup=true. Blank public connection configuration disables that browser UI only; it does not disable backend Auth signup or RPCs. Hosted Auth signup posture remains unverified in both staging modes.
+4. Explicitly choose and review hosted Auth's allow-new-signups setting. Do not copy the local rehearsal setting auth.enable_signup=true. Blank public connection configuration disables that browser UI only; it does not disable backend Auth signup or RPCs. The seventh tracked migration pauses profile creation/updates through both submission functions. It does not disable Auth signup or email sending. Verify both function grants after the full sequence; hosted state remains unverified in this offline packet. Enabling profile submission later requires an explicitly reviewed migration, as well as Auth and email acceptance.
 5. Privately approve initial staff and backup administrator identities, create or invite only after authorization, and assign the intended staff_roles role before invitation first-password completion. The browser grants no staff role. Rehearse admin/editor/viewer, anonymous/nonstaff denial, revoked access, reset, invite and expired-link behavior on the hosted service.
-6. Verify all six migrations, current readiness declaration, RLS, private storage rules, signed-link expiry, database advisors, account recovery, off-device backups and restore ownership before real member data goes in. No real records belong in this packet.
-7. ${signup ? 'The public connection config is staged for separate review. Verify email confirmation, exact callback, consent, own-profile isolation and office signup review before enabling the public page.' : 'The public connection config is blank. Keep public signup UI activation a separate decision; this staff-only browser packet makes no backend-disabled claim.'}
+6. Verify all seven migrations, current readiness declaration, RLS, private storage rules, signed-link expiry, database advisors, account recovery, off-device backups and restore ownership before real member data goes in. No real records belong in this packet.
+7. ${signup ? 'The public connection config is staged for separate review. The database baseline pauses profile submissions even when this UI configuration is staged. Before enabling the public page, explicitly review a later intake-opening migration and verify email confirmation, exact callback, consent, own-profile isolation and office signup review.' : 'The public connection config is blank. Keep public signup UI activation a separate decision; this staff-only browser packet makes no backend-disabled claim.'}
 8. Rehearse the actual phone and hosted email journeys. No mail, call, invitation, donation or other external action was exercised by this tool.
 
 The generated browser configs contain only the intended publishable key, never a service/secret key. The membership spreadsheet field is empty: do not insert a private ledger link into a publicly served asset. The report and this checklist omit all API-key values. Copying or deploying these files requires separate review; this checklist intentionally contains no apply commands.

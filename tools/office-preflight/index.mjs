@@ -5,6 +5,10 @@ import { isAbsolute, relative, resolve, sep } from 'node:path';
 const MANIFEST_PATH = 'tools/office-preflight/manifest.json';
 const CONFIG_PATH = 'admin/config.js';
 const CLIENT_PATH = 'admin/app.js';
+// The reviewed staff-first gate permits only this revoke transaction.
+// This is a local declaration check, not a SQL parser or hosted privilege check.
+const PAUSE_SQL = 'begin; revoke execute on function public.save_app_connection(text,text,text,text,boolean,text), private.save_app_connection(text,text,text,text,boolean,text) from public,anon,authenticated; commit;';
+const compactSQL = source => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/--[^\n\r]*/g, '').replace(/\s+/g, '').toLowerCase();
 const allowedPath = value => typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(value)
   && !value.split('/').some(part => part === '..' || part === '.' || part === '') && !isAbsolute(value);
 
@@ -88,6 +92,10 @@ function validManifest(manifest) {
       && /^[a-f0-9]{64}$/.test(row.sha256 || '') && Array.isArray(row.depends_on) && row.depends_on.every(allowedPath))
     && new Set(manifest.sql_files.map(row => row.path)).size === manifest.sql_files.length
     && /_office_base\.sql$/.test(manifest.sql_files[0].path)
+    && allowedPath(manifest.readiness_sql_file) && /_office_record_recovery\.sql$/.test(manifest.readiness_sql_file)
+    && allowedPath(manifest.intake_pause_sql_file) && /_pause_public_app_intake\.sql$/.test(manifest.intake_pause_sql_file)
+    && manifest.sql_files.at(-2)?.path === manifest.readiness_sql_file
+    && manifest.sql_files.at(-1)?.path === manifest.intake_pause_sql_file
     && Array.isArray(manifest.required_files) && manifest.required_files.every(allowedPath)
     && [CONFIG_PATH, CLIENT_PATH, 'admin/index.html', 'admin/help.html'].every(path => manifest.required_files.includes(path))
     && Array.isArray(manifest.readiness_modules) && manifest.readiness_modules.length > 0
@@ -136,7 +144,8 @@ export async function runPreflight(rootPath) {
     try { sources.set(name, await readLocal(root, name)); check('required_local_file_readable', true, name); }
     catch (_) { check('required_local_file_readable', false, name); }
   }
-  const recovery = sources.get(manifest.sql_files.at(-1).path) || '';
+  const recovery = sources.get(manifest.readiness_sql_file) || '';
+  check('staff_first_intake_pause_declared', compactSQL(sources.get(manifest.intake_pause_sql_file) || '') === compactSQL(PAUSE_SQL));
   const client = sources.get(CLIENT_PATH) || '';
   const sqlRevision = recovery.match(/'schema_revision'\s*,\s*'(\d{14})'/)?.[1];
   const clientRevision = client.match(/\bREQUIRED_REVISION\s*=\s*["'](\d{14})["']/)?.[1];
@@ -152,6 +161,7 @@ export async function runPreflight(rootPath) {
   if (report.configuration.status === 'not_configured') report.warnings.push('Office project URL and key are blank. This is a prepared local candidate, not an activated office.');
   else if (report.configuration.status === 'supplied_unverified') report.warnings.push('Office URL/key fields are nonempty. Their values, ownership, safety, validity and hosted behavior have not been verified.');
   else report.warnings.push('Office configuration is partial or uses unsupported syntax. Review it privately; no configuration values are included in this report.');
+  report.warnings.push('The final migration pauses browser-role public profile submissions and updates. Auth signup, email delivery and existing-record access remain separate; hosted privileges are not assessed.');
   if (/\b(?:src|href)=["']https?:\/\//i.test(sources.get('admin/index.html') || '')) report.warnings.push('The office page has external assets. Their availability was not checked.');
   report.status = report.checks.every(item => item.ok) ? 'passed' : 'failed';
   return report;

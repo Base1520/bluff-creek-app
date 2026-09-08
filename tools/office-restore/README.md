@@ -1,5 +1,7 @@
 # Local database and private-file restore rehearsal
 
+**Historical revision required:** this runner is intentionally fixed to the six-migration recovery rehearsal. The current staff-first manifest contains seven migrations, so a current-checkout run against the preserved six-migration source will safely refuse. Use the matching reviewed historical revision to inspect/reproduce that result. Do not relax its fingerprint, alter the live demonstration, or reset records to make it pass. Hosted recovery of the seven-file baseline remains a separate acceptance check.
+
 This runner rehearses recovery of the existing **fictional** local office stack into a separate disposable target. It is fixed to this task's Docker socket, Supabase CLI **2.117.0**, six observed immutable service images, PostgreSQL **17.6**, nine banned `.invalid` Auth users, zero staff roles, one history-linked document/object and the six reviewed migrations. It supports no hosted destination or arbitrary SQL. Production configuration and source files are unchanged.
 
 **Actual local recovery passed on September 8, 2026, through reviewed continuations.** See [the dated evidence and limitations](results-2026-09-08.md). This was a real database-plus-file recovery with a deliberately incomplete phase; it was not a clean first-attempt run or a production recovery-time test.

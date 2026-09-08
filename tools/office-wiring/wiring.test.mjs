@@ -110,9 +110,12 @@ test('report/checklist redact key values and preserve pending ownership/signup/s
     assert(!redacted.includes(key));assert(!redacted.includes('sb_publishable_'));
     assert.equal(packet.report.opaque_key_project_match,'not_verified_offline');
     assert.equal(packet.report.schema_applied,false);assert.equal(packet.report.network_used,false);
+    assert.equal(packet.report.reviewed_database_intake_default,'paused_after_complete_migration_sequence');
+    assert.equal(packet.report.hosted_database_intake_state,'unverified');
+    assert.match(redacted,/does not disable Auth signup or email sending/);
     assert.match(redacted,/allow-new-signups/);assert.match(redacted,/Do not copy the local rehearsal setting auth.enable_signup=true/);
     assert.match(redacted,/does not disable backend Auth signup or RPCs/);
-    assert.match(redacted,/staff_roles/);assert.match(redacted,/six-file migration manifest/);
+    assert.match(redacted,/staff_roles/);assert.match(redacted,/seven-file migration manifest/);
     assert.doesNotMatch(redacted,/supabase db push|supabase migration up|psql |INSERT INTO|curl /i);
   }
 });

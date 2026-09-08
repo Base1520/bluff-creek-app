@@ -16,9 +16,9 @@ docker network create --opt com.docker.network.bridge.host_binding_ipv4=127.0.0.
 supabase start --workdir ../office-rehearsal-stack --network-id bcbc-office-rehearsal-loopback --exclude realtime,imgproxy,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
 ```
 
-The prepare command accepts only a new directory outside this repository, verifies every migration against the reviewed manifest, then copies all six unchanged files. It refuses existing destinations. Reuse an existing verified local stack by starting it directly; do not reset it to hide failed checks. Never link this directory to a hosted project. Do not use `db push`, migration repair or a hosted connection for this rehearsal.
+The prepare command accepts only a new directory outside this repository, verifies every migration against the reviewed manifest, then copies the six unchanged baseline files plus the seventh intake-pause migration. It refuses existing destinations. Reuse an existing verified local stack by starting it directly; do not reset it to hide failed checks. Never link this directory to a hosted project. Do not use `db push`, migration repair or a hosted connection for this rehearsal.
 
-The CLI's startup/status output can contain **local privileged keys**. Capture it privately and never paste it into logs, commits, screenshots or shared reports. Verify service health, the six recorded migrations and actual host listeners before adding any fixtures. Published ports must bind only loopback. Review local advisors with `supabase db advisors --local --workdir ../office-rehearsal-stack`; do not omit `--local`.
+The CLI's startup/status output can contain **local privileged keys**. Capture it privately and never paste it into logs, commits, screenshots or shared reports. Verify service health, the seven recorded migrations and actual host listeners before adding any fixtures. Published ports must bind only loopback. Review local advisors with `supabase db advisors --local --workdir ../office-rehearsal-stack`; do not omit `--local`.
 
 ## Rehearse HTTP access and browser use
 
@@ -40,3 +40,5 @@ Use only clearly fictional records and ephemeral test accounts. Do not send mail
 Stop the preview with Ctrl-C. Run `supabase stop --workdir ../office-rehearsal-stack` to stop this project's services while retaining local data. Then stop the dedicated runtime if no further work needs it. Do not use broad container pruning or delete shared volumes.
 
 Record the app revision, CLI/runtime versions, migration hashes, service health, loopback listeners, actual HTTP assertions, browser result, advisor findings and remaining limitations. A prepared script or blank worksheet is not a completed service rehearsal. Keep fixture IDs and any required investigation data private to the disposable local workspace; shared reports contain counts and outcomes only.
+
+The seven-file baseline pauses public profile submissions. The older 38-check HTTP signup rehearsal below was run against the earlier six-file baseline; it must not be represented as a pass against the paused baseline. Its signup scenarios intentionally fail until a separately reviewed intake-opening change exists. Do not reopen intake automatically to make the harness pass. Current pause/retained-review behavior is covered by the SQL regression tests.

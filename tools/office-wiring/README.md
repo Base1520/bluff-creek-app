@@ -33,7 +33,11 @@ The packet contains:
 - `report.json`: redacted mode/target/callback and unverified-gate report; no API-key values.
 - `SETUP-CHECKLIST.md`: exact target and callbacks plus review-only setup prerequisites, with no apply commands or API keys.
 
-Blank public browser configuration does **not** disable backend Auth signup or RPCs. Explicitly choose and review hosted Auth's allow-new-signups setting; do not copy local rehearsal `auth.enable_signup=true`. Confirm project ownership/key association, exact callbacks, staff role assignment, all six migrations, RLS/storage/advisors, email delivery and recovery/backup procedures before activation. Staging is not release authorization and contains no real member records.
+Blank public browser configuration does **not** disable backend Auth signup or RPCs. Explicitly choose and review hosted Auth's allow-new-signups setting; do not copy local rehearsal `auth.enable_signup=true`. Confirm project ownership/key association, exact callbacks, staff role assignment, all seven migrations, RLS/storage/advisors, email delivery and recovery/backup procedures before activation. Staging is not release authorization and contains no real member records.
+
+The reviewed seven-migration sequence ends by revoking public profile-submission access from both the public and private save functions. That is a database pause for the staff-first rollout; it does not disable Auth signup, send email, or change staff review of existing submissions. This tool reports that intended default separately from actual hosted state, which remains unverified. A `true` UI setting cannot reopen database intake. Reopening requires a separately reviewed migration and successful hosted signup/email testing.
+
+For a complete static app/office package, use [office-release](../office-release/README.md); the wiring packet alone contains only the two configuration files.
 
 ## Verification
 

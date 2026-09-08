@@ -1,0 +1,19 @@
+{
+  "format_version": 1,
+  "files": [
+    "index.html", "connection.html", "manifest.webmanifest", "sw.js", "events.json", "calendar.ics",
+    "js/app-forms.js", "js/app-status.js", "js/calendar-config.js", "js/calendar-feed.js",
+    "js/connection-config.js", "js/connection.js", "js/grow-content.js", "js/grow.js",
+    "css/app-status.css", "css/connection.css", "css/fonts.css", "css/grow.css",
+    "assets/apple-touch-icon.png", "assets/creek.png", "assets/favicon-32.png", "assets/icon-192.png",
+    "assets/icon-512.png", "assets/la63.svg", "assets/logo.png",
+    "assets/fonts/OFL-Bitter.txt", "assets/fonts/OFL-NunitoSans.txt",
+    "assets/fonts/bitter-latin-italic-500-v42.woff2", "assets/fonts/bitter-latin-normal-v42.woff2",
+    "assets/fonts/nunito-sans-latin-normal-v19.woff2",
+    "admin/index.html", "admin/help.html", "admin/recovery.html", "admin/config.js",
+    "admin/admin.css", "admin/app.js", "admin/care.css", "admin/care.js",
+    "admin/followups.css", "admin/followups.js", "admin/membership.css", "admin/membership.js",
+    "admin/office-content.css", "admin/office-content.js", "admin/recovery.js",
+    "admin/reminder-calendar.css", "admin/reminder-calendar.js", "admin/signups.css", "admin/signups.js"
+  ]
+}

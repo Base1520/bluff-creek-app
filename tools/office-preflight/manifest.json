@@ -41,6 +41,13 @@
       "depends_on": [
         "supabase/migrations/20260907231531_leader_followups.sql"
       ]
+    },
+    {
+      "path": "supabase/migrations/20260908193401_pause_public_app_intake.sql",
+      "sha256": "8eba1837cffba0ca00934faccc4308239b4b49f534a4ba1a968a71bd7eeb00e3",
+      "depends_on": [
+        "supabase/migrations/20260907231533_office_record_recovery.sql"
+      ]
     }
   ],
   "required_files": [
@@ -99,5 +106,7 @@
     "app_connections",
     "leader_followups",
     "leader_followup_contacts"
-  ]
+  ],
+  "readiness_sql_file": "supabase/migrations/20260907231533_office_record_recovery.sql",
+  "intake_pause_sql_file": "supabase/migrations/20260908193401_pause_public_app_intake.sql"
 }
