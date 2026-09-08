@@ -1,4 +1,4 @@
-# Creek Office reliability and recovery · September 7, 2026
+# Creek Office reliability and recovery · September 8, 2026
 
 The goal is for common mistakes to be prevented, interrupted work to be recoverable, and unresolved work to have a clear owner. This is a prepared software candidate, not a claim of zero failures or an activated church service.
 
@@ -6,6 +6,7 @@ The goal is for common mistakes to be prevented, interrupted work to be recovera
 
 | Failure case | Guardrail |
 | --- | --- |
+| A staff password is forgotten, or an invited staff member needs a first password | Separate recovery page checks current staff access before accepting a new password, scrubs the callback, keeps credentials in memory and returns to a cleared staff login. It does not create or restore a removed staff role. Exact hosted callbacks and email delivery must be configured and rehearsed. |
 | Incomplete setup or lost core read access | Live staff-role lookup plus a versioned schema declaration and required module list; verified core reads before editing. Persistent status and refresh action; failed reads are not reported as empty successful lists. |
 | A cached role has changed | Role/readiness checks on refresh and before mutations; real identity/role loss clears private dialogs and blocks late responses. Same-user transport failures preserve drafts while disabling writes. |
 | Two editors save the same record | Server-owned integer versions and conditional updates on core records, care plans/guest records/guidelines and the four office-content tables. A stale draft cannot overwrite the newer version through these interfaces. |
@@ -23,7 +24,7 @@ Apply every SQL file in the explicit order in `admin/README.md`; the last is `su
 
 The read-only `office_readiness` RPC checks the current staff role on each call and declares schema revision `20260907174301` and supported modules. Its migration checks prerequisites before installing that declaration. It does not perform a full database integrity audit or test every permission, storage path, authentication email, backup, or delivery channel. Core table reads are checked by the interface; module failures remain visible in their own sections. RLS and server constraints remain the authority for writes.
 
-Local tests exercise real PostgreSQL behavior via PGlite and browser logic with fictional fixtures. They do not contact a hosted church database. The complete September 7 staff suite passed 183 tests. Native review confirmed fictional event archive/restore, an announcement save, and the editor and guide at 375px. Review the test run at the release commit and repeat critical cases on the authorized hosted configuration before loading real records.
+Local tests exercise real PostgreSQL behavior via PGlite and browser logic with fictional fixtures. They do not contact a hosted church database. The latest September 7 staff suite passed 196 tests, including 11 recovery cases. The separate isolated Supabase stack passed 38 actual Auth/REST/Storage checks, eight password-reset browser checks, seven invitation/first-password checks and seven public-signup browser checks through captured local mail. Native layout review separately confirmed fictional event archive/restore, an announcement save, and the editor and guide at 375px. Review the evidence at the release commit and repeat critical cases on the authorized hosted configuration before loading real records; these local passes do not establish hosted delivery, file restoration or operator acceptance.
 
 ## Rehearsal before the private pilot
 
@@ -41,6 +42,8 @@ Use fictional records and two designated test staff accounts. Record the date, r
 ## Backups and operational ownership
 
 Before real records are entered, assign a primary records owner and backup administrator. Document database backup/export availability, retention, restore permissions and file-storage backup separately. A database backup alone is not evidence uploaded source files are recoverable. Rehearse restoring both into a separate test environment; record the actual recovery time and how much recent work could be lost. Backup schedules and notifications remain unconfigured in this candidate.
+
+The September 8 [isolated local restore](../tools/office-restore/results-2026-09-08.md) passed against persistent fictional records and a linked private file. A restored database with one deliberately omitted payload failed the byte check; restoring only that absent payload recovered the exact original bytes, with matching record/policy/migration fingerprints and 36 foreign keys. Source volume bytes stayed unchanged. The run required diagnosed tool/network/response corrections and preserved its failed states. It does not establish production recovery time, off-device backups, retention or a church operator’s ability to restore records.
 
 Keep original handwritten pages, the reviewed source ledger and approved file masters through the pilot and import reconciliation. An interrupted browser session can lose an unsaved draft or recovery state; sign-out during an upload may leave an unfiled private object. A storage administrator should review suspected unfiled objects against document metadata and active work before any cleanup. Never mass-delete a bucket or clear the ledger as a rollback step.
 
