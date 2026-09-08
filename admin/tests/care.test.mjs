@@ -106,6 +106,91 @@ test('paused plans are separate and shared deacon/search filters apply', async t
   const filter=f.host.querySelector('[data-care-deacon]');filter.value='__unassigned';filter.dispatchEvent(new f.w.Event('change',{bubbles:true}));
   assert.equal(f.host.querySelector('[data-care-list="paused"] .care-row'),null);
 });
+test('People entry isolates an exact person across follow-up, coverage, guests and visitation', async t => {
+  const people=[{id:'person-synthetic',display_name:'Sample Person',household_name:'Shared household',status:'active'}, {id:'person-other',display_name:'Sample Person',household_name:'Shared household',status:'active'}];
+  const f=fixture(t,{people,assignments:[{...assignment,assigned_to:'First team',notes:'First person plan'}, {...assignment,id:'other-plan',contact_id:'person-other',assigned_to:'Other team',notes:'Other person plan'}],visits:[{...visit('2026-03-02'),notes:'First person contact'}, {...visit('2026-03-03'),contact_id:'person-other',notes:'Other person contact'}],guests:[{id:'guest-first',contact_id:'person-synthetic',status:'new',notes:'First person guest'}, {id:'guest-other',contact_id:'person-other',status:'new',notes:'Other person guest'}]});
+  await f.module.load(1);
+  const search=f.host.querySelector('[data-care-search]');search.value='no match';search.dispatchEvent(new f.w.Event('input',{bubbles:true}));
+  const owner=f.host.querySelector('[data-care-deacon]');owner.value='Other team';owner.dispatchEvent(new f.w.Event('change',{bubbles:true}));
+  const role=f.host.querySelector('[data-care-role-filter]');role.value='welcome';role.dispatchEvent(new f.w.Event('change',{bubbles:true}));
+  f.click('[data-care-view="visitation"]');
+  assert.equal(f.module.selectPerson('person-synthetic'),true);
+  assert.equal(f.host.querySelector('[data-care-panel="followup"]').hidden,false);
+  assert.equal(search.value,'');assert.equal(owner.value,'');assert.equal(role.value,'');
+  assert.match(f.host.querySelector('[data-care-person-label]').textContent,/Showing care for Sample Person/);
+  assert.equal(f.host.querySelector('.care-person-selection').hidden,false);
+  for(const list of ['assignments','coverage','guests','visits'])assert.equal(f.host.querySelectorAll('[data-care-list="'+list+'"] .care-row').length,1,list);
+  assert.match(f.host.textContent,/First person plan/);assert.match(f.host.textContent,/First person contact/);assert.match(f.host.textContent,/First person guest/);
+  assert.doesNotMatch(f.host.textContent,/Other person|Other team/);
+  f.click('[data-care-view="coverage"]');assert.equal(f.host.querySelector('[data-care-panel="coverage"]').hidden,false);
+  assert.deepEqual([...f.host.querySelectorAll('[data-care-list="coverage"] [data-contact]')].map(el=>el.dataset.contact),['person-synthetic']);
+  f.click('[data-care-view="guests"]');f.click('[data-care-panel="guests"] .care-section-head [data-care-action="guest"]');
+  assert.equal(f.host.querySelector('[name="contact_id"]').value,'person-synthetic');assert.equal(f.host.querySelector('[name="notes"]').value,'First person guest');
+  f.click('[data-care-action="cancel"]');f.click('[data-care-action="clear-person"]');
+  assert.equal(f.host.querySelector('.care-person-selection').hidden,true);
+  for(const list of ['assignments','coverage','guests','visits'])assert.equal(f.host.querySelectorAll('[data-care-list="'+list+'"] .care-row').length,2,list+' after clearing');
+});
+test('person selection persists through refresh and preselects new plans and contacts', async t => {
+  const f=fixture(t,{people:[{id:'person-synthetic',display_name:'First fixture'},{id:'person-other',display_name:'Other fixture'}]});await f.module.load(1);assert.equal(f.module.selectPerson('person-synthetic'),true);
+  f.click('[data-care-panel="followup"] .care-section-head [data-care-action="assignment"]');
+  assert.equal(f.host.querySelector('[name="contact_id"]').value,'person-synthetic');
+  f.set('notes','Retained person draft');assert.equal(f.module.selectPerson('person-synthetic'),true);
+  assert.equal(f.host.querySelector('[name="notes"]').value,'Retained person draft');
+  f.click('[data-care-action="cancel"]');f.rows.care_assignments.push({...assignment,version:1,notes:'Newly loaded plan'});await f.module.load(1);
+  assert.equal(f.host.querySelector('.care-person-selection').hidden,false);assert.match(f.host.textContent,/Newly loaded plan/);
+  f.click('[data-care-panel="visitation"] .care-section-head [data-care-action="visit"]');
+  assert.equal(f.host.querySelector('[name="contact_id"]').value,'person-synthetic');
+  f.set('contact_id','person-other');f.set('notes','Draft for another person');f.w.confirm=()=>false;
+  assert.equal(f.module.selectPerson('person-synthetic'),false);assert.equal(f.host.querySelector('[name="contact_id"]').value,'person-other');
+  f.w.confirm=()=>true;assert.equal(f.module.selectPerson('person-synthetic'),true);assert.equal(f.host.querySelector('[data-care-form]'),null);
+});
+test('unknown, stale and revoked People entries cannot replace the selected person', async t => {
+  const f=fixture(t,{people:[{id:'person-synthetic',display_name:'First fixture'},{id:'person-other',display_name:'Other fixture'}]});
+  assert.equal(f.module.selectPerson('person-synthetic'),false);assert.equal(f.host.textContent,'');
+  await f.module.load(1);assert.equal(f.module.selectPerson('person-synthetic'),true);
+  let prompts=0;f.w.confirm=()=>{prompts++;return true;};f.click('[data-care-action="assignment"]');f.set('notes','Keep draft');
+  for(const id of ['unknown-person','First fixture','',null,undefined,{},1])assert.equal(f.module.selectPerson(id),false);
+  assert.equal(prompts,0);assert.equal(f.host.querySelector('[name="notes"]').value,'Keep draft');
+  const original={...f.ctx};
+  for(const next of [{...original,role:'viewer',canEdit:false},{...original,userId:null},{...original,epoch:2},{...original,userId:'other-user'},{...original,workspaceReady:false}]) {
+    f.setContext(next);assert.equal(f.module.selectPerson('person-other'),false);assert.match(f.host.querySelector('[data-care-person-label]').textContent,/First fixture/);
+  }
+  f.setContext(original);assert.equal(prompts,0);assert.equal(f.calls.some(call=>call.op!=='select'),false);
+  f.module.clear();assert.equal(f.host.textContent,'');await f.module.load(1);
+  assert.equal(f.host.querySelector('.care-person-selection').hidden,true);assert.equal(f.host.querySelector('[data-care-person-label]').textContent,'');
+});
+test('changing or clearing the selected person honors unsaved draft confirmation', async t => {
+  const f=fixture(t,{people:[{id:'person-synthetic',display_name:'First fixture'},{id:'person-other',display_name:'Other fixture'}]});await f.module.load(1);f.module.selectPerson('person-synthetic');
+  f.click('[data-care-action="assignment"]');f.set('notes','Unsaved first person plan');
+  const prompts=[];f.w.confirm=message=>{prompts.push(message);return false;};
+  assert.equal(f.module.selectPerson('person-other'),false);f.click('[data-care-action="clear-person"]');
+  assert.equal(prompts.length,2);assert.ok(prompts.every(message=>message==='Discard your unsaved care changes?'));
+  assert.equal(f.host.querySelector('[name="notes"]').value,'Unsaved first person plan');assert.match(f.host.querySelector('[data-care-person-label]').textContent,/First fixture/);
+  f.w.confirm=()=>true;assert.equal(f.module.selectPerson('person-other'),true);assert.equal(f.host.querySelector('[data-care-form]'),null);
+  assert.match(f.host.querySelector('[data-care-person-label]').textContent,/Other fixture/);
+  f.click('[data-care-action="assignment"]');f.set('notes','Unsaved other person plan');f.click('[data-care-action="clear-person"]');
+  assert.equal(f.host.querySelector('[data-care-form]'),null);assert.equal(f.host.querySelector('.care-person-selection').hidden,true);
+});
+test('person selection rechecks the session after confirmation and auth cleanup forgets it', async t => {
+  const f=fixture(t,{people:[{id:'person-synthetic',display_name:'First fixture'},{id:'person-other',display_name:'Other fixture'}]});await f.module.load(1);f.module.selectPerson('person-synthetic');
+  f.click('[data-care-action="assignment"]');f.set('notes','Unsent fixture note');
+  f.w.confirm=()=>{f.setContext({epoch:2,userId:'new-fixture-user',canEdit:true,workspaceReady:true,role:'editor'});return true;};
+  assert.equal(f.module.selectPerson('person-other'),false);assert.match(f.host.querySelector('[data-care-person-label]').textContent,/First fixture/);
+  f.module.render();assert.doesNotMatch(f.host.textContent,/First fixture|Other fixture|Unsent fixture note/);
+  assert.equal(f.host.querySelector('.care-person-selection').hidden,true);assert.equal(f.module.selectPerson('person-other'),false);
+  await f.module.load(2);assert.equal(f.host.querySelector('.care-person-selection').hidden,true);assert.equal(f.module.selectPerson('person-other'),true);
+  f.setContext({epoch:3,userId:null,canEdit:false,role:null});f.module.render();assert.equal(f.host.textContent,'');
+});
+test('a removed person never broadens the exact selection or exposes orphaned care rows', async t => {
+  const people=[{id:'person-synthetic',display_name:'Removed fixture',status:'active'},{id:'person-other',display_name:'Remaining fixture',status:'active'}];
+  const f=fixture(t,{people,assignments:[{...assignment,assigned_to:'Removed team',notes:'Removed fixture planning note'},{...assignment,id:'other-plan',contact_id:'person-other',assigned_to:'Remaining team'}],visits:[{...visit('2026-03-02'),notes:'Removed fixture contact'}],guests:[{id:'guest-first',contact_id:'person-synthetic',status:'new',notes:'Removed fixture guest'}]});
+  await f.module.load(1);f.module.selectPerson('person-synthetic');people.splice(0,1);f.module.render();
+  assert.match(f.host.querySelector('[data-care-person-label]').textContent,/Person unavailable/);
+  assert.doesNotMatch(f.host.textContent,/Removed fixture|Removed team|Remaining fixture|Remaining team/);
+  for(const list of ['assignments','coverage','guests','visits'])assert.equal(f.host.querySelectorAll('[data-care-list="'+list+'"] .care-row').length,0,list);
+  assert.equal(f.module.selectPerson('person-synthetic'),false);f.click('[data-care-action="clear-person"]');
+  assert.match(f.host.textContent,/Remaining fixture/);assert.doesNotMatch(f.host.textContent,/Removed fixture|Removed team/);
+});
 test('editors read guidelines; only admins can save the default record and empty guidance stays proposed', async t => {
   const e=fixture(t,{guidelines:{id:'default',body:'Synthetic agreed guidance',updated_at:'2026-03-01T12:00:00Z'}});await e.module.load(1);
   assert.match(e.host.textContent,/Synthetic agreed guidance/);assert.equal(e.host.querySelector('[data-care-action="guidelines"]'),null);

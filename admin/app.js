@@ -144,6 +144,9 @@
     el("document-dialog").addEventListener("close", function () { documentEpoch++; window.clearTimeout(documentExpiryTimer); el("document-result").replaceChildren(); });
     ["event-search", "event-filter", "people-search", "people-filter", "document-search", "document-filter"].forEach(function (id) { el(id).addEventListener("input", render); });
     el("editor-form").addEventListener("submit", saveEditor);
+    el("editor-fields").addEventListener("input", function (event) {
+      if (["first_name", "last_name", "membership_number", "legacy_member_id"].includes(event.target.name)) renderPersonReview();
+    });
     if (el("workspace-refresh")) el("workspace-refresh").addEventListener("click", function () { loadAll(authEpoch); });
     if (el("editor-refresh")) el("editor-refresh").addEventListener("click", function () { loadAll(authEpoch); });
     if (el("event-delete")) el("event-delete").addEventListener("click", archiveEvent);
@@ -191,8 +194,10 @@
   }
   function syncEditor() {
     if (!draft) return;
+    renderPersonReview();
     var frozen = draft.busy || draft.requiresRefresh || draft.conflict || !canEdit();
     el("editor-fields").querySelectorAll("input,select,textarea").forEach(function (node) { node.disabled = frozen || (node.type === "file" && !!draft.file); });
+    el("editor-fields").querySelectorAll("[data-review-person]").forEach(function (node) { node.disabled = frozen; });
     el("save").disabled = frozen;
     document.querySelectorAll("[data-close-editor]").forEach(function (node) { node.disabled = draft.busy; });
     if (el("event-delete")) { hidden(el("event-delete"), draft.kind !== "event" || draft.isNew); el("event-delete").textContent = draft.archived ? "Restore event" : "Archive event"; el("event-delete").disabled = frozen; }
@@ -354,7 +359,7 @@
     var start = new Date(item.starts_at);
     return '<article class="row"><time datetime="' + safe(item.starts_at) + '">' + safe(start.toLocaleDateString("en-US", { month: "short", day: "numeric" })) + '</time><div><b>' + safe(item.title) + (item.is_archived ? ' · Archived' : '') + '</b><small>' + safe(start.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })) + (item.location ? " · " + safe(item.location) : "") + '</small></div>' + (canEdit() ? '<div class="row-actions"><button data-edit-event="' + item.id + '">Edit</button><button data-delete-event="' + item.id + '">' + (item.is_archived ? "Restore" : "Archive") + '</button></div>' : "") + '</article>';
   }
-  function personRow(item) { return '<tr><td><b>' + safe(item.last_name + ", " + item.first_name) + '</b>' + (item.membership_number ? '<small class="membership-person-extra">Member #'+safe(item.membership_number)+'</small>' : '') + (item.needs_review ? '<small class="membership-person-extra">Needs source review</small>' : '') + '</td><td><span class="tag">' + safe(item.status) + '</span></td><td>' + safe(item.household_name || "—") + '</td><td>' + dateLabel(item.updated_at.slice(0, 10)) + '</td><td>' + (canEdit() ? '<button class="quiet" data-edit-person="' + item.id + '">Edit</button> <button class="quiet" data-person-history="'+safe(item.id)+'">History</button>' : "") + '</td></tr>'; }
+  function personRow(item) { return '<tr><td><b>' + safe(item.last_name + ", " + item.first_name) + '</b>' + (item.membership_number ? '<small class="membership-person-extra">Member #'+safe(item.membership_number)+'</small>' : '') + (item.needs_review ? '<small class="membership-person-extra">Needs source review</small>' : '') + '</td><td><span class="tag">' + safe(item.status) + '</span></td><td>' + safe(item.household_name || "—") + '</td><td>' + dateLabel(item.updated_at.slice(0, 10)) + '</td><td class="person-actions">' + (canEdit() ? '<button class="quiet" data-edit-person="' + item.id + '">Edit</button> <button class="quiet" data-person-history="'+safe(item.id)+'">History</button>' + (care ? ' <button class="quiet" data-person-care="'+safe(item.id)+'" aria-label="Care for '+safe([item.first_name,item.last_name].filter(Boolean).join(" "))+'">Care</button>' : '') : "") + '</td></tr>'; }
   function documentRow(item) { return '<tr><td><b>' + safe(item.title) + '</b><small>' + safe(item.file_name) + '</small></td><td><span class="tag">' + safe(item.category) + '</span></td><td>' + dateLabel(item.updated_at.slice(0, 10)) + '</td><td><button class="quiet" data-open-document="' + item.id + '">Open</button>' + (canEdit() ? ' <button class="quiet" data-edit-document="' + safe(item.id) + '">Edit details</button>' : '') + '</td></tr>'; }
   function activityRow(item) { return '<article class="row"><time>' + safe(new Date(item.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })) + '</time><div><b>' + safe(item.action) + " " + safe(item.entity_type) + '</b><small>Record ' + safe(item.entity_id || "") + '</small></div></article>'; }
 
@@ -363,6 +368,10 @@
     document.querySelectorAll("[data-delete-event]").forEach(function (b) { b.onclick = function () { var item = state.events.find(function (row) { return row.id === b.dataset.deleteEvent; }); if (item) { openEvent(item); archiveEvent(); } }; });
     document.querySelectorAll("[data-edit-person]").forEach(function (b) { b.onclick = function () { openPerson(state.people.find(function (x) { return x.id === b.dataset.editPerson; })); }; });
     document.querySelectorAll("[data-person-history]").forEach(function (b) { b.onclick = function () { if (membership) membership.selectPerson(b.dataset.personHistory); }; });
+    document.querySelectorAll("[data-person-care]").forEach(function (b) { b.onclick = function () {
+      if (!care || !canEdit() || !peopleReady || !state.people.some(function (person) { return person.id === b.dataset.personCare; })) return;
+      if (care.selectPerson(b.dataset.personCare)) { location.hash = "care"; route(); }
+    }; });
     document.querySelectorAll("[data-edit-document]").forEach(function (b) { b.onclick = function () { openDocumentEditor(state.documents.find(function (row) { return row.id === b.dataset.editDocument; })); }; });
     document.querySelectorAll("[data-open-document]").forEach(function (b) { b.onclick = function () { openDocument(b.dataset.openDocument); }; });
   }
@@ -379,6 +388,7 @@
     var hasLedgerDetails = ["former_names", "membership_number", "legacy_member_id", "birth_date_text", "received_date_text", "how_received", "baptism_date_text", "dismissal_date_text", "reason_for_decrease"].some(function (name) { return !!item[name]; });
     openEditor("person", item.id ? "Edit person" : "Add person",
       '<p class="membership-note">Start with the details you know. Keep one record per person so their history and care stay together.</p>' +
+      (item.id ? '' : '<section id="person-review" class="person-review hidden" aria-labelledby="person-review-title" hidden></section>') +
       '<fieldset class="person-form-section"><legend>Person &amp; household</legend><div class="form-grid">' +
       input("first_name", "First name", "text", item.first_name) + input("last_name", "Last name", "text", item.last_name) +
       input("middle_name", "Middle name", "text", item.middle_name) + input("preferred_name", "Preferred name", "text", item.preferred_name) +
@@ -407,6 +417,48 @@
   function tableFor(kind) { return kind === "event" ? "events" : kind === "person" ? "contacts" : "documents"; }
   function valuesMatch(row, payload) { return Object.keys(payload || {}).every(function (key) { return ((key === "starts_at" || key === "ends_at") && row[key] && payload[key] && Date.parse(row[key]) === Date.parse(payload[key])) || row[key] === payload[key] || (row[key] == null && payload[key] == null); }); }
   function textValue(form, key) { return String(form.get(key) || "").trim(); }
+  function identityText(value) { return String(value || "").normalize("NFC").trim().replace(/\s+/g, " ").toLowerCase(); }
+  function personReview(row) {
+    var identity = [row.first_name, row.last_name, row.membership_number, row.legacy_member_id].map(identityText);
+    var matches = state.people.filter(function (person) {
+      return (identity[0] && identity[1] && identity[0] === identityText(person.first_name) && identity[1] === identityText(person.last_name)) ||
+        (identity[2] && identity[2] === identityText(person.membership_number)) ||
+        (identity[3] && identity[3] === identityText(person.legacy_member_id));
+    });
+    return { matches: matches, key: JSON.stringify([identity, matches.map(function (person) {
+      return [person.id, person.first_name, person.last_name, person.membership_number, person.legacy_member_id, person.household_name, person.status].map(function (value) { return String(value || ""); });
+    }).sort(function (a, b) { return a[0].localeCompare(b[0]); })]) };
+  }
+  function renderPersonReview() {
+    var box = el("person-review");
+    if (!box || !draft || draft.kind !== "person" || !draft.isNew) return;
+    if (!peopleReady || !canEdit()) { box.replaceChildren(); hidden(box, true); return; }
+    var form = el("editor-form").elements, row = {};
+    ["first_name", "last_name", "membership_number", "legacy_member_id"].forEach(function (key) { row[key] = form[key] ? form[key].value : ""; });
+    var review = personReview(row);
+    if (draft.personReviewKey !== review.key) { draft.personReviewKey = review.key; draft.personReviewAccepted = false; }
+    if (!review.matches.length) { box.replaceChildren(); hidden(box, true); return; }
+    hidden(box, false);
+    // Do not replace the checkbox while staff are interacting with an unchanged review.
+    if (box.dataset.reviewKey === review.key && box.childElementCount) return;
+    box.dataset.reviewKey = review.key;
+    box.innerHTML = '<h3 id="person-review-title">Could this person already be here?</h3><p>' + review.matches.length + ' existing ' + (review.matches.length === 1 ? 'record shares' : 'records share') + ' this name or member identifier. A match is a reason to check, not proof that they are the same person.</p><ul class="person-review-list">' + review.matches.map(function (person) {
+      return '<li><div><strong>' + safe([person.first_name, person.last_name].filter(Boolean).join(" ")) + '</strong><small>' + safe(person.status || "") + (person.membership_number ? ' · Member #'+safe(person.membership_number) : '') + (person.household_name ? ' · '+safe(person.household_name) : '') + '</small></div><button class="quiet" type="button" data-review-person="' + safe(person.id) + '">Review record</button></li>';
+    }).join('') + '</ul><label class="person-review-confirm"><input type="checkbox" name="person_match_reviewed"><span>I checked these records. This is a different person.</span></label><p class="membership-note">If it is the same person, use their existing record. Names or numbers alone do not establish identity.</p>';
+    var reviewDraft = draft, reviewAuth = authEpoch, reviewEditor = editorEpoch;
+    function currentReview(node) {
+      return draft === reviewDraft && authEpoch === reviewAuth && editorEpoch === reviewEditor && canEdit() && peopleReady &&
+        !draft.busy && !draft.requiresRefresh && !draft.conflict && draft.personReviewKey === review.key &&
+        box === el("person-review") && box.isConnected && box.contains(node);
+    }
+    var checkbox = box.querySelector("input"); checkbox.checked = !!draft.personReviewAccepted;
+    checkbox.onchange = function () { if (currentReview(checkbox)) draft.personReviewAccepted = checkbox.checked; };
+    box.querySelectorAll("[data-review-person]").forEach(function (button) { button.onclick = function () {
+      if (!currentReview(button)) return;
+      var person = state.people.find(function (item) { return item.id === button.dataset.reviewPerson; });
+      if (person) openPerson(person);
+    }; });
+  }
   function payloadFor(form, item) {
     var row;
     if (item.kind === "event") {
@@ -437,7 +489,18 @@
   async function saveEditor(event) {
     event.preventDefault();
     if (!session || !canEdit() || !draft || draft.busy || draft.requiresRefresh || draft.conflict) return;
-    try { var payload = payloadFor(new FormData(event.currentTarget), draft); await persistDraft(payload); }
+    try {
+      var payload = payloadFor(new FormData(event.currentTarget), draft);
+      if (draft.kind === "person" && draft.isNew) {
+        renderPersonReview();
+        var review = personReview(payload);
+        if (review.matches.length && (draft.personReviewKey !== review.key || !draft.personReviewAccepted)) {
+          el("editor-error").textContent = "Review the similar records before adding a different person.";
+          el("person-review").querySelector("button").focus(); return;
+        }
+      }
+      await persistDraft(payload);
+    }
     catch (error) { if (draft) el("editor-error").textContent = error.message || "Check the form and try again."; }
   }
   async function persistDraft(payload) {
@@ -457,6 +520,16 @@
       }
       requireCurrent(epoch);
       if (!canEdit() || draft !== item) throw new Error("Your access changed. Refresh before saving.");
+      // A refresh may reveal another match while the readiness check is pending.
+      // This is a review stop before any write, so keep the draft editable.
+      if (item.kind === "person" && item.isNew) {
+        renderPersonReview();
+        var review = personReview(payload);
+        if (review.matches.length && (item.personReviewKey !== review.key || !item.personReviewAccepted)) {
+          el("editor-error").textContent = "Review the similar records before adding a different person.";
+          return;
+        }
+      }
       item.attempted = true;
       var query = item.isNew ? db.from(tableFor(item.kind)).insert(Object.assign({ id: item.id }, payload)) : db.from(tableFor(item.kind)).update(payload).eq("id", item.id).eq("version", item.version);
       var result = await deadline(query.select("*").single());

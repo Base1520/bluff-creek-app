@@ -6,6 +6,11 @@ const html = await readFile(new URL('../index.html',import.meta.url),'utf8');
 const app = await readFile(new URL('../app.js',import.meta.url),'utf8');
 const session = id => ({ user:{ id, email:'staff-'+id+'@example.invalid' }, access_token:'synthetic-token' });
 const pause = () => new Promise(r=>setTimeout(r,15));
+async function until(check, message) {
+  const deadline=performance.now()+5000;
+  while(!check()&&performance.now()<deadline)await new Promise(resolve=>setTimeout(resolve,5));
+  assert.ok(check(),message);
+}
 const deferred = () => { let resolve; const promise=new Promise(r=>resolve=r);return {promise,resolve}; };
 function fixture(t,options={}) {
   const dom = new JSDOM(html,{url:options.url||'https://office.example.invalid/admin/',runScripts:'outside-only'}),w=dom.window;
@@ -45,6 +50,7 @@ function fixture(t,options={}) {
   };}}};
   function emit(next,event='TEST'){current=next;insideCallback=true;const returned=callback(event,next);insideCallback=false;assert.equal(returned,undefined);}
   if (options.membership) w.CreekMembership = { create(moduleOptions) { options.membership.options = moduleOptions; return { load: async () => {}, render() {}, clear() {} }; } };
+  if (options.care) w.CreekCare = { create() { return { load: async () => {}, render() {}, clear() {}, selectPerson(id) { options.care.selected.push(id); return options.care.accepted !== false; } }; } };
   if (options.followups) w.CreekFollowups = { create(moduleOptions) { options.followups.options = moduleOptions; return { load: async () => moduleOptions.onSummary(options.followups.summary), render() {}, clear() { moduleOptions.onSummary({ due:null, overdue:null, upcoming:null, items:[] }); }, openNew() {} }; } };
   let created=0; w.CREEK_OFFICE_CONFIG=options.config||{supabaseUrl:'https://project.example.invalid',publishableKey:'sb_publishable_synthetic'};
   w.supabase={createClient(){created++;return client;}};w.eval(app);
@@ -239,16 +245,16 @@ test('dirty Cancel and Escape require confirmation but actual sign-out still cle
   const f=fixture(t);await pause();f.el('people-list').querySelector('button').click();field(f,'notes').value='Synthetic unsaved';let asks=0;f.w.confirm=()=>{asks++;return false;};f.w.document.querySelector('[data-close-editor]').click();f.el('editor').dispatchEvent(new f.w.Event('cancel',{cancelable:true}));assert.equal(asks,2);assert.equal(f.el('editor').open,true);assert.equal(field(f,'notes').value,'Synthetic unsaved');f.emit(null);assert.equal(asks,2);assert.equal(f.el('editor').open,false);
 });
 test('an older readiness success cannot unlock the workspace after a newer failed check', async t => {
-  const personal={summary:{due:0,overdue:0,items:[]}}, options={followups:personal}, f=fixture(t,options);await pause();const epoch=personal.options.getContext().epoch,resolvers=[];
-  options.readiness=()=>new Promise(resolve=>resolvers.push(resolve));const older=personal.options.ensureReady(epoch);await pause();const newer=personal.options.ensureReady(epoch);await pause();
+  const personal={summary:{due:0,overdue:0,items:[]}}, options={followups:personal}, f=fixture(t,options);await until(()=>personal.options.getContext().canEdit,'initial staff readiness');const epoch=personal.options.getContext().epoch,resolvers=[];
+  options.readiness=()=>new Promise(resolve=>resolvers.push(resolve));const older=personal.options.ensureReady(epoch);await until(()=>resolvers.length===1,'older readiness request');const newer=personal.options.ensureReady(epoch);await until(()=>resolvers.length===2,'newer readiness request');
   resolvers[1]({error:{code:'PGRST202'}});assert.equal(await newer,false);resolvers[0]({data:{schema_revision:'20260907174301',staff_role:'editor',supported_modules:['events','contacts','documents','activity','membership','care','office_content','app_signups','leader_followups']}});assert.equal(await older,false);assert.equal(personal.options.getContext().canEdit,false);assert.match(f.el('workspace-health-message').textContent,/setup.*incomplete/i);
 });
 
 test('archiving cannot silently discard other unsaved event edits', async t => {
-  const f=fixture(t);await pause();f.w.confirm=()=>true;f.el('events-list').querySelector('[data-edit-event]').click();field(f,'title').value='Synthetic unsaved event title';f.el('event-delete').click();await pause();assert.equal(f.calls.some(q=>q.op==='update'),false);assert.equal(field(f,'title').value,'Synthetic unsaved event title');assert.equal(f.el('editor').open,true);assert.match(f.el('editor-error').textContent,/Save your other event changes/);
+  const f=fixture(t);await until(()=>f.el('events-list').querySelector('[data-edit-event]'),'initial event rendered');f.w.confirm=()=>true;f.el('events-list').querySelector('[data-edit-event]').click();field(f,'title').value='Synthetic unsaved event title';f.el('event-delete').click();await pause();assert.equal(f.calls.some(q=>q.op==='update'),false);assert.equal(field(f,'title').value,'Synthetic unsaved event title');assert.equal(f.el('editor').open,true);assert.match(f.el('editor-error').textContent,/Save your other event changes/);
 });
 test('a timed-out core save remains uncertain and ignores a later successful response', async t => {
-  const d=deferred(),f=fixture(t,{onQuery:q=>q.op==='update'?d.promise:undefined});await pause();f.el('people-list').querySelector('button').click();field(f,'notes').value='Synthetic timed request';let expire;const real=f.w.setTimeout.bind(f.w);f.w.setTimeout=(fn,ms)=>ms===12000?(expire=fn,12345):real(fn,ms);submit(f);await pause();const q=f.calls.find(q=>q.op==='update');expire();await pause();assert.equal(f.el('save').disabled,true);assert.match(f.el('editor-error').textContent,/could not be confirmed/);d.resolve({data:{...q.row,id:q.id,version:2}});await pause();assert.equal(f.el('editor').open,true);assert.equal(field(f,'notes').value,'Synthetic timed request');assert.doesNotMatch(f.el('notice').textContent,/Saved and confirmed/);
+  const d=deferred(),f=fixture(t,{onQuery:q=>q.op==='update'?d.promise:undefined});await until(()=>f.el('people-list').querySelector('button'),'initial person rendered');f.el('people-list').querySelector('button').click();field(f,'notes').value='Synthetic timed request';let expire;const real=f.w.setTimeout.bind(f.w);f.w.setTimeout=(fn,ms)=>ms===12000?(expire=fn,12345):real(fn,ms);submit(f);await until(()=>f.calls.some(q=>q.op==='update')&&expire,'save awaiting acknowledgement');const q=f.calls.find(q=>q.op==='update');expire();await pause();assert.equal(f.el('save').disabled,true);assert.match(f.el('editor-error').textContent,/could not be confirmed/);d.resolve({data:{...q.row,id:q.id,version:2}});await pause();assert.equal(f.el('editor').open,true);assert.equal(field(f,'notes').value,'Synthetic timed request');assert.doesNotMatch(f.el('notice').textContent,/Saved and confirmed/);
 });
 
 
@@ -260,4 +266,110 @@ test('membership receives the same document URL policy as the authenticated offi
   const hosted={};fixture(t,{membership:hosted});await pause();
   assert.equal(hosted.options.documentUrl('https://files.example.invalid/sample').protocol,'https:');
   assert.throws(()=>hosted.options.documentUrl('http://127.0.0.1:55321/sample'));
+});
+
+test('People hands Care the exact current ID and navigates only when accepted',async t=>{
+  const care={selected:[],accepted:false},f=fixture(t,{care});await pause();
+  f.w.location.hash='#people';await pause();
+  const button=f.el('people-list').querySelector('[data-person-care]');assert.ok(button);
+  button.click();assert.deepEqual(care.selected,['person-a']);assert.equal(f.w.location.hash,'#people');
+  care.accepted=true;button.click();assert.equal(f.w.location.hash,'#care');
+  const count=care.selected.length;button.dataset.personCare='missing-person';button.click();assert.equal(care.selected.length,count);
+  f.emit(null);button.dataset.personCare='person-a';button.click();assert.equal(care.selected.length,count);
+  const viewer=fixture(t,{care:{selected:[]},roles:{a:'viewer'}});await pause();assert.equal(viewer.el('people-list').querySelector('[data-person-care]'),null);
+});
+
+function change(f,name,value) { const input=field(f,name); input.value=value;input.dispatchEvent(new f.w.Event('input',{bubbles:true})); }
+function acceptPersonMatch(f) { const input=field(f,'person_match_reviewed');assert.ok(input);input.checked=true;input.dispatchEvent(new f.w.Event('change',{bubbles:true})); }
+
+test('a same-name new record requires review and explicit different-person acknowledgement',async t=>{
+  const f=fixture(t);await pause();await newPerson(f);
+  change(f,'first_name','  SYNTHETIC ');change(f,'last_name','Record   a');
+  assert.equal(f.el('person-review').hidden,false);assert.match(f.el('person-review').textContent,/Synthetic Record a/);
+  submit(f);await pause();assert.equal(f.calls.some(q=>q.op==='insert'&&q.table==='contacts'),false);
+  assert.match(f.el('editor-error').textContent,/Review the similar records/);
+  acceptPersonMatch(f);submit(f);await pause();
+  assert.equal(f.calls.filter(q=>q.op==='insert'&&q.table==='contacts').length,1);
+  assert.equal(f.el('editor').open,false);assert.equal(f.rows('a').contacts.length,2);
+});
+
+test('identifier review preserves leading zeros and does not guess a missing surname',async t=>{
+  const f=fixture(t);await pause();f.rows('a').contacts[0].membership_number='0012';f.rows('a').contacts[0].legacy_member_id='LEDGER-A';
+  await newPerson(f);change(f,'first_name','Synthetic');change(f,'last_name','');
+  assert.equal(f.el('person-review').hidden,true);
+  change(f,'membership_number','12');assert.equal(f.el('person-review').hidden,true);
+  change(f,'membership_number',' 0012 ');assert.equal(f.el('person-review').hidden,false);
+  submit(f);await pause();assert.equal(f.calls.some(q=>q.op==='insert'),false);
+  change(f,'membership_number','');change(f,'legacy_member_id','ledger-a');assert.equal(f.el('person-review').hidden,false);
+  submit(f);await pause();assert.equal(f.calls.some(q=>q.op==='insert'),false);
+});
+
+test('similar-record acceptance resets after identity edits or a newly loaded match',async t=>{
+  const f=fixture(t);await pause();await newPerson(f);change(f,'last_name','Record a');acceptPersonMatch(f);
+  change(f,'membership_number','NEW-NUMBER');assert.equal(field(f,'person_match_reviewed').checked,false);
+  submit(f);await pause();assert.equal(f.calls.some(q=>q.op==='insert'),false);
+  acceptPersonMatch(f);
+  f.rows('a').contacts.push({...f.rows('a').contacts[0],id:'person-a-second',membership_number:'NEW-NUMBER'});
+  f.el('workspace-refresh').click();await pause();await pause();
+  assert.equal(field(f,'person_match_reviewed').checked,false);assert.match(f.el('person-review').textContent,/2 existing records/);
+  submit(f);await pause();assert.equal(f.calls.some(q=>q.op==='insert'),false);
+});
+
+test('reviewing an existing person honors draft cancellation and sign-out clears the review',async t=>{
+  const f=fixture(t);await pause();await newPerson(f);change(f,'last_name','Record a');
+  const review=f.el('person-review').querySelector('[data-review-person]');f.w.confirm=()=>false;review.click();
+  assert.equal(f.el('editor-title').textContent,'Add person');assert.equal(f.el('editor-form').dataset.id,'');
+  f.w.confirm=()=>true;review.click();assert.equal(f.el('editor-title').textContent,'Edit person');assert.equal(f.el('editor-form').dataset.id,'person-a');
+  assert.equal(f.el('person-review'),null);
+  f.w.confirm=()=>true;await newPerson(f);change(f,'last_name','Record a');const held=f.el('person-review').querySelector('button');
+  f.emit(null);held.click();assert.equal(f.el('editor').open,false);assert.equal(f.el('editor-fields').textContent,'');
+});
+
+test('similar-record markup is escaped and ordinary edits do not trigger new-person review',async t=>{
+  const f=fixture(t);await pause();f.rows('a').contacts[0].membership_number='M-1';f.rows('a').contacts[0].household_name='<img src=x onerror=alert(1)>';
+  await newPerson(f);change(f,'membership_number','M-1');
+  assert.equal(f.el('person-review').querySelector('img'),null);assert.match(f.el('person-review').textContent,/<img/);
+  f.w.confirm=()=>true;f.el('person-review').querySelector('button').click();change(f,'notes','A routine note change.');submit(f);await pause();
+  assert.equal(f.calls.filter(q=>q.op==='update'&&q.table==='contacts').length,1);
+});
+
+test('detached review controls cannot acknowledge or replace a later person draft',async t=>{
+  const f=fixture(t);await pause();await newPerson(f);change(f,'last_name','Record a');
+  const checkbox=field(f,'person_match_reviewed'),button=f.el('person-review').querySelector('button');
+  change(f,'membership_number','DIFFERENT-ID');
+  checkbox.checked=true;checkbox.dispatchEvent(new f.w.Event('change'));f.w.confirm=()=>true;button.click();
+  assert.equal(f.el('editor-title').textContent,'Add person');submit(f);await pause();assert.equal(f.calls.some(q=>q.op==='insert'),false);
+  const oldCheckbox=field(f,'person_match_reviewed'),oldButton=f.el('person-review').querySelector('button');
+  f.emit(null);f.emit(session('a'));await pause();await newPerson(f);change(f,'last_name','Record a');
+  oldCheckbox.checked=true;oldCheckbox.dispatchEvent(new f.w.Event('change'));oldButton.click();
+  assert.equal(f.el('editor-title').textContent,'Add person');submit(f);await pause();assert.equal(f.calls.some(q=>q.op==='insert'),false);
+});
+
+test('refresh landing during save must force review of the newly known match',async t=>{
+  const f=fixture(t);await pause();await newPerson(f);
+  f.delayed.push(q=>q.table==='contacts'&&q.op==='select');
+  f.el('workspace-refresh').click();await pause();
+  const pendingContacts=f.pending.find(p=>p.q.table==='contacts');assert.ok(pendingContacts);
+  f.delayed.push(q=>q.table==='staff_roles');
+  submit(f);await pause();
+  const pendingStaff=f.pending.find(p=>p.q.table==='staff_roles');assert.ok(pendingStaff);
+  const existing={...f.rows('a').contacts[0],id:'parallel-person',first_name:'Synthetic',last_name:'New record'};
+  f.rows('a').contacts.push(existing);
+  pendingContacts.resolve({data:f.rows('a').contacts});await pause();
+  assert.equal(f.el('person-review').hidden,false);assert.equal(field(f,'person_match_reviewed').checked,false);
+  f.delayed.length=0;pendingStaff.resolve({data:{role:'editor'}});await pause();
+  assert.equal(f.calls.filter(q=>q.op==='insert'&&q.table==='contacts').length,0,'the new match must be reviewed before insertion');
+  assert.equal(f.el('save').disabled,false);assert.equal(f.el('editor').open,true);assert.match(f.el('editor-error').textContent,/Review the similar records/);
+  acceptPersonMatch(f);submit(f);await pause();assert.equal(f.calls.filter(q=>q.op==='insert'&&q.table==='contacts').length,1);
+});
+
+
+test('match review refreshes the household and status it displays',async t=>{
+  const f=fixture(t);await pause();f.rows('a').contacts[0].household_name='Old fixture household';
+  await newPerson(f);change(f,'last_name','Record a');acceptPersonMatch(f);
+  assert.match(f.el('person-review').textContent,/Old fixture household/);
+  f.rows('a').contacts[0].household_name='Corrected fixture household';f.rows('a').contacts[0].status='inactive';
+  f.el('workspace-refresh').click();await pause();
+  assert.match(f.el('person-review').textContent,/Corrected fixture household/);
+  assert.equal(field(f,'person_match_reviewed').checked,false);
 });
