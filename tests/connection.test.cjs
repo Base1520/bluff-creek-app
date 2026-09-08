@@ -36,8 +36,10 @@ test('blank configuration makes no SDK/Auth requests and strips token-bearing UR
  assert.equal(f.calls.factory.length,0);assert.equal(f.calls.sdk,0);assert.equal(f.nodes.unavailable.hidden,false);assert.equal(f.doc.defaultView.location.hash,'');assert.equal(f.nodes['profile-form'].hidden,true);
 });
 test('only exact approved origins and browser publishable keys can activate connection',()=>{
- for(const bad of [{...config,allowedOrigins:['https://other.example.invalid']},{...config,publishableKey:'sb_secret_not_public'},{...config,supabaseUrl:'https://sampleproject.supabase.co.evil.invalid'}])assert.equal(settings(bad,new URL('https://church.example.invalid/connection.html')),null);
+ for(const bad of [{...config,allowedOrigins:['https://other.example.invalid']},{...config,publishableKey:'sb_secret_not_public'},{...config,publishableKey:'sb_publishable_bad\n'},{...config,publishableKey:'sb_publishable_bad token'},{...config,supabaseUrl:'https://sampleproject.supabase.co.evil.invalid'}])assert.equal(settings(bad,new URL('https://church.example.invalid/connection.html')),null);
  assert.equal(settings(config,new URL('https://church.example.invalid/connection.html?redirect=https://other.invalid')).redirect,'https://church.example.invalid/connection.html');
+ assert.equal(settings(config,new URL('https://user@church.example.invalid/connection.html')),null);
+ assert.equal(settings({...config,allowedOrigins:['http://127.0.0.1:8812']},new URL('http://127.0.0.1:8812/connection.html')),null);
 });
 test('local rehearsal requires explicit opt-in, loopback on both ends and an exact callback origin',()=>{
  const page=new URL('http://127.0.0.1:8810/connection.html');

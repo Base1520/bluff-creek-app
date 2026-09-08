@@ -1,4 +1,6 @@
 # Creek Office setup
+For the post-demo hosted setup, use the [activation sequence](../docs/office-hosted-activation.md) and [offline wiring tool](../tools/office-wiring/README.md). The tool stages reviewed configuration separately; it never applies schema, invites staff or enables the hosted service.
+
 
 Creek Office is the private staff side of Home @ the Creek. It provides staff sign-in, calendar management, a contact/member CRM, private document storage, and an activity log. The repository contains no member data, staff credentials, or secret keys.
 
@@ -10,7 +12,7 @@ Before setup, run `node tools/office-preflight/cli.mjs` from the app repository 
 2. Run `supabase/migrations/20260907231507_office_base.sql`, followed by `supabase/migrations/20260907231527_membership_care.sql`, `supabase/migrations/20260907231528_office_content.sql`, `supabase/migrations/20260907231530_app_connections_care_roles.sql`, `supabase/migrations/20260907231531_leader_followups.sql`, then `supabase/migrations/20260907231533_office_record_recovery.sql`, in that explicit order through the tracked migration workflow after activation is authorized. Do not paste these migrations into the SQL editor without recording their migration history. See the [migration preparation and activation guide](../docs/office-migrations.md). See [signup/care setup](../docs/signup-care-maintenance.md) for migration-order and activation details.
 3. In Supabase Auth, create the first staff user. Public sign-up is not exposed by Creek Office.
 4. Privately confirm that approved user's UUID and use the commented `insert into public.staff_roles` example at the end of the base migration to grant `admin`. Never commit the real UUID or any seeded staff record.
-5. Copy `config.example.js` to `config.js`. Add the project URL and **publishable** key. Never put a secret or `service_role` key in this repository.
+5. Use the [offline wiring tool](../tools/office-wiring/README.md) to stage the reviewed project URL and modern **publishable** key in a separate directory. Review the generated files before placing them into an authorized release. `config.example.js` documents the format. Never put a secret or `service_role` key in browser configuration. Hosted login and recovery require a root HTTPS Supabase URL; legacy anon tokens are only supported by the explicit local rehearsal.
 6. Add each approved staff Auth user to `public.staff_roles` as `admin`, `editor`, or `viewer`.
 
 The `church-documents` bucket is private and limits files to 50 MB. New uploads use the signed-in staff member's folder and uploader ID. Staff receive a clickable signed link that expires visibly after 60 seconds. Database and storage permissions are enforced through RLS; hiding buttons is only a usability feature.

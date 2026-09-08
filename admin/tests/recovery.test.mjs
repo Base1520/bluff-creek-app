@@ -42,6 +42,8 @@ test('only approved URL/key configurations can construct a recovery client', asy
     { config: { supabaseUrl: '', publishableKey: '' } },
     { config: { ...config, publishableKey: 'sb_secret_synthetic' } },
     { config: { ...config, publishableKey: anon('service_role') } },
+    { config: { ...config, publishableKey: anon('anon') } },
+    { config: { ...config, publishableKey: 'sb_publishable_bad token' } },
     { config: { ...config, supabaseUrl: 'https://testproject.supabase.co.evil.invalid' } },
     { config: local },
     { config: { ...local, localDevelopment: 'true' }, url: 'http://127.0.0.1:8810/admin/recovery.html' },

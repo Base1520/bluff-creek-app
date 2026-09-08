@@ -8,8 +8,10 @@
   'use strict';
   var SDK = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4/dist/umd/supabase.min.js';
   function loopback(url) { return ['http:', 'https:'].includes(url.protocol) && ['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname) && !!url.port && !url.username && !url.password; }
-  function browserKey(key) {
-    if (/^sb_publishable_[A-Za-z0-9_-]+$/.test(key || '')) return true;
+  function browserKey(key, local) {
+    if (typeof key !== 'string' || key.trim() !== key) return false;
+    if (/^sb_publishable_[A-Za-z0-9_-]+$/.test(key)) return true;
+    if (!local) return false;
     try { return key.split('.').length === 3 && JSON.parse(atob(key.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).role === 'anon'; } catch (_) { return false; }
   }
   function settings(config, location) {
@@ -20,7 +22,7 @@
       if (page.pathname !== '/admin/recovery.html' || page.username || page.password || (!local && page.protocol !== 'https:')) return null;
       if (backend.username || backend.password || backend.pathname !== '/' || backend.search || backend.hash) return null;
       if (!local && (backend.protocol !== 'https:' || backend.port || !/^[a-z0-9-]+\.supabase\.co$/.test(backend.hostname))) return null;
-      if (!browserKey(config.publishableKey)) return null;
+      if (!browserKey(config.publishableKey, local)) return null;
       return { url: backend.origin, key: config.publishableKey, redirect: page.origin + '/admin/recovery.html' };
     } catch (_) { return null; }
   }

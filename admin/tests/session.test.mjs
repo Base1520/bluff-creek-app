@@ -54,7 +54,7 @@ function fixture(t,options={}) {
   if (options.sheetControls) { w.eval(membershipSource); const sheetLink=w.CreekMembership.sheetLink; w.CreekMembership={sheetLink,create(){return {load:async()=>{},render(){},clear(){}}}}; }
   if (options.care) w.CreekCare = { create(moduleOptions) { options.care.options=moduleOptions; return { load: async () => { moduleOptions.onSummary(options.care.summary || null); }, render() {}, clear() { moduleOptions.onSummary(null); }, selectPerson(id) { (options.care.selected ||= []).push(id); return options.care.accepted !== false; }, openQueue(kind) { (options.care.queues ||= []).push(kind); return options.care.queueAccepted !== false; } }; } };
   if (options.followups) w.CreekFollowups = { create(moduleOptions) { options.followups.options = moduleOptions; return { load: async () => moduleOptions.onSummary(options.followups.summary), render() {}, clear() { moduleOptions.onSummary({ due:null, overdue:null, upcoming:null, items:[] }); }, openNew() {} }; } };
-  let created=0; w.CREEK_OFFICE_CONFIG=options.config||{supabaseUrl:'https://project.example.invalid',publishableKey:'sb_publishable_synthetic'};
+  let created=0; w.CREEK_OFFICE_CONFIG=options.config||{supabaseUrl:'https://testproject.supabase.co',publishableKey:'sb_publishable_synthetic'};
   w.supabase={createClient(){created++;return client;}};w.eval(app);
   const el=id=>w.document.getElementById(id);
   return {w,el,calls,delayed,pending,emit,created:()=>created,rows};
@@ -105,7 +105,7 @@ test('50 MB preflight blocks the network and account change stops upload metadat
   const d=deferred(),g=fixture(t,{uploadDeferred:d});await pause();g.w.location.hash='#documents';await pause();g.el('primary-action').click();data.get('file').size=12;g.w.FormData=f.w.FormData;g.el('editor-form').dispatchEvent(new g.w.Event('submit',{bubbles:true,cancelable:true}));await pause();g.emit(session('b'));d.resolve({error:null});await pause();assert.equal(g.calls.some(q=>q.table==='documents'&&q.op==='insert'),false);assert.match(g.el('user-label').textContent,/staff-b/);
 });
 test('secret/service-role config fails closed without constructing a client',async t=>{
-  for(const key of ['sb_secret_synthetic','x.'+Buffer.from(JSON.stringify({role:'service_role'})).toString('base64url')+'.x']) {const f=fixture(t,{config:{supabaseUrl:'https://project.example.invalid',publishableKey:key}});await pause();assert.equal(f.created(),0);assert.equal(f.el('setup').classList.contains('hidden'),false);}
+  for(const key of ['sb_secret_synthetic','x.'+Buffer.from(JSON.stringify({role:'service_role'})).toString('base64url')+'.x']) {const f=fixture(t,{config:{supabaseUrl:'https://testproject.supabase.co',publishableKey:key}});await pause();assert.equal(f.created(),0);assert.equal(f.el('setup').classList.contains('hidden'),false);}
 });
 test('local office rehearsal fails closed unless both the page and backend are loopback',async t=>{
   const config={supabaseUrl:'http://127.0.0.1:55321',publishableKey:'sb_publishable_synthetic',localDevelopment:true};
@@ -114,7 +114,7 @@ test('local office rehearsal fails closed unless both the page and backend are l
     {config},
     {config:{...config,localDevelopment:false},url:'http://127.0.0.1:8810/admin/'},
     {config:{...config,supabaseUrl:'http://192.168.1.2:55321'},url:'http://127.0.0.1:8810/admin/'},
-    {config:{...config,supabaseUrl:'https://project.example.invalid'},url:'http://127.0.0.1:8810/admin/'},
+    {config:{...config,supabaseUrl:'https://testproject.supabase.co'},url:'http://127.0.0.1:8810/admin/'},
     {config:{...config,supabaseUrl:'http://127.0.0.1:55321/rest/v1'},url:'http://127.0.0.1:8810/admin/'},
     {config:{...config,publishableKey:'sb_secret_synthetic'},url:'http://127.0.0.1:8810/admin/'}
   ]) { const g=fixture(t,options);await pause();assert.equal(g.created(),0); }
@@ -378,7 +378,7 @@ test('match review refreshes the household and status it displays',async t=>{
 
 
 test('membership spreadsheet shortcut is staff-only and removed immediately on sign-out',async t=>{
-  const config={supabaseUrl:'https://project.example.invalid',publishableKey:'sb_publishable_synthetic',membershipSheetUrl:'https://docs.google.com/spreadsheets/d/Synthetic_123/edit?usp=sharing'};
+  const config={supabaseUrl:'https://testproject.supabase.co',publishableKey:'sb_publishable_synthetic',membershipSheetUrl:'https://docs.google.com/spreadsheets/d/Synthetic_123/edit?usp=sharing'};
   for(const role of ['admin','editor','viewer']){
     const f=fixture(t,{sheetControls:true,config,roles:{a:role}});await until(()=>f.el('role-label').textContent===role,'staff role loaded');await pause();
     const link=f.el('people-sheet-link'),box=f.el('people-sheet-tools');
@@ -391,10 +391,10 @@ test('membership spreadsheet shortcut is staff-only and removed immediately on s
 
 test('membership spreadsheet shortcut rejects unsafe configuration and clears on workspace failure',async t=>{
   for(const value of ['', 'javascript:alert(1)', 'https://docs.google.com.evil.invalid/spreadsheets/d/test/edit']){
-    const f=fixture(t,{sheetControls:true,config:{supabaseUrl:'https://project.example.invalid',publishableKey:'sb_publishable_synthetic',membershipSheetUrl:value}});await until(()=>f.el('people-list').querySelector('button'),'people loaded');
+    const f=fixture(t,{sheetControls:true,config:{supabaseUrl:'https://testproject.supabase.co',publishableKey:'sb_publishable_synthetic',membershipSheetUrl:value}});await until(()=>f.el('people-list').querySelector('button'),'people loaded');
     assert.equal(f.el('people-sheet-tools').hidden,true);assert.equal(f.el('people-sheet-link').getAttribute('href'),null);
   }
-  let blocked=false;const f=fixture(t,{sheetControls:true,config:{supabaseUrl:'https://project.example.invalid',publishableKey:'sb_publishable_synthetic',membershipSheetUrl:'https://docs.google.com/spreadsheets/d/Synthetic_123/edit'},onQuery:q=>blocked&&q.table==='contacts'?{error:{code:'NETWORK'}}:undefined});
+  let blocked=false;const f=fixture(t,{sheetControls:true,config:{supabaseUrl:'https://testproject.supabase.co',publishableKey:'sb_publishable_synthetic',membershipSheetUrl:'https://docs.google.com/spreadsheets/d/Synthetic_123/edit'},onQuery:q=>blocked&&q.table==='contacts'?{error:{code:'NETWORK'}}:undefined});
   await until(()=>!f.el('people-sheet-tools').hidden,'sheet shortcut ready');blocked=true;f.el('workspace-refresh').click();await until(()=>f.el('workspace').dataset.connection==='blocked','workspace blocked');
   assert.equal(f.el('people-sheet-tools').hidden,true);assert.equal(f.el('people-sheet-link').getAttribute('href'),null);
 });
@@ -426,4 +426,32 @@ test('a core workspace failure removes care dashboard counts before a stale summ
   await until(()=>f.el('care-due-count').textContent==='2','care summary loaded');blocked=true;f.el('workspace-refresh').click();await until(()=>f.el('workspace').dataset.connection==='blocked','workspace blocked');
   care.options.onSummary(care.summary);for(const id of ['care-due-count','care-unassigned-count','care-gaps-count'])assert.equal(f.el(id).textContent,'—');
   for(const button of f.w.document.querySelectorAll('[data-care-queue]'))assert.equal(button.disabled,true);
+});
+
+
+test('hosted office rejects incompatible origins, endpoint paths and unsafe key shapes before client creation', async t => {
+  const config={supabaseUrl:'https://testproject.supabase.co',publishableKey:'sb_publishable_synthetic'};
+  const invalid=[
+    {supabaseUrl:'https://unrelated.example.invalid'},
+    {supabaseUrl:'https://testproject.supabase.co.evil.invalid'},
+    {supabaseUrl:'https://testproject.supabase.co/rest/v1'},
+    {supabaseUrl:'https://testproject.supabase.co?token=synthetic'},
+    {supabaseUrl:'https://testproject.supabase.co#synthetic'},
+    {supabaseUrl:'https://testproject.supabase.co:8443'},
+    {supabaseUrl:'https://user@testproject.supabase.co'},
+    {publishableKey:'sb_publishable_bad token'},
+    {publishableKey:'sb_publishable_bad\n'},
+    {publishableKey:'sb_publishable_'},
+    {publishableKey:'x.'+Buffer.from(JSON.stringify({role:'anon'})).toString('base64url')+'.x'}
+  ];
+  for(const patch of invalid){const f=fixture(t,{config:{...config,...patch}});await pause();assert.equal(f.created(),0);assert.equal(f.el('setup').classList.contains('hidden'),false);}
+  for(const url of ['http://office.example.invalid/admin/','https://user@office.example.invalid/admin/','https://office.example.invalid/elsewhere/']){
+    const f=fixture(t,{config,url});await pause();assert.equal(f.created(),0);
+  }
+});
+
+test('explicit local office accepts its legacy anon fixture but rejects a privileged token', async t => {
+  const config={supabaseUrl:'http://127.0.0.1:55321',publishableKey:'x.'+Buffer.from(JSON.stringify({role:'anon'})).toString('base64url')+'.x',localDevelopment:true};
+  const f=fixture(t,{config,url:'http://127.0.0.1:8812/admin/'});await until(()=>f.el('people-list').querySelector('button'),'local legacy fixture loaded');assert.equal(f.created(),1);
+  const bad=fixture(t,{config:{...config,publishableKey:'x.'+Buffer.from(JSON.stringify({role:'service_role'})).toString('base64url')+'.x'},url:'http://127.0.0.1:8812/admin/'});await pause();assert.equal(bad.created(),0);
 });

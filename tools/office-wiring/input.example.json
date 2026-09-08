@@ -1,0 +1,8 @@
+{
+  "projectRef": "REPLACE_WITH_APPROVED_PROJECT_REF",
+  "supabaseUrl": "REPLACE_WITH_EXACT_PROJECT_URL",
+  "publishableKey": "REPLACE_WITH_PROJECT_PUBLISHABLE_KEY",
+  "appOrigin": "REPLACE_WITH_APPROVED_APP_ORIGIN",
+  "publicSignupEnabled": false,
+  "membershipSheetUrl": ""
+}

@@ -20,9 +20,10 @@
       if (config.localDevelopment === true && !local) return null;
       if (project.username || project.password || project.pathname !== '/' || project.search || project.hash) return null;
       if (!local && (project.protocol !== 'https:' || project.port || !/^[a-z0-9-]+\.supabase\.co$/.test(project.hostname))) return null;
-      if (!/^sb_publishable_[A-Za-z0-9_-]+$/.test(config.publishableKey || '') && !(local && localAnonKey(config.publishableKey || ''))) return null;
+      if (typeof config.publishableKey !== 'string' || config.publishableKey.trim() !== config.publishableKey) return null;
+      if (!/^sb_publishable_[A-Za-z0-9_-]+$/.test(config.publishableKey) && !(local && localAnonKey(config.publishableKey || ''))) return null;
       if (!Array.isArray(config.allowedOrigins) || !config.allowedOrigins.includes(page.origin)) return null;
-      if (page.protocol !== 'https:' && !(page.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(page.hostname))) return null;
+      if (page.username || page.password || (!local && page.protocol !== 'https:')) return null;
       if (page.pathname !== '/connection.html') return null;
       return { url: project.origin, key: config.publishableKey, redirect: page.origin + '/connection.html' };
     } catch (_) { return null; }

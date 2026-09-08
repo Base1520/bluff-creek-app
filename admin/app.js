@@ -93,17 +93,19 @@
 
   async function start() {
     els.notice = el("notice");
-    if (!cfg.supabaseUrl || !cfg.publishableKey || cfg.supabaseUrl.indexOf("YOUR_PROJECT") !== -1) { show("setup"); return; }
-    var validKey = /^sb_publishable_.+/.test(cfg.publishableKey);
-    if (!validKey && cfg.publishableKey.split(".").length === 3) {
-      try { var encoded = cfg.publishableKey.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"); validKey = JSON.parse(atob(encoded)).role === "anon"; } catch (_) { validKey = false; }
-    }
-    var validUrl = false;
+    if (typeof cfg.supabaseUrl !== "string" || typeof cfg.publishableKey !== "string" || !cfg.supabaseUrl || !cfg.publishableKey || cfg.supabaseUrl.indexOf("YOUR_PROJECT") !== -1) { show("setup"); return; }
+    var validUrl = false, validKey = cfg.publishableKey.trim() === cfg.publishableKey && /^sb_publishable_[A-Za-z0-9_-]+$/.test(cfg.publishableKey);
     try {
       var endpoint = new URL(cfg.supabaseUrl), page = new URL(window.location.href);
-      localDevelopment = cfg.localDevelopment === true && loopback(endpoint) && loopback(page) && endpoint.pathname === "/" && !endpoint.search && !endpoint.hash;
-      validUrl = (endpoint.protocol === "https:" || localDevelopment) && !endpoint.username && !endpoint.password;
+      localDevelopment = cfg.localDevelopment === true && loopback(endpoint) && loopback(page);
+      validUrl = !endpoint.username && !endpoint.password && endpoint.pathname === "/" && !endpoint.search && !endpoint.hash
+        && !page.username && !page.password && ["/admin/", "/admin/index.html"].includes(page.pathname)
+        && (localDevelopment || (page.protocol === "https:" && endpoint.protocol === "https:" && !endpoint.port && /^[a-z0-9-]+\.supabase\.co$/.test(endpoint.hostname)));
       if (cfg.localDevelopment === true && !localDevelopment) validUrl = false;
+      // Legacy anon tokens are only supported by the explicit loopback rehearsal.
+      if (!validKey && localDevelopment && cfg.publishableKey.split(".").length === 3) {
+        try { var encoded = cfg.publishableKey.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"); validKey = JSON.parse(atob(encoded)).role === "anon"; } catch (_) { validKey = false; }
+      }
       if (validUrl) backendOrigin = endpoint.origin;
     } catch (_) {}
     if (!validKey || !validUrl) { show("setup"); el("setup").querySelector("p:last-child").textContent = "Use the church project's HTTPS URL and public publishable key. Secret and service-role keys must never be placed in a browser configuration."; return; }
