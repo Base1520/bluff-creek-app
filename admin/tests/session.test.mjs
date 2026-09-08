@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { JSDOM } from 'jsdom';
 const html = await readFile(new URL('../index.html',import.meta.url),'utf8');
 const app = await readFile(new URL('../app.js',import.meta.url),'utf8');
+const membershipSource = await readFile(new URL('../membership.js',import.meta.url),'utf8');
 const session = id => ({ user:{ id, email:'staff-'+id+'@example.invalid' }, access_token:'synthetic-token' });
 const pause = () => new Promise(r=>setTimeout(r,15));
 async function until(check, message) {
@@ -50,6 +51,7 @@ function fixture(t,options={}) {
   };}}};
   function emit(next,event='TEST'){current=next;insideCallback=true;const returned=callback(event,next);insideCallback=false;assert.equal(returned,undefined);}
   if (options.membership) w.CreekMembership = { create(moduleOptions) { options.membership.options = moduleOptions; return { load: async () => {}, render() {}, clear() {} }; } };
+  if (options.sheetControls) { w.eval(membershipSource); const sheetLink=w.CreekMembership.sheetLink; w.CreekMembership={sheetLink,create(){return {load:async()=>{},render(){},clear(){}}}}; }
   if (options.care) w.CreekCare = { create() { return { load: async () => {}, render() {}, clear() {}, selectPerson(id) { options.care.selected.push(id); return options.care.accepted !== false; } }; } };
   if (options.followups) w.CreekFollowups = { create(moduleOptions) { options.followups.options = moduleOptions; return { load: async () => moduleOptions.onSummary(options.followups.summary), render() {}, clear() { moduleOptions.onSummary({ due:null, overdue:null, upcoming:null, items:[] }); }, openNew() {} }; } };
   let created=0; w.CREEK_OFFICE_CONFIG=options.config||{supabaseUrl:'https://project.example.invalid',publishableKey:'sb_publishable_synthetic'};
@@ -372,4 +374,27 @@ test('match review refreshes the household and status it displays',async t=>{
   f.el('workspace-refresh').click();await pause();
   assert.match(f.el('person-review').textContent,/Corrected fixture household/);
   assert.equal(field(f,'person_match_reviewed').checked,false);
+});
+
+
+test('membership spreadsheet shortcut is staff-only and removed immediately on sign-out',async t=>{
+  const config={supabaseUrl:'https://project.example.invalid',publishableKey:'sb_publishable_synthetic',membershipSheetUrl:'https://docs.google.com/spreadsheets/d/Synthetic_123/edit?usp=sharing'};
+  for(const role of ['admin','editor','viewer']){
+    const f=fixture(t,{sheetControls:true,config,roles:{a:role}});await until(()=>f.el('role-label').textContent===role,'staff role loaded');await pause();
+    const link=f.el('people-sheet-link'),box=f.el('people-sheet-tools');
+    assert.equal(box.hidden,role==='viewer');assert.equal(link.getAttribute('href'),role==='viewer'?null:'https://docs.google.com/spreadsheets/d/Synthetic_123/edit');
+    assert.equal(link.target,'_blank');assert.equal(link.rel,'noopener noreferrer');
+    f.emit(null);assert.equal(box.hidden,true);assert.equal(link.getAttribute('href'),null);
+    const click=new f.w.MouseEvent('click',{cancelable:true});link.dispatchEvent(click);assert.equal(click.defaultPrevented,true);
+  }
+});
+
+test('membership spreadsheet shortcut rejects unsafe configuration and clears on workspace failure',async t=>{
+  for(const value of ['', 'javascript:alert(1)', 'https://docs.google.com.evil.invalid/spreadsheets/d/test/edit']){
+    const f=fixture(t,{sheetControls:true,config:{supabaseUrl:'https://project.example.invalid',publishableKey:'sb_publishable_synthetic',membershipSheetUrl:value}});await until(()=>f.el('people-list').querySelector('button'),'people loaded');
+    assert.equal(f.el('people-sheet-tools').hidden,true);assert.equal(f.el('people-sheet-link').getAttribute('href'),null);
+  }
+  let blocked=false;const f=fixture(t,{sheetControls:true,config:{supabaseUrl:'https://project.example.invalid',publishableKey:'sb_publishable_synthetic',membershipSheetUrl:'https://docs.google.com/spreadsheets/d/Synthetic_123/edit'},onQuery:q=>blocked&&q.table==='contacts'?{error:{code:'NETWORK'}}:undefined});
+  await until(()=>!f.el('people-sheet-tools').hidden,'sheet shortcut ready');blocked=true;f.el('workspace-refresh').click();await until(()=>f.el('workspace').dataset.connection==='blocked','workspace blocked');
+  assert.equal(f.el('people-sheet-tools').hidden,true);assert.equal(f.el('people-sheet-link').getAttribute('href'),null);
 });

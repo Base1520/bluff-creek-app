@@ -28,7 +28,7 @@ function fixture(t,options={}){
     list(folder,options){calls.push({op:'storage-list',folder,options});if(control.storageError)return Promise.resolve({error:control.storageError});return Promise.resolve({data:[...blobs].filter(p=>p.startsWith(folder+'/')).map(p=>({name:p.split('/').at(-1)})),error:null})},
     createSignedUrl(){return Promise.resolve({data:{signedUrl:control.signedUrl}})}
   }}}};
-  api=w.CreekMembership.create({root:w.document.getElementById('history-view'),db,documentUrl:options.documentUrl,getContext:()=>state,isCurrent:epoch=>epoch===state.epoch&&!!state.userId,people:()=>people,documents:()=>documents,ensureReady:async epoch=>{calls.push({op:'ensureReady',epoch});return gate?gate():state.workspaceReady},refresh:async()=>{},notice:(...args)=>notices.push(args)});
+  api=w.CreekMembership.create({root:w.document.getElementById('history-view'),db,sheetUrl:options.sheetUrl,documentUrl:options.documentUrl,getContext:()=>state,isCurrent:epoch=>epoch===state.epoch&&!!state.userId,people:()=>people,documents:()=>documents,ensureReady:async epoch=>{calls.push({op:'ensureReady',epoch});return gate?gate():state.workspaceReady},refresh:async()=>{},notice:(...args)=>notices.push(args)});
   const form=()=>w.document.querySelector('dialog form');
   const open=()=>{w.document.getElementById('membership-add').click();return form()};
   const fill=f=>{f.elements.contact_id.value=people[0].id;f.elements.event_type.value='Received by letter';f.elements.source_label.value='Synthetic ledger · page 1';f.elements.date_text.value='Summer 1956; day [unclear]';f.elements.details.value='<img src=x onerror=alert(1)> remains literal';f.elements.reviewed.checked=true};
@@ -156,4 +156,15 @@ test('source links without an office policy remain HTTPS-only and reject embedde
     const f=fixture(t);f.rows.push({id:'sample-history',contact_id:'person-sample',event_type:'Synthetic source',source_document_id:'sample-source'});f.documents.push({id:'sample-source',storage_path:'synthetic-user/page.png'});f.control.signedUrl=url;
     await f.api.load(1);[...f.w.document.querySelectorAll('.membership-entry button')].find(b=>b.textContent==='Open original page').click();await delay();assert.equal(!!f.w.document.querySelector('dialog a'),allowed);
   }
+});
+
+
+test('history spreadsheet shortcut appears after readiness and clears with private state',async t=>{
+  const f=fixture(t,{sheetUrl:'https://docs.google.com/spreadsheets/d/Synthetic_123/edit'}),link=f.w.document.getElementById('membership-sheet-link');
+  assert.equal(link.hidden,true);assert.equal(link.getAttribute('href'),null);
+  await f.api.load(1);assert.equal(link.hidden,false);assert.equal(link.href,'https://docs.google.com/spreadsheets/d/Synthetic_123/edit');assert.equal(link.target,'_blank');assert.equal(link.rel,'noopener noreferrer');
+  f.state.canEdit=false;f.state.workspaceReady=false;f.api.render();assert.equal(link.hidden,true);assert.equal(link.getAttribute('href'),null);
+  f.state.canEdit=true;f.state.workspaceReady=true;f.api.render();assert.equal(link.hidden,false);
+  f.api.clear();assert.equal(link.hidden,true);assert.equal(link.getAttribute('href'),null);
+  f.state.userId=null;const event=new f.w.MouseEvent('click',{cancelable:true});link.dispatchEvent(event);assert.equal(event.defaultPrevented,true);
 });

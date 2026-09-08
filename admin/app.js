@@ -38,6 +38,13 @@
   function fail(error) { notice(error.message || "The request could not be confirmed. Refresh before trying again.", true); }
   function hasEditRole() { return role === "admin" || role === "editor"; }
   function canEdit() { return workspaceReady && readinessOK && hasEditRole(); }
+  function syncMembershipSheet() {
+    var link = el("people-sheet-link"), box = el("people-sheet-tools");
+    if (!link || !box) return;
+    var target = session && canEdit() && window.CreekMembership && window.CreekMembership.sheetLink ? window.CreekMembership.sheetLink(cfg.membershipSheetUrl) : null;
+    hidden(box, !target);
+    if (target) link.href = target; else link.removeAttribute("href");
+  }
   function current(epoch) { return epoch === authEpoch && !!session && !!role; }
   function requireCurrent(epoch) { if (!current(epoch)) throw new Error("Your session changed. Sign in again before saving."); }
   function editorSnapshot() { return Array.from(el("editor-fields").querySelectorAll("input,select,textarea")).map(function (node) { return [node.name, node.type === "checkbox" ? node.checked : node.value]; }).map(function (value) { return JSON.stringify(value); }).join("|"); }
@@ -59,6 +66,7 @@
     el("dashboard-followup-list").replaceChildren(); el("dashboard-followup-status").textContent = ""; el("followup-badge").textContent = ""; el("followup-badge").removeAttribute("aria-label");
     loadEpoch++; documentEpoch++; peopleReady = false; state = { events: [], people: [], documents: [], activity: [] };
     workspaceReady = false; readinessOK = false; refreshing = false; readinessEpoch++;
+    syncMembershipSheet();
     clearEditor(true); if (el("document-dialog").open) el("document-dialog").close(); el("document-result").replaceChildren();
     ["dashboard-events", "events-list", "people-list", "documents-list", "activity-list", "user-label", "role-label"].forEach(function (id) { el(id).replaceChildren(); });
     ["event-count", "people-count", "document-count", "signup-count"].forEach(function (id) { el(id).textContent = "—"; });
@@ -138,6 +146,10 @@
     window.addEventListener("hashchange", route);
     document.querySelectorAll("aside nav a").forEach(function (link) { link.addEventListener("click", function () { document.querySelector("aside").classList.remove("open"); el("menu").setAttribute("aria-expanded", "false"); }); });
     el("primary-action").addEventListener("click", primaryAction);
+    if (el("people-sheet-link")) el("people-sheet-link").addEventListener("click", function (event) {
+      var target = window.CreekMembership && window.CreekMembership.sheetLink ? window.CreekMembership.sheetLink(cfg.membershipSheetUrl) : null;
+      if (!session || !canEdit() || !target || event.currentTarget.getAttribute("href") !== target) event.preventDefault();
+    });
     document.querySelectorAll("[data-close-editor]").forEach(function (button) { button.addEventListener("click", clearEditor); });
     el("editor").addEventListener("cancel", function (event) { event.preventDefault(); clearEditor(); });
     el("close-document").addEventListener("click", function () { el("document-dialog").close(); });
@@ -212,7 +224,7 @@
     el("followup-badge").textContent = ""; el("followup-badge").removeAttribute("aria-label"); el("dashboard-followup-status").textContent = "Follow-ups are unavailable until the workspace refreshes.";
     el("primary-action").disabled = true;
     privateViews.forEach(function (name) { var view = el(name + "-view"); if (view) view.classList.add("hidden"); });
-    freezeOtherDialogs(true); syncEditor(); health(message, setup);
+    syncMembershipSheet(); freezeOtherDialogs(true); syncEditor(); health(message, setup);
   }
   function authFailure(error) { return error && (error.status === 401 || ["PGRST301", "PGRST302", "PGRST303"].includes(error.code)); }
   async function verifyReadiness(epoch) {
@@ -317,6 +329,7 @@
   }
 
   function render() {
+    syncMembershipSheet();
     if (!session || !role || !workspaceReady) return;
     var now = new Date();
     var future = state.events.filter(function (item) { return !item.is_archived && new Date(item.ends_at || item.starts_at) >= now; });
