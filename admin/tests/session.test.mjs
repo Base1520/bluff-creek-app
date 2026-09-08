@@ -44,6 +44,7 @@ function fixture(t,options={}) {
     async createSignedUrl(){calls.push({op:'signedUrl'});if(options.signedDeferred)return options.signedDeferred.promise;return {data:{signedUrl:'https://files.example.invalid/synthetic?token=test'}};}
   };}}};
   function emit(next,event='TEST'){current=next;insideCallback=true;const returned=callback(event,next);insideCallback=false;assert.equal(returned,undefined);}
+  if (options.membership) w.CreekMembership = { create(moduleOptions) { options.membership.options = moduleOptions; return { load: async () => {}, render() {}, clear() {} }; } };
   if (options.followups) w.CreekFollowups = { create(moduleOptions) { options.followups.options = moduleOptions; return { load: async () => moduleOptions.onSummary(options.followups.summary), render() {}, clear() { moduleOptions.onSummary({ due:null, overdue:null, upcoming:null, items:[] }); }, openNew() {} }; } };
   let created=0; w.CREEK_OFFICE_CONFIG=options.config||{supabaseUrl:'https://project.example.invalid',publishableKey:'sb_publishable_synthetic'};
   w.supabase={createClient(){created++;return client;}};w.eval(app);
@@ -248,4 +249,15 @@ test('archiving cannot silently discard other unsaved event edits', async t => {
 });
 test('a timed-out core save remains uncertain and ignores a later successful response', async t => {
   const d=deferred(),f=fixture(t,{onQuery:q=>q.op==='update'?d.promise:undefined});await pause();f.el('people-list').querySelector('button').click();field(f,'notes').value='Synthetic timed request';let expire;const real=f.w.setTimeout.bind(f.w);f.w.setTimeout=(fn,ms)=>ms===12000?(expire=fn,12345):real(fn,ms);submit(f);await pause();const q=f.calls.find(q=>q.op==='update');expire();await pause();assert.equal(f.el('save').disabled,true);assert.match(f.el('editor-error').textContent,/could not be confirmed/);d.resolve({data:{...q.row,id:q.id,version:2}});await pause();assert.equal(f.el('editor').open,true);assert.equal(field(f,'notes').value,'Synthetic timed request');assert.doesNotMatch(f.el('notice').textContent,/Saved and confirmed/);
+});
+
+
+test('membership receives the same document URL policy as the authenticated office',async t=>{
+  const membership={},config={supabaseUrl:'http://127.0.0.1:55321',publishableKey:'sb_publishable_synthetic',localDevelopment:true};
+  fixture(t,{membership,config,url:'http://127.0.0.1:8810/admin/'});await pause();
+  assert.equal(membership.options.documentUrl('http://127.0.0.1:55321/storage/v1/object/sign/sample').origin,'http://127.0.0.1:55321');
+  for(const value of ['http://127.0.0.1:55322/sample','http://files.example.invalid/sample','http://user@127.0.0.1:55321/sample','javascript:alert(1)','data:text/html,test','https://user:secret@files.example.invalid/sample'])assert.throws(()=>membership.options.documentUrl(value));
+  const hosted={};fixture(t,{membership:hosted});await pause();
+  assert.equal(hosted.options.documentUrl('https://files.example.invalid/sample').protocol,'https:');
+  assert.throws(()=>hosted.options.documentUrl('http://127.0.0.1:55321/sample'));
 });

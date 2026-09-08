@@ -73,6 +73,14 @@
       </section>
 
       <section id="dashboard-view" class="view">
+        <section class="panel member-journey" data-private-module aria-labelledby="member-journey-title">
+          <div class="member-journey-intro"><p class="eyebrow">Caring for our church family</p><h2 id="member-journey-title">Start with a person.</h2><p>Keep their story together, and make the next conversation a little easier.</p></div>
+          <ol class="member-journey-steps">
+            <li><a href="#people"><span class="journey-number" aria-hidden="true">01</span><span><strong>People &amp; membership <span aria-hidden="true">→</span></strong><span class="journey-description">Search first, then add or update one person’s record.</span></span></a></li>
+            <li><a href="#history"><span class="journey-number" aria-hidden="true">02</span><span><strong>Member history <span aria-hidden="true">→</span></strong><span class="journey-description">Keep the original page and review the wording. Mark anything uncertain.</span></span></a></li>
+            <li><a href="#care"><span class="journey-number" aria-hidden="true">03</span><span><strong>Guests &amp; care <span aria-hidden="true">→</span></strong><span class="journey-description">Assign the next contact, choose when it is due, and record each visit or call.</span></span></a></li>
+          </ol>
+        </section>
         <section class="panel personal-dashboard" data-private-module aria-labelledby="personal-dashboard-title">
           <div class="panel-head"><div><p class="eyebrow">Your people. Your next step.</p><h2 id="personal-dashboard-title">Make room to reach out.</h2></div><a href="#followups">My follow-ups →</a></div>
           <p id="dashboard-followup-status" role="status">Loading your personal reminders…</p>
@@ -96,7 +104,7 @@
       </section>
 
       <section id="people-view" class="view hidden">
-        <p class="membership-note">Search by name, former name, member number, household or contact details. Keep uncertain historical dates as written; inactive records stay in the archive.</p>
+        <p class="membership-note">Search before adding a person to keep their history and care in one place. Search by name, former name, member number, household or contact details. Keep uncertain historical dates as written; inactive records stay in the archive.</p>
         <div class="toolbar"><input id="people-search" aria-label="Search people" type="search" placeholder="Name, member number, household…"><select id="people-filter" aria-label="Filter people by status"><option value="">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="visitor">Visitor</option></select></div>
         <div class="panel table-wrap"><table><thead><tr><th>Name</th><th>Status</th><th>Household</th><th>Updated</th><th></th></tr></thead><tbody id="people-list"></tbody></table></div>
       </section>
@@ -114,6 +122,7 @@
       <section id="prayers-view" class="view hidden"></section>
 
       <section id="documents-view" class="view hidden">
+        <p class="membership-note document-guide">Keep policies, minutes and spreadsheets together. General documents here are available to all approved office staff. Uploaded spreadsheets are saved copies; use the working Google Sheet for shared editing.</p>
         <div class="toolbar"><input id="document-search" aria-label="Search documents" type="search" placeholder="Search documents"><select id="document-filter" aria-label="Filter documents by category"><option value="">All categories</option><option value="policy">Policies</option><option value="spreadsheet">Spreadsheets</option><option value="form">Forms</option><option value="minutes">Minutes</option><option value="ministry">Ministry</option><option value="other">Other</option></select></div>
         <div class="panel table-wrap"><table><thead><tr><th>Document</th><th>Category</th><th>Updated</th><th></th></tr></thead><tbody id="documents-list"></tbody></table></div>
       </section>

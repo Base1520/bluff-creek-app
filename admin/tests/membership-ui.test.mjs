@@ -5,7 +5,7 @@ import { JSDOM } from 'jsdom';
 
 const source=await readFile(new URL('../membership.js',import.meta.url),'utf8');
 const delay=()=>new Promise(resolve=>setTimeout(resolve,10));
-function fixture(t){
+function fixture(t,options={}){
   const dom=new JSDOM('<section id="history-view"></section>',{url:'https://office.example.invalid/admin/',runScripts:'outside-only'}),w=dom.window;
   t.after(()=>w.close());w.HTMLDialogElement.prototype.showModal=function(){this.open=true};w.HTMLDialogElement.prototype.close=function(){this.open=false};
   const confirmations=[];let discard=true;w.confirm=message=>{confirmations.push(message);return discard};const revoked=[];w.URL.createObjectURL=()=> 'blob:synthetic-preview';w.URL.revokeObjectURL=url=>revoked.push(url);w.eval(source);
@@ -13,7 +13,7 @@ function fixture(t){
   const state={epoch:1,userId:'synthetic-user',role:'editor',canEdit:true,workspaceReady:true};
   const people=[{id:'person-sample',first_name:'Synthetic',last_name:'Record',membership_number:'SAMPLE-01'}];
   const calls=[],notices=[],rows=[],documents=[],blobs=new Set();let respond=null,uploads=null,gate=null,api;
-  const control={after:null,noWrite:false,storageError:null};
+  const control={after:null,noWrite:false,storageError:null,signedUrl:'javascript:alert(1)'};
   const db={from(table){const q={table,op:'select'};const chain={select(fields){q.fields=fields;return chain},order(){return chain},range(a,b){q.range=[a,b];return chain},eq(k,v){q[k]=v;return chain},maybeSingle(){q.single=true;return chain},single(){q.single=true;return chain},insert(row){q.op='insert';q.row=structuredClone(row);return chain},then(a,b){
     calls.push(q);if(respond){const response=respond(q);if(response!==undefined)return Promise.resolve(response).then(a,b);}
     const tableRows=table==='membership_history'?rows:documents;let result;
@@ -26,9 +26,9 @@ function fixture(t){
   }};return chain},storage:{from(){return{
     upload(path,file){calls.push({op:'upload',path,size:file.size});if(control.storageError)return Promise.resolve({error:control.storageError});blobs.add(path);return uploads?uploads():Promise.resolve({data:{path},error:null})},
     list(folder,options){calls.push({op:'storage-list',folder,options});if(control.storageError)return Promise.resolve({error:control.storageError});return Promise.resolve({data:[...blobs].filter(p=>p.startsWith(folder+'/')).map(p=>({name:p.split('/').at(-1)})),error:null})},
-    createSignedUrl(){return Promise.resolve({data:{signedUrl:'javascript:alert(1)'}})}
+    createSignedUrl(){return Promise.resolve({data:{signedUrl:control.signedUrl}})}
   }}}};
-  api=w.CreekMembership.create({root:w.document.getElementById('history-view'),db,getContext:()=>state,isCurrent:epoch=>epoch===state.epoch&&!!state.userId,people:()=>people,documents:()=>documents,ensureReady:async epoch=>{calls.push({op:'ensureReady',epoch});return gate?gate():state.workspaceReady},refresh:async()=>{},notice:(...args)=>notices.push(args)});
+  api=w.CreekMembership.create({root:w.document.getElementById('history-view'),db,documentUrl:options.documentUrl,getContext:()=>state,isCurrent:epoch=>epoch===state.epoch&&!!state.userId,people:()=>people,documents:()=>documents,ensureReady:async epoch=>{calls.push({op:'ensureReady',epoch});return gate?gate():state.workspaceReady},refresh:async()=>{},notice:(...args)=>notices.push(args)});
   const form=()=>w.document.querySelector('dialog form');
   const open=()=>{w.document.getElementById('membership-add').click();return form()};
   const fill=f=>{f.elements.contact_id.value=people[0].id;f.elements.event_type.value='Received by letter';f.elements.source_label.value='Synthetic ledger · page 1';f.elements.date_text.value='Summer 1956; day [unclear]';f.elements.details.value='<img src=x onerror=alert(1)> remains literal';f.elements.reviewed.checked=true};
@@ -138,4 +138,22 @@ test('early absence after a write timeout retries the same ID and reconciles a l
   f.rows.push(structuredClone(pendingRow));finish({data:{id},error:null});await delay();assert.equal(f.notices.length,0);
   f.submit(form);await delay();const inserts=f.calls.filter(q=>q.op==='insert');assert.equal(inserts.length,2);assert.ok(inserts.every(q=>q.row.id===id));assert.equal(f.rows.length,1,'duplicate primary key prevents a second historical entry');
   form.querySelector('[data-recover]').click();await delay();assert.equal(f.form(),null);assert.equal(f.rows.length,1);assert.match(f.notices[0][0],/already saved/);
+});
+
+
+test('original page handoff uses the office URL policy without opening an automatic popup',async t=>{
+  const checked=[];const f=fixture(t,{documentUrl(value){checked.push(value);const url=new URL(value);if(url.origin!=='http://127.0.0.1:55321'||url.username||url.password)throw new Error('unapproved source origin');return url;}});
+  f.rows.push({id:'sample-history',contact_id:'person-sample',event_type:'Synthetic source',source_document_id:'sample-source'});
+  f.documents.push({id:'sample-source',storage_path:'synthetic-user/page.png'});f.control.signedUrl='http://127.0.0.1:55321/storage/v1/object/sign/sample?token=synthetic';
+  f.w.open=()=>assert.fail('Opening the source must wait for a user click');await f.api.load(1);
+  [...f.w.document.querySelectorAll('.membership-entry button')].find(b=>b.textContent==='Open original page').click();await delay();
+  const link=f.w.document.querySelector('dialog a');assert.ok(link);assert.equal(link.href,f.control.signedUrl);assert.equal(link.target,'_blank');assert.equal(link.rel,'noopener noreferrer');assert.match(link.textContent,/expires in one minute/);assert.deepEqual(checked,[f.control.signedUrl]);
+  f.api.clear();assert.equal(f.w.document.querySelector('dialog'),null);
+});
+
+test('source links without an office policy remain HTTPS-only and reject embedded credentials',async t=>{
+  for(const [url,allowed] of [['https://files.example.invalid/sample',true],['http://127.0.0.1:55321/sample',false],['https://user:secret@files.example.invalid/sample',false],['javascript:alert(1)',false]]){
+    const f=fixture(t);f.rows.push({id:'sample-history',contact_id:'person-sample',event_type:'Synthetic source',source_document_id:'sample-source'});f.documents.push({id:'sample-source',storage_path:'synthetic-user/page.png'});f.control.signedUrl=url;
+    await f.api.load(1);[...f.w.document.querySelectorAll('.membership-entry button')].find(b=>b.textContent==='Open original page').click();await delay();assert.equal(!!f.w.document.querySelector('dialog a'),allowed);
+  }
 });

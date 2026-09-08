@@ -25,6 +25,11 @@
   }
   function hidden(node, value) { if (node) { node.hidden = value; node.classList.toggle("hidden", value); } }
   function loopback(address) { return ["http:", "https:"].includes(address.protocol) && ["127.0.0.1", "[::1]", "localhost"].includes(address.hostname) && !!address.port && !address.username && !address.password; }
+  function documentUrl(value) {
+    var address = new URL(value);
+    if (address.username || address.password || (address.protocol !== "https:" && !(localDevelopment && address.protocol === "http:" && address.origin === backendOrigin))) throw new Error("The document link could not be opened securely.");
+    return address;
+  }
   function el(id) { return document.getElementById(id); }
   function show(id) { ["setup", "login", "loading", "workspace"].forEach(function (name) { el(name).classList.toggle("hidden", name !== id); }); }
   function safe(value) { var node = document.createElement("span"); node.textContent = value == null ? "" : String(value); return node.innerHTML.replace(/"/g, "&quot;"); }
@@ -98,7 +103,7 @@
     db = window.supabase.createClient(cfg.supabaseUrl, cfg.publishableKey, { auth: { storage: window.sessionStorage, storageKey: AUTH_STORAGE_KEY, persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
     bind();
     var moduleOptions = { db: db, getContext: function () { return { epoch: authEpoch, userId: session && session.user.id, role: role, canEdit: canEdit(), workspaceReady: workspaceReady }; }, isCurrent: current, ensureReady: ensureReady, refresh: function () { return loadAll(authEpoch); }, notice: notice, people: function () { return state.people; }, peopleReady: function () { return peopleReady; }, documents: function () { return state.documents; } };
-    if (window.CreekMembership && el("history-view")) membership = window.CreekMembership.create(Object.assign({}, moduleOptions, { root: el("history-view"), sheetUrl: cfg.membershipSheetUrl || "" }));
+    if (window.CreekMembership && el("history-view")) membership = window.CreekMembership.create(Object.assign({}, moduleOptions, { root: el("history-view"), sheetUrl: cfg.membershipSheetUrl || "", documentUrl: documentUrl }));
     if (window.CreekCare && el("care-view")) care = window.CreekCare.create(Object.assign({}, moduleOptions, { root: el("care-view") }));
     if (window.CreekOfficeContent) officeContent = window.CreekOfficeContent.create(Object.assign({}, moduleOptions, {
       roots: { announcements: el("announcements-view"), committees: el("committees-view"), slides: el("slides-view"), prayers: el("prayers-view") },
@@ -369,7 +374,29 @@
   function textArea(name, label, value) { return '<label class="wide">' + label + '<textarea name="' + name + '">' + safe(value || "") + '</textarea></label>'; }
   function localDateTime(value) { if (!value) return ""; var d = new Date(value); var offset = d.getTimezoneOffset(); return new Date(d.getTime() - offset * 60000).toISOString().slice(0, 16); }
   function openEvent(item) { item = item || {}; openEditor("event", item.id ? "Edit event" : "Add event", '<div class="form-grid">' + input("title", "Title", "text", item.title) + select("tag", "Type", ["Weekly", "Monthly", "Special"], item.tag || "Special") + input("starts_at", "Starts", "datetime-local", localDateTime(item.starts_at)) + input("ends_at", "Ends", "datetime-local", localDateTime(item.ends_at)) + input("location", "Location", "text", item.location, true) + textArea("description", "Details", item.description) + '</div>', item.id); }
-  function openPerson(item) { item = item || {}; openEditor("person", item.id ? "Edit person" : "Add person", '<p class="membership-note">Historical dates may be approximate. Preserve the original wording rather than guessing. Archive a person as inactive; history is retained.</p><div class="form-grid">' + input("first_name", "First name", "text", item.first_name) + input("last_name", "Last name", "text", item.last_name) + input("middle_name", "Middle name", "text", item.middle_name) + input("preferred_name", "Preferred name", "text", item.preferred_name) + input("former_names", "Former names / spelling variants", "text", item.former_names, true) + select("status", "Status", ["active", "inactive", "visitor"], item.status || "active") + input("household_name", "Household", "text", item.household_name) + input("membership_number", "Membership number", "text", item.membership_number) + input("legacy_member_id", "Existing ledger MemberID", "text", item.legacy_member_id) + input("email", "Email", "email", item.email) + input("phone", "Phone", "tel", item.phone) + input("address", "Address", "text", item.address, true) + input("birth_date_text", "Birth date as recorded", "text", item.birth_date_text) + input("received_date_text", "Date received as recorded", "text", item.received_date_text) + input("how_received", "How received", "text", item.how_received) + input("baptism_date_text", "Baptism date as recorded", "text", item.baptism_date_text) + input("dismissal_date_text", "Dismissal date as recorded", "text", item.dismissal_date_text) + input("reason_for_decrease", "Reason for removal from active roll", "text", item.reason_for_decrease) + select("needs_review", "Source verification", ["Verified", "Needs review"], (!item.id || item.needs_review) ? "Needs review" : "Verified") + textArea("notes", "Administrative notes (visible to all approved staff roles)", item.notes) + '</div>', item.id); }
+  function openPerson(item) {
+    item = item || {};
+    var hasLedgerDetails = ["former_names", "membership_number", "legacy_member_id", "birth_date_text", "received_date_text", "how_received", "baptism_date_text", "dismissal_date_text", "reason_for_decrease"].some(function (name) { return !!item[name]; });
+    openEditor("person", item.id ? "Edit person" : "Add person",
+      '<p class="membership-note">Start with the details you know. Keep one record per person so their history and care stay together.</p>' +
+      '<fieldset class="person-form-section"><legend>Person &amp; household</legend><div class="form-grid">' +
+      input("first_name", "First name", "text", item.first_name) + input("last_name", "Last name", "text", item.last_name) +
+      input("middle_name", "Middle name", "text", item.middle_name) + input("preferred_name", "Preferred name", "text", item.preferred_name) +
+      select("status", "Status", ["active", "inactive", "visitor"], item.status || "active") + input("household_name", "Household", "text", item.household_name) +
+      '</div><p class="membership-note person-field-help">Set status to inactive to archive a person; their history is retained.</p></fieldset>' +
+      '<fieldset class="person-form-section"><legend>Contact details</legend><div class="form-grid">' +
+      input("email", "Email", "email", item.email) + input("phone", "Phone", "tel", item.phone) + input("address", "Address", "text", item.address, true) + '</div></fieldset>' +
+      '<details class="person-ledger"' + (hasLedgerDetails ? ' open' : '') + '><summary>Historical ledger details <span>Optional</span></summary>' +
+      '<p class="membership-note">Copy dates and wording as recorded, including approximate dates. Preserve anything uncertain rather than guessing.</p><div class="form-grid">' +
+      input("former_names", "Former names / spelling variants", "text", item.former_names, true) +
+      input("membership_number", "Membership number", "text", item.membership_number) + input("legacy_member_id", "Existing ledger MemberID", "text", item.legacy_member_id) +
+      input("birth_date_text", "Birth date as recorded", "text", item.birth_date_text) + input("received_date_text", "Date received as recorded", "text", item.received_date_text) +
+      input("how_received", "How received", "text", item.how_received) + input("baptism_date_text", "Baptism date as recorded", "text", item.baptism_date_text) +
+      input("dismissal_date_text", "Dismissal date as recorded", "text", item.dismissal_date_text) + input("reason_for_decrease", "Reason for removal from active roll", "text", item.reason_for_decrease) + '</div></details>' +
+      '<fieldset class="person-form-section"><legend>Review &amp; notes</legend><div class="form-grid">' +
+      select("needs_review", "Source verification", ["Verified", "Needs review"], (!item.id || item.needs_review) ? "Needs review" : "Verified") +
+      textArea("notes", "Administrative notes (visible to all approved staff roles)", item.notes) + '</div></fieldset>', item.id);
+  }
 
   function openUpload(category) { openEditor("document", "Upload document", '<div class="form-grid">' + input("title", "Title", "text", "") + select("category", "Category", ["policy", "spreadsheet", "form", "minutes", "ministry", "other"], category || "policy") + '<label class="wide">File<input name="file" type="file" required aria-describedby="upload-help"><span id="upload-help">Maximum file size: 50 MB.</span></label>' + textArea("description", "Description", "") + '</div>'); }
 
@@ -491,8 +518,7 @@
       var result = await deadline(db.storage.from("church-documents").createSignedUrl(item.storage_path, 60));
       if (!current(epoch) || request !== documentEpoch || !el("document-dialog").open) return;
       if (result.error) throw result.error;
-      var address = new URL(result.data.signedUrl);
-      if (address.username || address.password || (address.protocol !== "https:" && !(localDevelopment && address.protocol === "http:" && address.origin === backendOrigin))) throw new Error("The document link could not be opened securely.");
+      var address = documentUrl(result.data.signedUrl);
       var link = document.createElement("a"); link.href = address.href; link.target = "_blank"; link.rel = "noopener"; link.textContent = "Open " + item.title;
       var note = document.createElement("p"); note.textContent = "This private link expires after one minute. Close this dialog and open the document again for a fresh link.";
       el("document-result").replaceChildren(link, note); link.focus();

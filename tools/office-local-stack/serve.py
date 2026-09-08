@@ -85,6 +85,11 @@ def handler(repo, config, origins, port):
                 mime = mimetypes.guess_type(asset.name)[0] or 'application/octet-stream'
                 if asset.suffix == '.html':
                     payload = payload.replace(b'</title>', b' - Local rehearsal</title>', 1)
+                    banner = ('<div role="note" style="position:relative;z-index:20;padding:10px 18px;'
+                              'background:#eadfca;color:#17352b;text-align:center;font:600 14px system-ui;">'
+                              'Demonstration &middot; Fictional records only &middot; Changes save on this Mac'
+                              '</div>')
+                    payload = payload.replace(b'<body>', b'<body>' + banner.encode(), 1)
             self.send_response(200)
             self.send_header('Content-Type', mime + ('; charset=utf-8' if mime.startswith('text/') else ''))
             self.send_header('Cache-Control', 'no-store')
