@@ -39,6 +39,18 @@ test('only exact approved origins and browser publishable keys can activate conn
  for(const bad of [{...config,allowedOrigins:['https://other.example.invalid']},{...config,publishableKey:'sb_secret_not_public'},{...config,supabaseUrl:'https://sampleproject.supabase.co.evil.invalid'}])assert.equal(settings(bad,new URL('https://church.example.invalid/connection.html')),null);
  assert.equal(settings(config,new URL('https://church.example.invalid/connection.html?redirect=https://other.invalid')).redirect,'https://church.example.invalid/connection.html');
 });
+test('local rehearsal requires explicit opt-in, loopback on both ends and an exact callback origin',()=>{
+ const page=new URL('http://127.0.0.1:8810/connection.html');
+ const local={supabaseUrl:'http://127.0.0.1:55321',publishableKey:'sb_publishable_local',allowedOrigins:[page.origin],localDevelopment:true};
+ assert.equal(settings(local,page).redirect,page.origin+'/connection.html');
+ for(const bad of [{...local,localDevelopment:false},{...local,localDevelopment:'true'},{...local,supabaseUrl:'http://192.168.1.2:55321'},{...local,supabaseUrl:'http://localhost.evil.invalid:55321'},{...local,supabaseUrl:'http://127.0.0.1:55321/rest/v1'},{...local,supabaseUrl:'http://user@127.0.0.1:55321'},{...local,allowedOrigins:['http://localhost:8810']},{...local,publishableKey:'sb_secret_local'}])assert.equal(settings(bad,page),null);
+ assert.equal(settings({...local,allowedOrigins:['https://church.example.invalid']},new URL('https://church.example.invalid/connection.html')),null);
+ assert.equal(settings({...config,localDevelopment:true},new URL('https://church.example.invalid/connection.html')),null);
+ const token=role=>'x.'+Buffer.from(JSON.stringify({role})).toString('base64url')+'.x';
+ assert.ok(settings({...local,publishableKey:token('anon')},page));
+ assert.equal(settings({...local,publishableKey:token('service_role')},page),null);
+ assert.equal(settings({...config,publishableKey:token('anon')},new URL('https://church.example.invalid/connection.html')),null);
+});
 test('email link success uses the exact local callback; errors never claim submission',async()=>{
  for(const error of [null,{message:'Synthetic auth failure'}]){
   const f=fixture({session:null,otpResult:{error}});await f.flush();f.nodes.email.value='person@example.invalid';await f.nodes['email-form'].emit('submit');

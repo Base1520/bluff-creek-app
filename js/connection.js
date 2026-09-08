@@ -7,11 +7,20 @@
 })(typeof window !== 'undefined' ? window : globalThis, function () {
   'use strict';
   var SDK = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4/dist/umd/supabase.min.js';
+  function loopback(address) {
+    return ['http:', 'https:'].includes(address.protocol) && ['127.0.0.1', '[::1]', 'localhost'].includes(address.hostname) && !!address.port && !address.username && !address.password;
+  }
+  function localAnonKey(key) {
+    try { return JSON.parse(atob(key.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).role === 'anon'; } catch (_) { return false; }
+  }
   function settings(config, location) {
     try {
       var project = new URL(config.supabaseUrl), page = new URL(location.href);
-      if (project.protocol !== 'https:' || project.username || project.password || project.port || project.pathname !== '/' || project.search || project.hash || !/^[a-z0-9-]+\.supabase\.co$/.test(project.hostname)) return null;
-      if (!/^sb_publishable_[A-Za-z0-9_-]+$/.test(config.publishableKey || '')) return null;
+      var local = config.localDevelopment === true && loopback(project) && loopback(page);
+      if (config.localDevelopment === true && !local) return null;
+      if (project.username || project.password || project.pathname !== '/' || project.search || project.hash) return null;
+      if (!local && (project.protocol !== 'https:' || project.port || !/^[a-z0-9-]+\.supabase\.co$/.test(project.hostname))) return null;
+      if (!/^sb_publishable_[A-Za-z0-9_-]+$/.test(config.publishableKey || '') && !(local && localAnonKey(config.publishableKey || ''))) return null;
       if (!Array.isArray(config.allowedOrigins) || !config.allowedOrigins.includes(page.origin)) return null;
       if (page.protocol !== 'https:' && !(page.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(page.hostname))) return null;
       if (page.pathname !== '/connection.html') return null;

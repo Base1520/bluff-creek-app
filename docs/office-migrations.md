@@ -25,6 +25,8 @@ The preflight passes 16/16 tests and 39/39 local checks. The SQL regression suit
 
 ## Before the first hosted application
 
+The [local stack guide](../tools/office-local-stack/README.md) now provides a separate, unlinked rehearsal directory, verified migration copying and a loopback-only browser preview. The [HTTP rehearsal](../tools/office-rehearsal/README.md) uses fictional users and actual Auth/REST/Storage services, refuses hosted targets and keeps privileged keys in memory. Its guard tests establish safe tool behavior; only a recorded real service run establishes a local service pass. Production browser configs remain blank.
+
 1. Get the concrete activation instruction for the dedicated Bluff Creek Church Office project (`xzfeumdonxeodqhfirjr`). The prior project-creation approval did not activate the office or invite staff.
 2. Recheck that this is the intended target and that public office objects, staff users/files and migration history are still empty. The September 7 creation check is dated evidence, not a lock against later work. If old schema or history exists, stop and reconcile it; do not blindly mark new IDs applied or replay the renamed baseline.
 3. Review the exact committed manifest, byte hashes and six-file pending list. Rehearse on a clean local Supabase stack and review its database advisors; then use the authorized tracked migration mechanism for the target. Do not use SQL Editor changes that bypass history. Local filename normalization is not remote history repair.

@@ -49,6 +49,8 @@
     "admin/README.md",
     "admin/config.js",
     "admin/app.js",
+    "admin/recovery.js",
+    "admin/recovery.html",
     "admin/membership.js",
     "admin/care.js",
     "admin/office-content.js",

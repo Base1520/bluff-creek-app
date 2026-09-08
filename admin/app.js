@@ -3,6 +3,7 @@
   var cfg = window.CREEK_OFFICE_CONFIG || {};
   var els = {};
   var db = null;
+  var localDevelopment = false, backendOrigin = null;
   var membership = null, care = null, officeContent = null, signups = null, followups = null, reminderCalendar = null;
   var session = null;
   var role = null;
@@ -23,6 +24,7 @@
     return Promise.race([Promise.resolve(request), new Promise(function (_resolve, reject) { timer = window.setTimeout(function () { reject(new Error("The request timed out.")); }, 12000); })]).finally(function () { window.clearTimeout(timer); });
   }
   function hidden(node, value) { if (node) { node.hidden = value; node.classList.toggle("hidden", value); } }
+  function loopback(address) { return ["http:", "https:"].includes(address.protocol) && ["127.0.0.1", "[::1]", "localhost"].includes(address.hostname) && !!address.port && !address.username && !address.password; }
   function el(id) { return document.getElementById(id); }
   function show(id) { ["setup", "login", "loading", "workspace"].forEach(function (name) { el(name).classList.toggle("hidden", name !== id); }); }
   function safe(value) { var node = document.createElement("span"); node.textContent = value == null ? "" : String(value); return node.innerHTML.replace(/"/g, "&quot;"); }
@@ -84,7 +86,13 @@
       try { var encoded = cfg.publishableKey.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"); validKey = JSON.parse(atob(encoded)).role === "anon"; } catch (_) { validKey = false; }
     }
     var validUrl = false;
-    try { var endpoint = new URL(cfg.supabaseUrl); validUrl = endpoint.protocol === "https:" && !endpoint.username && !endpoint.password; } catch (_) {}
+    try {
+      var endpoint = new URL(cfg.supabaseUrl), page = new URL(window.location.href);
+      localDevelopment = cfg.localDevelopment === true && loopback(endpoint) && loopback(page) && endpoint.pathname === "/" && !endpoint.search && !endpoint.hash;
+      validUrl = (endpoint.protocol === "https:" || localDevelopment) && !endpoint.username && !endpoint.password;
+      if (cfg.localDevelopment === true && !localDevelopment) validUrl = false;
+      if (validUrl) backendOrigin = endpoint.origin;
+    } catch (_) {}
     if (!validKey || !validUrl) { show("setup"); el("setup").querySelector("p:last-child").textContent = "Use the church project's HTTPS URL and public publishable key. Secret and service-role keys must never be placed in a browser configuration."; return; }
     if (!window.supabase || !window.supabase.createClient) { show("setup"); el("setup").querySelector("p:last-child").textContent = "The secure client could not load. Check the network connection and pinned client file."; return; }
     db = window.supabase.createClient(cfg.supabaseUrl, cfg.publishableKey, { auth: { storage: window.sessionStorage, storageKey: AUTH_STORAGE_KEY, persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
@@ -484,7 +492,7 @@
       if (!current(epoch) || request !== documentEpoch || !el("document-dialog").open) return;
       if (result.error) throw result.error;
       var address = new URL(result.data.signedUrl);
-      if (address.protocol !== "https:") throw new Error("The document link could not be opened securely.");
+      if (address.username || address.password || (address.protocol !== "https:" && !(localDevelopment && address.protocol === "http:" && address.origin === backendOrigin))) throw new Error("The document link could not be opened securely.");
       var link = document.createElement("a"); link.href = address.href; link.target = "_blank"; link.rel = "noopener"; link.textContent = "Open " + item.title;
       var note = document.createElement("p"); note.textContent = "This private link expires after one minute. Close this dialog and open the document again for a fresh link.";
       el("document-result").replaceChildren(link, note); link.focus();

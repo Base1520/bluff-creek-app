@@ -13,3 +13,4 @@ aside{overflow:hidden}.office-brand,.account{flex-shrink:0}#workspace-nav{flex:1
 @media(max-width:760px){.workspace-health,.office-help-card{align-items:flex-start;flex-direction:column;gap:14px}.toolbar input{min-width:0}.toolbar select{width:100%}.office-help-card{padding:20px}}
 
 .workspace-health:not(.hidden)~.view .rows:empty:after{content:"Records are unavailable while the connection is being checked."}
+.auth-card .auth-link{color:var(--pine);font-weight:800;text-decoration-color:var(--gold);text-underline-offset:.2em}.auth-card .auth-link:hover{color:var(--pine2);text-decoration-thickness:2px}.auth-card .auth-link:focus-visible{outline:3px solid var(--gold);outline-offset:4px;border-radius:2px}

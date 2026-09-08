@@ -8,7 +8,7 @@ const session = id => ({ user:{ id, email:'staff-'+id+'@example.invalid' }, acce
 const pause = () => new Promise(r=>setTimeout(r,15));
 const deferred = () => { let resolve; const promise=new Promise(r=>resolve=r);return {promise,resolve}; };
 function fixture(t,options={}) {
-  const dom = new JSDOM(html,{url:'https://office.example.invalid/admin/',runScripts:'outside-only'}),w=dom.window;
+  const dom = new JSDOM(html,{url:options.url||'https://office.example.invalid/admin/',runScripts:'outside-only'}),w=dom.window;
   t.after(()=>w.close());
   w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};
   w.HTMLDialogElement.prototype.close=function(){this.open=false;this.dispatchEvent(new w.Event('close'));};
@@ -97,6 +97,27 @@ test('50 MB preflight blocks the network and account change stops upload metadat
 });
 test('secret/service-role config fails closed without constructing a client',async t=>{
   for(const key of ['sb_secret_synthetic','x.'+Buffer.from(JSON.stringify({role:'service_role'})).toString('base64url')+'.x']) {const f=fixture(t,{config:{supabaseUrl:'https://project.example.invalid',publishableKey:key}});await pause();assert.equal(f.created(),0);assert.equal(f.el('setup').classList.contains('hidden'),false);}
+});
+test('local office rehearsal fails closed unless both the page and backend are loopback',async t=>{
+  const config={supabaseUrl:'http://127.0.0.1:55321',publishableKey:'sb_publishable_synthetic',localDevelopment:true};
+  const f=fixture(t,{config,url:'http://127.0.0.1:8810/admin/'});await pause();assert.equal(f.created(),1);
+  for(const options of [
+    {config},
+    {config:{...config,localDevelopment:false},url:'http://127.0.0.1:8810/admin/'},
+    {config:{...config,supabaseUrl:'http://192.168.1.2:55321'},url:'http://127.0.0.1:8810/admin/'},
+    {config:{...config,supabaseUrl:'https://project.example.invalid'},url:'http://127.0.0.1:8810/admin/'},
+    {config:{...config,supabaseUrl:'http://127.0.0.1:55321/rest/v1'},url:'http://127.0.0.1:8810/admin/'},
+    {config:{...config,publishableKey:'sb_secret_synthetic'},url:'http://127.0.0.1:8810/admin/'}
+  ]) { const g=fixture(t,options);await pause();assert.equal(g.created(),0); }
+});
+test('local document handoff permits HTTP only at its configured loopback backend',async t=>{
+  const config={supabaseUrl:'http://127.0.0.1:55321',publishableKey:'sb_publishable_synthetic',localDevelopment:true};
+  for(const [signedUrl,allowed] of [['http://127.0.0.1:55321/storage/v1/object/sign/test',true],['http://127.0.0.1:55322/test',false],['http://files.example.invalid/test',false],['http://user@127.0.0.1:55321/test',false]]) {
+    const d=deferred(),f=fixture(t,{config,url:'http://127.0.0.1:8810/admin/',signedDeferred:d});
+    const until=performance.now()+2000;while(!f.el('documents-list').querySelector('button')&&performance.now()<until)await pause();
+    assert.ok(f.el('documents-list').querySelector('button'));f.el('documents-list').querySelector('button').click();d.resolve({data:{signedUrl}});await pause();
+    assert.equal(!!f.el('document-result').querySelector('a'),allowed);
+  }
 });
 test('failed sign-out stays locked against late auth callbacks and clears only owned storage',async t=>{
   const d=deferred(),f=fixture(t,{signOutDeferred:d});await pause();
