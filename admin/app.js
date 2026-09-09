@@ -47,11 +47,14 @@
   }
   function current(epoch) { return epoch === authEpoch && !!session && !!role; }
   function requireCurrent(epoch) { if (!current(epoch)) throw new Error("Your session changed. Sign in again before saving."); }
-  function editorSnapshot() { return Array.from(el("editor-fields").querySelectorAll("input,select,textarea")).map(function (node) { return [node.name, node.type === "checkbox" ? node.checked : node.value]; }).map(function (value) { return JSON.stringify(value); }).join("|"); }
+  function editorSnapshot() { return Array.from(el("editor-fields").querySelectorAll("input,select,textarea")).map(function (node) { return [node.name, node.type === "file" ? Array.from(node.files || []).map(function (file) { return [file.name, file.type, file.size, file.lastModified]; }) : node.type === "checkbox" ? node.checked : node.value]; }).map(function (value) { return JSON.stringify(value); }).join("|"); }
+  function editorNeedsWarning() { return !!draft && (draft.busy || draft.requiresRefresh || draft.conflict || editorSnapshot() !== draft.initial); }
+  function warnEditorUnload(event) { if (editorNeedsWarning()) { event.preventDefault(); event.returnValue = true; } }
+  function syncEditorUnload() { window[editorNeedsWarning() ? "addEventListener" : "removeEventListener"]("beforeunload", warnEditorUnload); }
   function clearEditor(force) {
     if (draft && draft.busy && force !== true) return false;
     if (draft && force !== true && (draft.requiresRefresh || draft.conflict || editorSnapshot() !== draft.initial) && !window.confirm("Close this draft and discard unsaved changes? If a save was uncertain, refresh and check the saved records before adding it again.")) return false;
-    draft = null; editorEpoch++;
+    draft = null; editorEpoch++; syncEditorUnload();
     if (el("editor").open) el("editor").close();
     el("editor-fields").replaceChildren(); el("editor-form").reset();
     el("editor-form").dataset.id = ""; el("editor-form").dataset.kind = "";
@@ -165,7 +168,9 @@
     el("editor-form").addEventListener("submit", saveEditor);
     el("editor-fields").addEventListener("input", function (event) {
       if (["first_name", "last_name", "membership_number", "legacy_member_id"].includes(event.target.name)) renderPersonReview();
+      syncEditorUnload();
     });
+    el("editor-fields").addEventListener("change", syncEditorUnload);
     if (el("workspace-refresh")) el("workspace-refresh").addEventListener("click", function () { loadAll(authEpoch); });
     if (el("editor-refresh")) el("editor-refresh").addEventListener("click", function () { loadAll(authEpoch); });
     if (el("event-delete")) el("event-delete").addEventListener("click", archiveEvent);
@@ -213,6 +218,7 @@
   }
   function syncEditor() {
     if (!draft) return;
+    syncEditorUnload();
     renderPersonReview();
     var frozen = draft.busy || draft.requiresRefresh || draft.conflict || !canEdit();
     el("editor-fields").querySelectorAll("input,select,textarea").forEach(function (node) { node.disabled = frozen || (node.type === "file" && !!draft.file); });

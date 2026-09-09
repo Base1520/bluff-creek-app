@@ -35,11 +35,14 @@
     date = validDate(date) ? date : today();
     var history = (visits || []).filter(function (visit) { return visit.contact_id === assignment.contact_id && roleOf(visit) === roleOf(assignment) && validDate(visit.contacted_on) && visit.contacted_on <= date; }).slice().sort(latestFirst);
     if (assignment.one_time && validDate(assignment.started_on)) history = history.filter(function (visit) { return visit.contacted_on >= assignment.started_on; });
-    var latest = history[0], success = history.find(function (visit) { return visit.outcome === 'contacted'; });
+    var success = history.find(function (visit) { return visit.outcome === 'contacted'; });
+    // An attempt without a new date keeps the agreed follow-up. Stop at the
+    // newest success so an older explicit date cannot override a new schedule.
+    var latestSchedule = history.find(function (visit) { return visit.outcome === 'contacted' || validDate(visit.next_contact_on); });
     var cadence = Number(assignment.cadence_days), months = Number(assignment.cadence_months);
     if (!Number.isInteger(cadence) || cadence < 1 || cadence > 365) cadence = 28;
     if (!Number.isInteger(months) || months < 1 || months > 12) months = null;
-    var explicit = latest && validDate(latest.next_contact_on) ? latest.next_contact_on : null;
+    var explicit = latestSchedule && validDate(latestSchedule.next_contact_on) ? latestSchedule.next_contact_on : null;
     var base = success ? success.contacted_on : assignment.started_on;
     var completed = !!assignment.one_time && history.some(function (visit) { return visit.outcome === 'contacted' && (!validDate(assignment.started_on) || visit.contacted_on >= assignment.started_on); });
     var first = !success && validDate(assignment.first_due_on) ? assignment.first_due_on : null;
@@ -145,7 +148,7 @@
     }
     function assignmentRow(item) {
       var due = dueFor(item, state.visits);
-      return '<article class="care-row"><div class="care-row-main"><div class="care-row-title"><h4>' + safe(personName(item.contact_id)) + '</h4>' + dueTag(due) + '</div><p>' + safe(ROLE_LABELS[roleOf(item)]) + ' · ' + safe(String(item.assigned_to || '').trim() || 'No person assigned') + ' · ' + (item.one_time ? 'One-time follow-up' : 'Every ' + (due.months || due.cadence) + (due.months ? (due.months === 1 ? ' month' : ' months') : ' days')) + '</p><p class="care-small">' + (due.neverContacted ? 'Never contacted in this record' : 'Last successful contact · ' + dateLabel(due.lastContact)) + (due.explicit ? ' · Next date chosen in the latest contact record' : '') + '</p>' + (item.notes ? '<details><summary>Planning note</summary><p class="care-preserve">' + safe(item.notes) + '</p></details>' : '') + '</div><div class="care-row-actions">' + button('visit', 'Record contact', item.contact_id, false, roleOf(item)) + button('assignment', 'Edit plan', item.contact_id, true, roleOf(item)) + '</div></article>';
+      return '<article class="care-row"><div class="care-row-main"><div class="care-row-title"><h4>' + safe(personName(item.contact_id)) + '</h4>' + dueTag(due) + '</div><p>' + safe(ROLE_LABELS[roleOf(item)]) + ' · ' + safe(String(item.assigned_to || '').trim() || 'No person assigned') + ' · ' + (item.one_time ? 'One-time follow-up' : 'Every ' + (due.months || due.cadence) + (due.months ? (due.months === 1 ? ' month' : ' months') : ' days')) + '</p><p class="care-small">' + (due.neverContacted ? 'Never contacted in this record' : 'Last successful contact · ' + dateLabel(due.lastContact)) + (due.explicit ? ' · Next date chosen in contact history' : '') + '</p>' + (item.notes ? '<details><summary>Planning note</summary><p class="care-preserve">' + safe(item.notes) + '</p></details>' : '') + '</div><div class="care-row-actions">' + button('visit', 'Record contact', item.contact_id, false, roleOf(item)) + button('assignment', 'Edit plan', item.contact_id, true, roleOf(item)) + '</div></article>';
     }
     function renderLists() {
       if (!mounted) return;
