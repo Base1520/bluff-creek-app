@@ -1,0 +1,20 @@
+{
+  "format_version": 1,
+  "state": "prepared_not_configured",
+  "templates": [
+    {
+      "kind": "invite",
+      "file": "invite.html",
+      "subject": "Your invitation to Creek Office"
+    },
+    {
+      "kind": "recovery",
+      "file": "recovery.html",
+      "subject": "Reset your Creek Office password"
+    }
+  ],
+  "confirmation_variable": "{{ .ConfirmationURL }}",
+  "intended_recovery_callback": "https://app.bluffcreekbaptistchurch.org/admin/recovery.html",
+  "email_settings_changed": false,
+  "messages_sent": false
+}

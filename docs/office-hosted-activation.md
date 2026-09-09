@@ -14,6 +14,8 @@ September 8 hosted update: following explicit schema-only approval and a fresh e
 
 The existing modern publishable key was retrieved for private local staging; no key was created or rotated. The last read-only Auth settings GET returned HTTP200 with `disable_signup: false` and `mailer_autoconfirm: false`. No Auth setting was changed. This does not prove hosted mail delivery or accept public signup. Two intended administrator identities have been supplied privately; accounts, roles and invitations have not been created.
 
+Later September 8, the signed-in dashboard confirmed custom SMTP is off, Site URL is still `http://localhost:3000`, and the redirect allowlist is empty. Anonymous HTTPS requests to both proposed staff routes returned GitHub Pages 404. Accounts and staff grants remain zero. These settings and routes must be resolved before invitations. The [concrete staff sign-in proposal](office-staff-signin-proposal-2026-09-08.md) records the exact pending changes and their separate release/email dependencies.
+
 ## Wiring prepared
 
 Use the [offline wiring tool](../tools/office-wiring/README.md) with a private JSON input file. It checks that the project reference and URL agree, accepts only a modern publishable browser key, requires an exact HTTPS app origin, and produces consistent staff and optional member settings in a **new staging directory**. It never modifies the source checkout or connects to a service. Review the staged files before placing them in a release.
@@ -53,3 +55,5 @@ Source checks: [Supabase API keys](https://supabase.com/docs/guides/getting-star
 ## Complete release files
 
 The [offline release builder](../tools/office-release/README.md) packages the actual public app and private office pages, including connection and password recovery, into a dedicated `site/` directory. It uses a fixed asset inventory and generated hosted settings, preserving source files. SQL, tests, working notes and private configuration inputs are excluded. The sibling review report records file hashes and pending hosted checks. The output is a local release candidate, not a preview server or deployment.
+
+That 49-file packet is a full candidate, **not** an overlay for the current public app. Compared with current main it replaces three public files and omits CNAME and eight brand paths. Do not publish it as a staff-only replacement. A narrow alternative preserves current main, adds the office dependency closure, and separately corrects the old public service worker so it cannot cache office responses as the homepage. See the staff sign-in proposal and the reviewed worker under `tools/office-staff-release/`; neither artifact authorizes release.

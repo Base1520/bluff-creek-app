@@ -1,0 +1,9 @@
+{
+  "pinned_main_sha": "3d001e53145cd04d0d2f249bd2f88f78570edbbd",
+  "base_worker_sha256": "b3a1633b7ad7eb340c2c1c87a10adb8614745870b16543e99167509b7eef0b6d",
+  "proposed_worker_sha256": "ee93b7a440e032bc356bee24f160b94704a63fbb87f29cd95c1f55240ba429b6",
+  "tests_passed": 15,
+  "tests_failed": 0,
+  "browser_upgrade_tested": false,
+  "deployed": false
+}

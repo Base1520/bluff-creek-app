@@ -55,6 +55,20 @@
     function current(revision) { return !destroyed && revision === epoch && phase !== 'closed'; }
     function status(message, bad) { el('status').textContent = message; el('status').classList.toggle('error', !!bad); }
     function clearFields() { el('request-form').reset(); el('password-form').reset(); el('account').textContent = ''; }
+    function hidePending() { el('access-pending').hidden = true; el('check-access').disabled = true; }
+    function pendingAccess() {
+      phase = 'pending'; busy = false; clearFields(); el('password-panel').hidden = true;
+      el('title').textContent = 'Your staff access is being prepared.';
+      el('access-pending').hidden = false; el('check-access').disabled = false; el('cancel').hidden = false;
+      status('Waiting for staff access. Check again after your workspace administrator confirms it is ready.');
+      el('check-access').focus();
+    }
+    function passwordReady(verifiedUser, kind) {
+      phase = 'password'; busy = false; hidePending();
+      el('title').textContent = kind === 'invite' ? 'Set your staff password.' : 'Choose a new password.';
+      el('account').textContent = 'Staff account: ' + verifiedUser.email; el('password-panel').hidden = false;
+      status('Your email link and current staff access have been checked.'); el('password').focus();
+    }
     function cleanup() {
       if (!client || cleanupStarted) return; cleanupStarted = true;
       // Run after an Auth callback returns; SDK methods must not reenter its lock.
@@ -67,21 +81,25 @@
     }
     function close(message, success) {
       epoch++; phase = 'closed'; owner = null; busy = false; callback = null; clearFields();
-      el('request').hidden = true; el('password-panel').hidden = true; el('cancel').hidden = true;
+      el('request').hidden = true; el('password-panel').hidden = true; el('cancel').hidden = true; hidePending();
       el('save').disabled = true; el('restart').hidden = !!success;
       status(message, !success); cleanup(); el(success ? 'login' : 'restart').focus();
     }
     function timed(request) {
       var timer; return Promise.race([Promise.resolve(request), new Promise(function (_resolve, reject) { timer = win.setTimeout(function () { reject(new Error('timeout')); }, options.timeoutMs || 12000); })]).finally(function () { win.clearTimeout(timer); });
     }
-    async function staff(revision, expectedId) {
+    async function staff(revision, expectedId, allowPendingInvite) {
       var result = await timed(client.auth.getUser());
       if (!current(revision)) return null;
       var user = result && result.data && result.data.user;
       if (!result || result.error || !user || !user.id || !user.email || !user.email_confirmed_at || user.is_anonymous === true || (expectedId && user.id !== expectedId)) throw new Error('identity');
       var access = await timed(client.from('staff_roles').select('role').eq('user_id', user.id).maybeSingle());
       if (!current(revision)) return null;
-      if (!access || access.error || !access.data || !['admin', 'editor', 'viewer'].includes(access.data.role)) throw new Error('staff');
+      if (!access || access.error) throw new Error('staff');
+      // Only a successfully read missing role on a verified invite may wait.
+      // Invalid roles, identity failures and unreadable access never enter this state.
+      if (access.data === null && allowPendingInvite === true) return { pending: true };
+      if (!access.data || !['admin', 'editor', 'viewer'].includes(access.data.role)) throw new Error('staff');
       return user;
     }
     el('request-form').addEventListener('submit', async function (event) {
@@ -94,6 +112,18 @@
       email = ''; el('email').value = ''; busy = false; el('send').disabled = false;
       // Identical response for existing/unknown accounts and provider failures.
       status('Check your inbox for a reset link. If no link arrives, try again later or ask your workspace administrator for help.');
+    });
+    el('check-access').addEventListener('click', async function () {
+      if (!client || phase !== 'pending' || busy || !owner || destroyed) return;
+      var revision = epoch, expectedId = owner;
+      busy = true; el('check-access').disabled = true; status('Checking your current staff access…');
+      try {
+        var verified = await staff(revision, expectedId, true);
+        if (!verified || !current(revision)) return;
+        if (verified.pending) pendingAccess(); else passwordReady(verified, 'invite');
+      } catch (_) {
+        if (current(revision)) close('This invitation or staff access could not be verified. Ask your workspace administrator to check your access, then request a fresh link.', false);
+      }
     });
     el('password-form').addEventListener('submit', async function (event) {
       event.preventDefault(); if (!client || phase !== 'password' || busy || !owner || destroyed) return;
@@ -119,7 +149,7 @@
       // Returning to manual sign-in must not restore an older office account in this tab.
       ['creek-office-auth', 'creek-office-auth-code-verifier', 'creek-office-auth-user'].forEach(function (key) { try { win.sessionStorage.removeItem(key); } catch (_) {} });
     });
-    function destroy() { destroyed = true; epoch++; phase = 'closed'; owner = null; callback = null; clearFields(); el('password-panel').hidden = true; if (subscription) subscription.unsubscribe(); cleanup(); }
+    function destroy() { destroyed = true; epoch++; phase = 'closed'; owner = null; callback = null; clearFields(); el('password-panel').hidden = true; hidePending(); if (subscription) subscription.unsubscribe(); cleanup(); }
     win.addEventListener('pagehide', destroy);
     win.addEventListener('pageshow', function (event) { if (event.persisted) win.location.reload(); });
     var ready = (async function () {
@@ -141,11 +171,9 @@
         if (!current(revision)) return;
         if (!response || response.error || !response.data || !response.data.session || !response.data.session.user) throw new Error('link');
         owner = response.data.session.user.id;
-        var user = await staff(revision, owner);
+        var user = await staff(revision, owner, kind === 'invite');
         if (!user || !current(revision)) return;
-        phase = 'password'; el('title').textContent = kind === 'invite' ? 'Set your staff password.' : 'Choose a new password.';
-        el('account').textContent = 'Staff account: ' + user.email; el('password-panel').hidden = false;
-        status('Your email link and current staff access have been checked.'); el('password').focus();
+        if (user.pending) pendingAccess(); else passwordReady(user, kind);
       } catch (_) { if (!destroyed && phase !== 'closed') close('This link or staff access could not be verified. Request a fresh link, or ask your workspace administrator to check your access.', false); }
     })();
     return { ready: ready, destroy: destroy };
