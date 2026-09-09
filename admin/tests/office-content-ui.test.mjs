@@ -140,3 +140,37 @@ test('fresh readiness failure prevents a write and an authorization error clears
 test('Cancel asks before discarding a changed draft and keeps it when staff stay',async t=>{const f=fixture(t);await f.api.load(1);f.api.open('announcements');f.set('title','Keep sample');let asks=0;f.w.confirm=()=>{asks++;return false;};f.form().querySelector('[data-office-close]').click();assert.ok(f.form());assert.equal(asks,1);f.w.confirm=()=>true;f.form().querySelector('[data-office-close]').click();assert.equal(f.form(),null);});
 
 test('a stalled content save becomes recoverable instead of leaving the draft busy',async t=>{const f=fixture(t);await f.api.load(1);f.api.open('announcements');f.set('title','Sample stalled save');f.set('body','Keep recovery identity');f.w.setTimeout=fn=>setTimeout(fn,1);f.w.clearTimeout=clearTimeout;f.control.hold=()=>new Promise(()=>{});await f.submit();await tick();assert.match(f.form().textContent,/could not be confirmed/);const check=f.form().querySelector('[data-office-reconcile]');assert.equal(check.hidden,false);assert.equal(check.disabled,false);assert.equal(f.form().querySelector('[type=submit]').disabled,true);});
+
+for (const transition of ['clear', 'new-user', 'viewer', 'unavailable']) {
+  test('accepted content discard cannot reopen private details after ' + transition, async t => {
+    const f = fixture(t, { rows: { office_prayer_requests: [{ id: 'sample-prayer', display_name: 'Fictional request', request_text: 'OLD_PRIVATE_PRAYER_CANARY', status: 'active', share_scope: 'staff_only', sharing_approved: false }] } });
+    await f.api.load(1);
+    f.api.open('announcements'); f.set('title', 'Unsaved sample announcement');
+    f.w.confirm = () => {
+      if (transition === 'clear') { f.setContext({ epoch: 2, userId: null, role: null, canEdit: false }); f.api.clear(); }
+      if (transition === 'new-user') f.setContext({ epoch: 2, userId: 'other-sample-user', role: 'editor', canEdit: true });
+      if (transition === 'viewer') f.setContext({ epoch: 1, userId: 'sample-user', role: 'viewer', canEdit: false });
+      if (transition === 'unavailable') f.setContext({ epoch: 1, userId: 'sample-user', role: 'editor', canEdit: false, workspaceReady: false });
+      return true;
+    };
+    f.roots.prayers.querySelector('[data-office-edit]').click();
+    assert.equal(f.form(), null);
+    assert.equal(f.calls.some(q => q.op !== 'select'), false);
+    assert.equal(f.w.document.querySelector('.office-content-dialog'), null);
+  });
+}
+
+test('an earlier content discard decision cannot erase a replacement draft', async t => {
+  const f = fixture(t); await f.api.load(1);
+  f.api.open('announcements'); f.set('title', 'Old sample draft');
+  f.w.confirm = () => {
+    f.w.confirm = () => true;
+    f.api.open('committees'); f.set('committee_name', 'Keep replacement draft');
+    return true;
+  };
+  f.form().querySelector('[data-office-close]').click();
+  assert.ok(f.form());
+  assert.equal(f.form().elements.committee_name.value, 'Keep replacement draft');
+  assert.equal(f.w.document.querySelectorAll('.office-content-dialog').length, 1);
+  assert.equal(f.calls.some(q => q.op !== 'select'), false);
+});

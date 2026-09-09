@@ -14,6 +14,18 @@ async function until(check, message) {
 }
 const deferred = () => { let resolve; const promise=new Promise(r=>resolve=r);return {promise,resolve}; };
 function unloadBlocked(f) { const event=new f.w.Event('beforeunload',{cancelable:true}); f.w.dispatchEvent(event); return event.defaultPrevented; }
+function coreRequestClock(f) {
+  const originalSet=f.w.setTimeout.bind(f.w), originalClear=f.w.clearTimeout.bind(f.w), timers=new Map();let next=-1;
+  f.w.setTimeout=(fn,ms,...args)=>{if(ms!==12000)return originalSet(fn,ms,...args);const id=next--;timers.set(id,()=>fn(...args));return id;};
+  f.w.clearTimeout=id=>{if(!timers.delete(id))originalClear(id);};
+  return ()=>{assert.equal(timers.size,1,'exactly the held request reaches its deadline');const [id,run]=timers.entries().next().value;timers.delete(id);run();};
+}
+async function newDocumentUpload(f) {
+  await until(()=>f.el('people-list').querySelector('button'),'workspace ready');f.w.location.hash='#documents';
+  await until(()=>f.el('primary-action').textContent==='Upload document','document route ready');f.el('primary-action').click();
+  const values=new Map([['title','Synthetic pending upload'],['category','policy'],['file',{name:'fixture.pdf',size:12,type:'application/pdf'}]]);
+  f.w.FormData=class{get(key){return values.get(key);}};
+}
 function fixture(t,options={}) {
   const dom = new JSDOM(html,{url:options.url||'https://office.example.invalid/admin/',runScripts:'outside-only'}),w=dom.window;
   t.after(()=>w.close());
@@ -491,4 +503,78 @@ test('pending and uncertain core saves keep the unload warning until confirmatio
   response.resolve({error:{message:'Synthetic lost response'}});await until(()=>f.el('editor-error').textContent.includes('could not be confirmed'),'uncertain state shown');
   assert.equal(unloadBlocked(f),true);assert.equal(field(f,'notes').disabled,true);
   f.emit(null);assert.equal(unloadBlocked(f),false);assert.equal(f.el('editor').open,false);
+});
+
+test('timed-out document upload retains its draft through early absence and settles without automatic metadata writes',async t=>{
+  const upload=deferred(),options={uploadDeferred:upload},f=fixture(t,options);await newDocumentUpload(f);const expire=coreRequestClock(f);
+  submit(f);await until(()=>f.calls.some(q=>q.op==='upload'),'upload started');expire();await until(()=>f.el('editor-error').textContent.includes('could not be confirmed'),'deadline reported');
+  const originalPath=f.calls.find(q=>q.op==='upload').path;
+  f.el('editor-refresh').click();await until(()=>f.el('save').disabled===false,'same-ID retry is offered after absent read');
+  assert.equal(field(f,'title').disabled,true,'pending submitted fields remain frozen');
+  assert.equal(f.w.document.querySelector('[data-close-editor]').disabled,true);
+  let asked=0;f.w.confirm=()=>{asked++;return true;};f.el('editor').dispatchEvent(new f.w.Event('cancel',{cancelable:true}));
+  assert.equal(f.el('editor').open,true);assert.equal(asked,0);assert.equal(unloadBlocked(f),true);
+  options.storageList={data:[{name:originalPath.split('/').pop(),metadata:{size:12}}]};upload.resolve({error:null});
+  await until(()=>f.el('save').disabled,'settled upload requires a fresh recovery read');
+  assert.equal(f.calls.some(q=>q.table==='documents'&&q.op==='insert'),false);assert.equal(f.w.document.querySelector('[data-close-editor]').disabled,true);
+  f.el('editor-refresh').click();await until(()=>f.el('save').disabled===false,'fresh read verifies the existing upload');submit(f);
+  await until(()=>!f.el('editor').open,'explicit metadata save confirms the draft');
+  assert.equal(f.calls.filter(q=>q.op==='upload').length,1);assert.equal(f.calls.filter(q=>q.table==='documents'&&q.op==='insert').length,1);assert.equal(f.calls.some(q=>q.op==='remove'),false);
+});
+
+test('a storage absence read started before upload settlement cannot unlock recovery',async t=>{
+  const upload=deferred(),listing=deferred(),options={uploadDeferred:upload},f=fixture(t,options);await newDocumentUpload(f);const expire=coreRequestClock(f);
+  submit(f);await until(()=>f.calls.some(q=>q.op==='upload'),'upload started');expire();await until(()=>f.el('editor-error').textContent.includes('could not be confirmed'),'deadline reported');
+  options.storageList=listing.promise;f.el('editor-refresh').click();await until(()=>f.calls.some(q=>q.op==='list'),'recovery read started');
+  upload.resolve({error:{message:'Synthetic late transport response'}});await pause();listing.resolve({data:[]});
+  await until(()=>f.el('workspace-refresh').disabled===false,'refresh completed');
+  assert.equal(f.el('save').disabled,true);assert.equal(f.w.document.querySelector('[data-close-editor]').disabled,true);
+  assert.match(f.el('editor-error').textContent,/settled.*refresh|refresh.*settled/i);assert.equal(f.calls.some(q=>q.table==='documents'&&q.op==='insert'),false);
+  options.storageList={data:[]};f.el('editor-refresh').click();await until(()=>f.el('save').disabled===false,'a later read can unlock the same draft');
+});
+
+test('a metadata absence snapshot predating late settlement cannot unlock or discard a document',async t=>{
+  const mutation=deferred(),reading=deferred();let holdRead=false;
+  const options={onQuery:q=>q.table==='documents'&&q.op==='insert'?mutation.promise:q.table==='documents'&&q.op==='select'&&holdRead?reading.promise:undefined};
+  const f=fixture(t,options);await newDocumentUpload(f);const expire=coreRequestClock(f);submit(f);
+  await until(()=>f.calls.some(q=>q.table==='documents'&&q.op==='insert'),'metadata write started');expire();await until(()=>f.el('editor-error').textContent.includes('could not be confirmed'),'deadline reported');
+  const write=f.calls.find(q=>q.table==='documents'&&q.op==='insert'),before=structuredClone(f.rows('a').documents),reads=f.calls.filter(q=>q.table==='documents'&&q.op==='select').length;
+  holdRead=true;f.el('editor-refresh').click();await until(()=>f.calls.filter(q=>q.table==='documents'&&q.op==='select').length>reads,'metadata recovery read started');
+  const saved={...write.row,version:1};f.rows('a').documents.push(saved);mutation.resolve({data:saved});await pause();reading.resolve({data:before});
+  await until(()=>f.el('workspace-refresh').disabled===false,'stale refresh completed');assert.equal(f.el('save').disabled,true);assert.equal(f.el('editor').open,true);
+  assert.equal(f.w.document.querySelector('[data-close-editor]').disabled,true);holdRead=false;f.el('editor-refresh').click();
+  await until(()=>!f.el('editor').open,'fresh durable record confirms the original write');assert.equal(f.calls.filter(q=>q.table==='documents'&&q.op==='insert').length,1);
+});
+
+test('late document upload settlement after account clearing cannot affect a replacement draft',async t=>{
+  const upload=deferred(),f=fixture(t,{uploadDeferred:upload});await newDocumentUpload(f);const expire=coreRequestClock(f);submit(f);
+  await until(()=>f.calls.some(q=>q.op==='upload'),'upload started');expire();await until(()=>f.el('editor-error').textContent.includes('could not be confirmed'),'deadline reported');
+  f.emit(session('b'));await until(()=>f.el('user-label').textContent.includes('staff-b'),'replacement account ready');
+  f.w.document.querySelector('[data-edit-person]').click();field(f,'notes').value='Keep replacement draft';field(f,'notes').dispatchEvent(new f.w.Event('input',{bubbles:true}));
+  const before=f.el('editor-error').textContent;upload.resolve({error:null});await pause();
+  assert.equal(field(f,'notes').value,'Keep replacement draft');assert.equal(f.el('editor-error').textContent,before);assert.equal(f.el('save').disabled,false);
+  assert.equal(f.calls.some(q=>q.table==='documents'&&q.op==='insert'),false);assert.equal(f.calls.some(q=>q.op==='remove'),false);
+});
+
+test('a confirmed same-path document retry can finish while an earlier upload remains unresolved',async t=>{
+  const first=deferred(),second=deferred(),options={uploadDeferred:first},f=fixture(t,options);await newDocumentUpload(f);const expire=coreRequestClock(f);
+  submit(f);await until(()=>f.calls.some(q=>q.op==='upload'),'first upload started');expire();await until(()=>f.el('editor-error').textContent.includes('could not be confirmed'),'first deadline reported');
+  f.el('editor-refresh').click();await until(()=>f.el('save').disabled===false,'absent read permits stable retry');assert.match(f.el('editor-error').textContent,/earlier request is still unresolved.*Keep this draft open/);
+  options.uploadDeferred=second;field(f,'title').value='Scripted replacement title';f.w.FormData=class{get(){return 'Must not become the retry payload';}};submit(f);
+  await until(()=>f.calls.filter(q=>q.op==='upload').length===2,'explicit retry started');const uploads=f.calls.filter(q=>q.op==='upload');assert.equal(uploads[0].path,uploads[1].path);
+  second.resolve({error:null});await until(()=>!f.el('editor').open,'confirmed metadata completes the safe retry');
+  const metadata=f.calls.find(q=>q.table==='documents'&&q.op==='insert');assert.equal(metadata.row.storage_path,uploads[0].path);assert.equal(metadata.row.title,'Synthetic pending upload');
+  const notice=f.el('notice').textContent;first.resolve({error:{message:'Synthetic older upload settled'}});await pause();
+  assert.equal(f.el('editor').open,false);assert.equal(f.el('notice').textContent,notice);assert.equal(f.calls.filter(q=>q.table==='documents'&&q.op==='insert').length,1);assert.equal(f.calls.some(q=>q.op==='remove'),false);
+});
+
+test('an unresolved event save permits only its submitted retry and blocks alternate archive actions',async t=>{
+  const mutation=deferred(),f=fixture(t,{onQuery:q=>q.table==='events'&&q.op==='update'?mutation.promise:undefined});
+  await until(()=>f.el('events-list').querySelector('[data-edit-event]'),'event ready');f.el('events-list').querySelector('[data-edit-event]').click();const expire=coreRequestClock(f);submit(f);
+  await until(()=>f.calls.some(q=>q.table==='events'&&q.op==='update'),'event write started');expire();await until(()=>f.el('editor-error').textContent.includes('could not be confirmed'),'event deadline reported');
+  f.el('editor-refresh').click();await until(()=>f.el('save').disabled===false,'fresh unchanged version permits submitted retry');
+  assert.equal(f.el('event-delete').disabled,true);assert.equal(field(f,'title').disabled,true);f.w.confirm=()=>true;
+  f.el('event-delete').disabled=false;f.el('event-delete').click();await pause();
+  assert.equal(f.calls.filter(q=>q.table==='events'&&q.op==='update').length,1,'the handler independently rejects an alternate archive payload');
+  f.emit(null);mutation.resolve({error:{message:'Synthetic abandoned response'}});await pause();assert.equal(f.el('editor').open,false);
 });

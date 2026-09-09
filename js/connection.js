@@ -65,14 +65,20 @@
     function status(message, bad) { el('status').textContent = message || ''; el('status').hidden = !message; el('status').classList.toggle('error', !!bad); }
     function clearPrivate() {
       user = null; loaded = false; busy = false; profile.reset(); el('fields').disabled = false; profile.hidden = true;
-      el('account').hidden = true; el('verified-email').textContent = ''; el('retry').hidden = true;
+      el('account').hidden = true; el('verified-email').textContent = ''; el('retry').hidden = true; el('retry').disabled = false;
       el('email').value = ''; emailForm.querySelector('button').disabled = false;
     }
     function phoneRequired() { field('phone').required = field('preferred_contact').value !== 'email'; }
     function showSignin(message, bad) { el('signin').hidden = false; status(message, bad); }
     async function readProfile(token, verifiedUser) {
+      if (!current(token)) return;
+      loaded = false; busy = true; el('fields').disabled = true; el('retry').disabled = true;
+      var timeout;
       try {
-        var result = await client.rpc('get_my_app_connection');
+        // Bound the UI wait; a timed-out RPC may still finish on the server.
+        var result = await Promise.race([client.rpc('get_my_app_connection'), new Promise(function (_, reject) {
+          timeout = win.setTimeout(function () { reject(new Error('profile timeout')); }, 15000);
+        })]);
         if (!current(token)) return;
         if (!result || result.error) throw new Error('profile');
         var row = returnedRow(result.data);
@@ -86,6 +92,9 @@
         if (!current(token)) return;
         loaded = false; profile.hidden = true; el('retry').hidden = false;
         status('Your details could not load. Please try again before making changes.', true);
+      } finally {
+        win.clearTimeout(timeout);
+        if (current(token)) { busy = false; el('fields').disabled = false; el('retry').disabled = false; }
       }
     }
     async function verifyAndLoad(token) {

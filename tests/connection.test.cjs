@@ -21,7 +21,7 @@ function fixture(overrides={}) {
   nodes.unavailable.hidden=false;nodes['profile-form']=profile;nodes['email-form']=emailForm;nodes.email=emailForm.fields.email;nodes.email.required=true;
   let location=new URL(overrides.url||'https://church.example.invalid/connection.html'),authCallback;
   const calls={factory:[],rpc:[],otp:[],setSession:[],signout:[],sdk:0,unsubscribed:0};
-  const win={get location(){return location},history:{replaceState(_,__,url){location=new URL(url,location)}},setTimeout,addEventListener(){}};
+  const win={get location(){return location},history:{replaceState(_,__,url){location=new URL(url,location)}},setTimeout:overrides.setTimeout||setTimeout,clearTimeout:overrides.clearTimeout||clearTimeout,addEventListener(){}};
   const doc={defaultView:win,getElementById:id=>nodes[id.replace(/^connection-/,'')],head:{appendChild(){calls.sdk++}},createElement(){return new Node()}};
   const client={auth:{getSession:async()=>({data:{session:overrides.session===undefined?session:overrides.session},error:null}),getUser:overrides.getUser||(async()=>({data:{user:overrides.user===undefined?ownUser:overrides.user},error:null})),setSession:async(value)=>{calls.setSession.push(value);return{data:{session},error:null}},onAuthStateChange(fn){authCallback=fn;return{data:{subscription:{unsubscribe(){calls.unsubscribed++}}}}},signInWithOtp:async arg=>{calls.otp.push(arg);return overrides.otpResult||{data:{session:null},error:null}},signOut:async arg=>{calls.signout.push(arg);authCallback('SIGNED_OUT',null);return{error:null}},stopAutoRefresh(){}},rpc:async(name,payload)=>{calls.rpc.push({name,payload});return overrides.rpc?overrides.rpc(name,payload):{data:name==='get_my_app_connection'?(overrides.profile||null):saved,error:null}}};
   const app=initialize(doc,{config:overrides.config===undefined?config:overrides.config,createClient:(...args)=>{calls.factory.push({args,hash:location.hash});return client}});
@@ -83,8 +83,63 @@ test('failed or empty save results preserve entries without claiming success',as
   const f=fixture({rpc:async name=>name==='get_my_app_connection'?{data:null,error:null}:saveResult});await f.flush();f.fill();await f.profile.emit('submit');assert.match(f.nodes.status.textContent,/could not confirm/);assert.equal(f.profile.fields.first_name.value,'Sample');assert.equal(f.nodes.retry.hidden,false);
  }
 });
+test('a pending retry prevents a newer save from racing an older profile response',async()=>{
+ const pending=deferred();let reads=0,writes=0;
+ const f=fixture({rpc:async name=>{
+  if(name==='get_my_app_connection')return ++reads===1?{data:null,error:null}:pending.promise;
+  return ++writes===1?{error:{message:'Synthetic interrupted acknowledgement'}}:{data:saved,error:null};
+ }});await f.flush();f.fill();await f.profile.emit('submit');assert.match(f.nodes.status.textContent,/could not confirm/);
+ await f.nodes.retry.emit('click');f.profile.fields.first_name.value='New synthetic draft';f.profile.fields.contact_permission.checked=true;
+ await f.profile.emit('submit');await f.nodes.retry.emit('click');
+ assert.equal(writes,1);assert.equal(reads,2);assert.equal(f.nodes.fields.disabled,true);assert.equal(f.nodes.retry.disabled,true);assert.match(f.nodes.status.textContent,/Loading your connection details/);
+ pending.resolve({data:{first_name:'Older synthetic snapshot',email:ownUser.email},error:null});await f.flush();
+ assert.equal(f.profile.fields.first_name.value,'Older synthetic snapshot');assert.equal(f.profile.fields.contact_permission.checked,false);assert.equal(f.nodes.fields.disabled,false);assert.equal(f.nodes.retry.disabled,false);
+ f.fill();f.profile.fields.first_name.value='New synthetic draft';await f.profile.emit('submit');
+ assert.equal(writes,2);assert.equal(f.profile.fields.first_name.value,'New synthetic draft');assert.match(f.nodes.status.textContent,/submitted for staff review/);f.app.destroy();
+});
+test('a failed retry releases its controls but blocks saving until a successful profile read',async()=>{
+ const pending=deferred();let reads=0,writes=0;
+ const f=fixture({rpc:async name=>{
+  if(name==='get_my_app_connection')return ++reads===2?pending.promise:{data:null,error:null};
+  writes++;return{error:{message:'Synthetic interrupted acknowledgement'}};
+ }});await f.flush();f.fill();await f.profile.emit('submit');await f.nodes.retry.emit('click');
+ pending.resolve({error:{message:'Synthetic read failure'}});await f.flush();
+ assert.equal(f.nodes.fields.disabled,false);assert.equal(f.nodes.retry.disabled,false);assert.equal(f.nodes.retry.hidden,false);assert.equal(f.profile.hidden,true);assert.equal(f.profile.fields.first_name.value,'Sample');
+ await f.profile.emit('submit');assert.equal(writes,1);
+ await f.nodes.retry.emit('click');await f.flush();assert.equal(reads,3);assert.equal(f.profile.hidden,false);assert.equal(f.nodes.fields.disabled,false);assert.equal(f.nodes.retry.disabled,false);f.app.destroy();
+});
+test('a timed-out profile read releases Retry and cannot overwrite a later successful save',async()=>{
+ const lateRead=deferred(),timers=new Map();let reads=0,writes=0,nextTimer=0;
+ const f=fixture({setTimeout(fn,ms){if(ms===15000){const id=++nextTimer;timers.set(id,fn);return id;}return setTimeout(fn,ms);},clearTimeout(id){if(timers.has(id))timers.delete(id);else clearTimeout(id);},rpc:async name=>{
+  if(name==='get_my_app_connection')return ++reads===2?lateRead.promise:{data:null,error:null};
+  return ++writes===1?{error:{message:'Synthetic interrupted acknowledgement'}}:{data:saved,error:null};
+ }});await f.flush();assert.equal(timers.size,0);f.fill();await f.profile.emit('submit');await f.nodes.retry.emit('click');
+ assert.equal(timers.size,1);assert.equal(f.nodes.fields.disabled,true);assert.equal(f.nodes.retry.disabled,true);
+ timers.values().next().value();await f.flush();
+ assert.equal(timers.size,0);assert.equal(f.nodes.fields.disabled,false);assert.equal(f.nodes.retry.disabled,false);assert.equal(f.nodes.retry.hidden,false);assert.equal(f.profile.hidden,true);assert.equal(f.profile.fields.first_name.value,'Sample');assert.match(f.nodes.status.textContent,/could not load/);
+ await f.profile.emit('submit');assert.equal(writes,1);await f.nodes.retry.emit('click');await f.flush();
+ assert.equal(reads,3);assert.equal(timers.size,0);f.fill();f.profile.fields.first_name.value='New synthetic draft';await f.profile.emit('submit');assert.equal(writes,2);assert.match(f.nodes.status.textContent,/submitted for staff review/);
+ lateRead.resolve({data:{first_name:'Late older snapshot',email:ownUser.email},error:null});await f.flush();
+ assert.equal(f.profile.fields.first_name.value,'New synthetic draft');assert.equal(f.nodes.fields.disabled,false);assert.equal(f.nodes.retry.disabled,false);assert.equal(f.nodes.retry.hidden,true);assert.match(f.nodes.status.textContent,/submitted for staff review/);f.app.destroy();
+});
+test('an old retry cannot unlock or populate a different account while its profile is loading',async()=>{
+ const oldRead=deferred(),newRead=deferred();let reads=0,activeUser=ownUser;
+ const nextUser={...ownUser,id:'00000000-0000-4000-8000-000000000002',email:'other@example.invalid'};
+ const f=fixture({getUser:async()=>({data:{user:activeUser},error:null}),rpc:async name=>{
+  if(name==='get_my_app_connection'){reads++;return reads===1?{data:null,error:null}:reads===2?oldRead.promise:newRead.promise;}
+  return{error:{message:'Synthetic interrupted acknowledgement'}};
+ }});await f.flush();f.fill();await f.profile.emit('submit');await f.nodes.retry.emit('click');
+ activeUser=nextUser;f.event('SIGNED_IN',{access_token:'synthetic-other-account',user:nextUser});
+ assert.equal(f.profile.fields.first_name.value,'');assert.equal(f.profile.hidden,true);assert.equal(f.nodes.retry.disabled,false);
+ await f.flush();assert.equal(reads,3);assert.equal(f.nodes.fields.disabled,true);assert.equal(f.nodes.retry.disabled,true);
+ oldRead.resolve({data:{first_name:'Old account snapshot',email:ownUser.email},error:null});await f.flush();
+ assert.equal(f.profile.fields.first_name.value,'');assert.equal(f.profile.hidden,true);assert.equal(f.nodes.fields.disabled,true);assert.equal(f.nodes.retry.disabled,true);assert.equal(f.nodes['verified-email'].textContent,nextUser.email);
+ await f.nodes.retry.emit('click');f.fill();await f.profile.emit('submit');assert.equal(reads,3);assert.equal(f.calls.rpc.filter(x=>x.name==='save_app_connection').length,1);
+ newRead.resolve({data:{first_name:'New account snapshot',email:nextUser.email},error:null});await f.flush();
+ assert.equal(f.profile.fields.first_name.value,'New account snapshot');assert.equal(f.profile.hidden,false);assert.equal(f.nodes.fields.disabled,false);assert.equal(f.nodes.retry.disabled,false);f.app.destroy();
+});
 test('sign out clears the profile immediately and ignores a late own-profile response',async()=>{
- const pending=deferred();const f=fixture({rpc:()=>pending.promise});await f.flush();await f.nodes.signout.emit('click');pending.resolve({data:{first_name:'Late private sample',email:ownUser.email},error:null});await f.flush();assert.equal(f.profile.fields.first_name.value,'');assert.equal(f.nodes['verified-email'].textContent,'');assert.equal(f.nodes.account.hidden,true);assert.equal(f.profile.hidden,true);assert.match(f.nodes.status.textContent,/Signed out/);assert.deepEqual(f.calls.signout,[{scope:'local'}]);
+ const pending=deferred();const f=fixture({rpc:()=>pending.promise});await f.flush();await f.nodes.signout.emit('click');assert.equal(f.nodes.fields.disabled,false);assert.equal(f.nodes.retry.disabled,false);pending.resolve({data:{first_name:'Late private sample',email:ownUser.email},error:null});await f.flush();assert.equal(f.profile.fields.first_name.value,'');assert.equal(f.nodes['verified-email'].textContent,'');assert.equal(f.nodes.account.hidden,true);assert.equal(f.profile.hidden,true);assert.equal(f.nodes.fields.disabled,false);assert.equal(f.nodes.retry.disabled,false);assert.match(f.nodes.status.textContent,/Signed out/);assert.deepEqual(f.calls.signout,[{scope:'local'}]);
 });
 test('a stale save cannot restore a signed-out success message or form',async()=>{
  const pending=deferred();const f=fixture({rpc:name=>name==='get_my_app_connection'?Promise.resolve({data:null,error:null}):pending.promise});await f.flush();f.fill();const submission=f.profile.emit('submit');await new Promise(r=>setTimeout(r,0));await f.nodes.signout.emit('click');pending.resolve({data:saved,error:null});await submission;assert.match(f.nodes.status.textContent,/Signed out/);assert.equal(f.profile.fields.first_name.value,'');assert.equal(f.profile.hidden,true);

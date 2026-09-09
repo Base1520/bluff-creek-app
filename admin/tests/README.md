@@ -34,3 +34,9 @@ Public signup browser verification: **7/7 checks passed** through the actual loc
 ## Staff-first intake pause
 
 `public-intake-paused-rls.test.mjs` applies all seven manifest migrations with synthetic PostgreSQL records. It verifies revoked submission access at both function boundaries, unchanged rows/capability revision, retained own-profile privacy and admin/editor review. The earlier recovery and signup SQL tests target the first six migrations; their results are baseline behavior, not evidence that public intake stays open after the seventh step.
+
+## September 9 late-response regressions
+
+The core editor and membership-history suites now hold actual fixture promises across their UI deadline, perform an early absence check and settle the old request afterward. They verify unresolved upload/metadata/history protection, stable-ID retries, fresh reconciliation after settlement, and immediate clearing without late effects on replacement drafts. These are synthetic client-transport sequences, not proof of server cancellation or durable draft recovery.
+
+Office-content cases reproduce access changes and replacement drafts during discard confirmation. The accepted decision must still refer to the original dialog, user and current record. Public `tests/connection.test.cjs` separately covers retry/read versus save ordering, a bounded read timeout and old-account cleanup isolation.

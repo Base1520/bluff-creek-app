@@ -15,15 +15,15 @@
     function authError(e){return e&&(['42501','PGRST301','PGRST302'].includes(e.code)||[401,403].includes(e.status))}
     function sameDraft(d){return draft===d&&active(d.epoch,d.owner)}
     async function gate(d){if(!sameDraft(d))throw new Error('session');if(options.ensureReady && await deadline(options.ensureReady(d.epoch))===false)throw new Error('unavailable');if(!sameDraft(d))throw new Error('session');if(!writable())throw new Error('unavailable')}
-    function syncForm(){syncUnload();if(!dialog||!draft)return;var locked=draft.pending||draft.uncertain||!!draft.snapshot;dialog.querySelectorAll('input,select,textarea').forEach(function(n){n.disabled=locked || (draft.correction&&n.name==='contact_id')});dialog.querySelectorAll('[data-close]').forEach(function(n){n.disabled=draft.pending||draft.uncertain||(draft.uploaded&&!draft.filed)});var save=dialog.querySelector('[type=submit]');if(save)save.disabled=draft.pending||draft.uncertain||!writable();var retry=dialog.querySelector('[data-recover]');if(retry)retry.disabled=draft.pending||context().workspaceReady===false;}
+    function syncForm(){syncUnload();if(!dialog||!draft)return;var locked=draft.pending||draft.uncertain||!!draft.snapshot;dialog.querySelectorAll('input,select,textarea').forEach(function(n){n.disabled=locked || (draft.correction&&n.name==='contact_id')});dialog.querySelectorAll('[data-close]').forEach(function(n){n.disabled=draft.pending||draft.uncertain||draft.unresolvedWrites>0||(draft.uploaded&&!draft.filed)});var save=dialog.querySelector('[type=submit]');if(save)save.disabled=draft.pending||draft.uncertain||!writable();var retry=dialog.querySelector('[data-recover]');if(retry)retry.disabled=draft.pending||context().workspaceReady===false;}
     function check(epoch){if(!active(epoch))throw new Error('Your session changed. Sign in again before saving.')}
     function name(person){return [person.last_name,person.first_name,person.middle_name].filter(Boolean).join(', ')}
     function peopleOptions(select,placeholder){var value=select.value;select.replaceChildren(new Option(placeholder,''));options.people().forEach(function(p){select.add(new Option(name(p)+(p.membership_number?' · #'+p.membership_number:''),p.id))});select.value=value}
     function formFingerprint(){if(!dialog)return '';return JSON.stringify(Array.from(dialog.querySelectorAll('form [name]')).map(function(n){return[n.name,n.type==='file'?Array.from(n.files||[]).map(function(f){return[f.name||'',f.type,f.size]}):n.type==='checkbox'?n.checked:n.value]}))}
     // Best-effort browser warning only; drafts and photos remain in memory.
     function warnUnload(event){event.preventDefault();event.returnValue=true}
-    function syncUnload(){var needed=!!(draft&&(draft.pending||draft.uncertain||draft.snapshot||(draft.uploaded&&!draft.filed)||(draft.initialForm&&formFingerprint()!==draft.initialForm)));if(needed===unloadListening)return;doc.defaultView[needed?'addEventListener':'removeEventListener']('beforeunload',warnUnload);unloadListening=needed}
-    function closeDialog(force){if(force!==true&&draft&&(draft.pending||draft.uncertain||(draft.uploaded&&!draft.filed)))return;if(force!==true&&draft&&draft.initialForm&&formFingerprint()!==draft.initialForm&&!doc.defaultView.confirm(draft.filed?'Discard this review draft? The uploaded source page will remain in Documents.':'Discard this unsaved review? Your transcription and selected photo will be cleared.'))return;requestId++;draft=null;syncUnload();if(previewURL){URL.revokeObjectURL(previewURL);previewURL=null}if(dialog){if(dialog.open)dialog.close();dialog.remove();dialog=null}}
+    function syncUnload(){var needed=!!(draft&&(draft.pending||draft.uncertain||draft.unresolvedWrites>0||draft.snapshot||(draft.uploaded&&!draft.filed)||(draft.initialForm&&formFingerprint()!==draft.initialForm)));if(needed===unloadListening)return;doc.defaultView[needed?'addEventListener':'removeEventListener']('beforeunload',warnUnload);unloadListening=needed}
+    function closeDialog(force){if(force!==true&&draft&&(draft.pending||draft.uncertain||draft.unresolvedWrites>0||(draft.uploaded&&!draft.filed)))return;if(force!==true&&draft&&draft.initialForm&&formFingerprint()!==draft.initialForm&&!doc.defaultView.confirm(draft.filed?'Discard this review draft? The uploaded source page will remain in Documents.':'Discard this unsaved review? Your transcription and selected photo will be cleared.'))return;requestId++;draft=null;syncUnload();if(previewURL){URL.revokeObjectURL(previewURL);previewURL=null}if(dialog){if(dialog.open)dialog.close();dialog.remove();dialog=null}}
     function clear(){clearSheetLink();loadId++;rows=[];selected='';failed=false;ready=false;loadedOwner=null;closeDialog(true);find('membership-person').replaceChildren(new Option('All people',''));find('membership-search').value='';find('membership-history').replaceChildren();find('membership-status').textContent=''}
     async function load(epoch){
       if(!active(epoch)){clear();return}if(loadedOwner&&loadedOwner!==context().userId)clear();loadedOwner=context().userId;var currentLoad=++loadId,all=[];failed=false;
@@ -51,7 +51,18 @@
       form.addEventListener('input',syncUnload,true);form.addEventListener('change',syncUnload,true);
       form.elements.page.onchange=function(){if(previewURL)URL.revokeObjectURL(previewURL);previewURL=null;var img=dialog.querySelector('img'),file=form.elements.page.files[0];img.hidden=true;img.removeAttribute('src');if(file&&['image/jpeg','image/png','image/webp'].includes(file.type)&&file.size<=15728640){previewURL=URL.createObjectURL(file);img.src=previewURL;img.hidden=false}};
       var d=draft;
+      d.unresolvedWrites=0;d.writeRevision=0;
       function output(message){if(sameDraft(d)&&dialog)form.querySelector('output').textContent=message}
+      // A client deadline does not cancel the underlying request or prove server absence.
+      async function write(promise){
+        var unresolved=true,timedOut=false;d.unresolvedWrites++;
+        function settled(){
+          unresolved=false;d.unresolvedWrites--;d.writeRevision++;
+          if(timedOut&&sameDraft(d)){d.uncertain=true;output('An earlier save request finished. Check saved progress again before continuing.');syncForm()}
+        }
+        var observed=Promise.resolve(promise).then(function(result){settled();return result},function(error){settled();throw error});
+        try{return await deadline(observed)}catch(error){if(unresolved)timedOut=true;throw error}
+      }
       function snapshot(){
         if(!form.reportValidity())return false;
         var personId=correction?correction.contact_id:select.value,eventType=form.elements.event_type.value.trim(),source=form.elements.source_label.value.trim(),file=form.elements.page.files[0];
@@ -71,14 +82,15 @@
         try{if(options.refresh)await options.refresh()}catch(_){if(active(d.epoch,d.owner))options.notice('History was saved, but the workspace could not refresh. Refresh it when the connection returns.',true)}
       }
       async function recover(){
-        if(!sameDraft(d)||d.pending)return;d.pending=true;syncForm();output('Checking the saved history and source page…');
+        if(!sameDraft(d)||d.pending)return;var revision=d.writeRevision;d.pending=true;syncForm();output('Checking the saved history and source page…');
+        function changedDuringCheck(){if(d.writeRevision===revision)return false;d.uncertain=true;output('An earlier save request finished during this check. Check saved progress again to confirm the latest result.');return true}
         try{
           if(options.ensureReady && await deadline(options.ensureReady(d.epoch))===false)throw new Error('unavailable');
           if(!sameDraft(d))return;
           if(context().workspaceReady===false)throw new Error('unavailable');
           var history=await deadline(options.db.from('membership_history').select('*').eq('id',d.id).maybeSingle());
           if(!sameDraft(d))return;if(history.error)throw history.error;
-          if(history.data){if(history.data.id!==d.id||!d.snapshot||history.data.contact_id!==d.snapshot.contact_id)throw new Error('unconfirmed');await success(true);return;}
+          if(history.data){if(history.data.id!==d.id||!d.snapshot||history.data.contact_id!==d.snapshot.contact_id)throw new Error('unconfirmed');if(changedDuringCheck())return;await success(true);return;}
           if(d.file){
             var metadata=await deadline(options.db.from('documents').select('id,storage_path').eq('id',d.documentId).maybeSingle());
             if(!sameDraft(d))return;if(metadata.error)throw metadata.error;
@@ -92,8 +104,9 @@
           }
           if(!ready||failed)await load(d.epoch);
           if(!sameDraft(d))return;
+          if(changedDuringCheck())return;
           d.uncertain=false;
-          output(d.filed?'The original page is safely filed in Documents. Save reviewed history to finish; the same source will be reused.':d.uploaded?'The page upload is present. Save reviewed history to finish filing it; it will not be uploaded again.':'No saved history was found. Your reviewed draft is retained; retry uses the same record and upload IDs.');
+          output(d.unresolvedWrites>0?'An earlier save is still unresolved. Keep this draft open. You can retry with the same record and upload IDs, then check saved progress again.':d.filed?'The original page is safely filed in Documents. Save reviewed history to finish; the same source will be reused.':d.uploaded?'The page upload is present. Save reviewed history to finish filing it; it will not be uploaded again.':'No saved history was found. Your reviewed draft is retained; retry uses the same record and upload IDs.');
         }catch(error){if(sameDraft(d)){if(authError(error)){clear();return}output('Saved progress could not be confirmed. Your submitted draft and photo are retained. Restore the connection, then check again.');}}
         finally{if(sameDraft(d)){d.pending=false;syncForm()}}
       }
@@ -105,9 +118,9 @@
         d.pending=true;syncForm();output('Saving the reviewed entry…');var mutationStarted=false;
         try{
           await gate(d);
-          if(d.file&&!d.uploaded){mutationStarted=true;var uploaded=await deadline(options.db.storage.from('church-documents').upload(d.uploadPath,d.file,{contentType:d.file.type,upsert:false}));if(!sameDraft(d))return;if(uploaded.error)throw uploaded.error;d.uploaded=true;}
-          if(d.file&&!d.filed){await gate(d);mutationStarted=true;var metadata=await deadline(options.db.from('documents').insert(d.metadata).select('id').single());if(!sameDraft(d))return;confirmed(metadata,d.documentId);d.filed=true;d.snapshot.source_document_id=d.documentId;}
-          await gate(d);mutationStarted=true;var result=await deadline(options.db.from('membership_history').insert(d.snapshot).select('id').single());if(!sameDraft(d))return;confirmed(result,d.id);await success(false);
+          if(d.file&&!d.uploaded){mutationStarted=true;var uploaded=await write(options.db.storage.from('church-documents').upload(d.uploadPath,d.file,{contentType:d.file.type,upsert:false}));if(!sameDraft(d))return;if(uploaded.error)throw uploaded.error;d.uploaded=true;}
+          if(d.file&&!d.filed){await gate(d);mutationStarted=true;var metadata=await write(options.db.from('documents').insert(d.metadata).select('id').single());if(!sameDraft(d))return;confirmed(metadata,d.documentId);d.filed=true;d.snapshot.source_document_id=d.documentId;}
+          await gate(d);mutationStarted=true;var result=await write(options.db.from('membership_history').insert(d.snapshot).select('id').single());if(!sameDraft(d))return;confirmed(result,d.id);await success(false);
         }catch(error){
           if(sameDraft(d)){
             if(authError(error)){clear();return}

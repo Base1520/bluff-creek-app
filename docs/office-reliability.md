@@ -1,4 +1,4 @@
-# Creek Office reliability and recovery · September 8, 2026
+# Creek Office reliability and recovery · September 9, 2026
 
 The goal is for common mistakes to be prevented, interrupted work to be recoverable, and unresolved work to have a clear owner. This is a prepared software candidate, not a claim of zero failures or an activated church service.
 
@@ -19,6 +19,14 @@ The goal is for common mistakes to be prevented, interrupted work to be recovera
 The operator guide is `admin/help.html`, linked from Overview and setup. People status, office-content archive/status controls, and append-only history already preserve earlier records. Document **details** can be edited; this is not file revision history or a collaborative spreadsheet editor. The new protections do not automatically publish content, invite staff, create a live reminder service, or synchronize the historical Google Sheet.
 
 The reload warning is best-effort, not draft recovery. Browsers choose the prompt text and require prior user interaction; mobile termination may skip it entirely. The handlers are removed after save, discard or access clearing, and store no draft/photo data. Focused tests verify cancelable DOM events, not native prompt display or phone recovery. See [MDN beforeunload](https://developer.mozilla.org/en-US/docs/Web/API/Window/beforeunload_event). Finish and confirm each entry before leaving; keep source originals separately.
+
+## Late responses and interrupted saves
+
+Documents and membership-page reviews keep a count of unresolved client write requests across their UI deadlines. A progress check that sees no record does not allow discarding a draft while a known request can still respond. A late settlement marks the same active draft for another explicit check; it cannot restart its abandoned save sequence or alter a replacement session. Recovery reads that overlap a settlement cannot clear uncertainty using an older observation. Submitted fields and stable record/file IDs stay together during retries. A matching durable saved record remains the completion proof.
+
+These guards track client requests, not database transaction completion. A rejected request and an absent read cannot prove that the server will never commit later. Sign-out/access loss still clears private drafts immediately; browser termination and external server work remain possible. Keep original files and review suspected unfiled objects privately before cleanup. No durable browser storage, automatic cancellation, deletion or cleanup is added.
+
+Announcements, committee contacts, slides and prayer editors bind discard decisions to the original dialog and draft. Opening the next record rechecks the user, role, readiness and current record after confirmation. An outdated confirmation cannot resurrect cleared details or erase a replacement draft.
 
 ## Migration and readiness contract
 

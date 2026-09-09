@@ -132,11 +132,11 @@ test('timed-out upload unlocks recovery and a late server commit is reused witho
   f.uploads(null);form.querySelector('[data-recover]').click();await delay();f.submit(form);await delay();assert.equal(f.calls.filter(q=>q.op==='upload').length,1);assert.equal(f.documents[0].storage_path,originalPath);assert.equal(f.rows.length,1);
 });
 
-test('early absence after a write timeout retries the same ID and reconciles a later commit',async t=>{
+test('a late history commit invalidates early absence and requires recovery before another submit',async t=>{
   const f=fixture(t);await f.api.load(1);f.clock(true);const form=f.open();f.fill(form);let pendingRow,finish;f.respond(q=>{if(q.op==='insert'&&q.table==='membership_history'){pendingRow=q.row;return new Promise(resolve=>finish=resolve)}});f.submit(form);await delay();const id=pendingRow.id;f.expire();await delay();
   f.respond(null);form.querySelector('[data-recover]').click();await delay();assert.equal(form.querySelector('[type=submit]').disabled,false);
-  f.rows.push(structuredClone(pendingRow));finish({data:{id},error:null});await delay();assert.equal(f.notices.length,0);
-  f.submit(form);await delay();const inserts=f.calls.filter(q=>q.op==='insert');assert.equal(inserts.length,2);assert.ok(inserts.every(q=>q.row.id===id));assert.equal(f.rows.length,1,'duplicate primary key prevents a second historical entry');
+  f.rows.push(structuredClone(pendingRow));finish({data:{id},error:null});await delay();assert.equal(f.notices.length,0);assert.equal(form.querySelector('[type=submit]').disabled,true);
+  f.submit(form);await delay();const inserts=f.calls.filter(q=>q.op==='insert');assert.equal(inserts.length,1);assert.equal(inserts[0].row.id,id);assert.equal(f.rows.length,1,'late completion requires a fresh check, never another automatic or manual write');
   form.querySelector('[data-recover]').click();await delay();assert.equal(f.form(),null);assert.equal(f.rows.length,1);assert.match(f.notices[0][0],/already saved/);
 });
 
@@ -191,4 +191,86 @@ test('reload cancellation covers pending and uncertain source uploads then clear
   finish({error:{message:'Synthetic lost upload response'}});await delay();assert.equal(reload(),true);assert.equal(form.querySelector('[type=submit]').disabled,true);
   f.uploads(null);form.querySelector('[data-recover]').click();await delay();assert.equal(reload(),true);f.submit(form);await delay();
   assert.equal(f.rows.length,1);assert.equal(f.documents.length,1);assert.equal(f.form(),null);assert.equal(reload(),false);
+});
+
+async function pendingStage(t,stage){
+  const f=fixture(t);await f.api.load(1);f.clock(true);const form=f.open();f.fill(form);f.photo(form);
+  let finish,reject,payload;const response=new Promise((resolve,fail)=>{finish=resolve;reject=fail});
+  if(stage==='upload')f.uploads(()=>response);
+  else f.respond(q=>{if(q.op==='insert'&&q.table===(stage==='metadata'?'documents':'membership_history')){payload=q.row;return response}});
+  f.submit(form);await delay();const path=f.calls.find(q=>q.op==='upload').path;
+  if(stage==='upload')f.blobs.delete(path); // The original request has not committed yet.
+  f.expire();await delay();
+  return{f,form,finish,reject,payload,path,commit(){
+    if(stage==='upload'){f.blobs.add(path);finish({data:{path},error:null})}
+    else{(stage==='metadata'?f.documents:f.rows).push(structuredClone(payload));finish({data:{id:payload.id},error:null})}
+  }};
+}
+
+test('early absence cannot discard unresolved upload, document or history writes; late completion requires a fresh check',async t=>{
+  for(const stage of ['upload','metadata','history'])await t.test(stage,async t=>{
+    const p=await pendingStage(t,stage),{f,form}=p;
+    const reload=()=>{const event=new f.w.Event('beforeunload',{cancelable:true});f.w.dispatchEvent(event);return event.defaultPrevented};
+    form.querySelector('[data-recover]').click();await delay();
+    assert.equal(form.querySelector('[type=submit]').disabled,false,'a retry can retain the frozen IDs');
+    assert.equal(f.w.document.querySelector('[data-close]').disabled,true);assert.equal(reload(),true);
+    f.w.document.querySelector('[data-close]').click();f.w.document.querySelector('dialog').dispatchEvent(new f.w.Event('cancel',{cancelable:true}));
+    assert.equal(f.form(),form);assert.equal(f.confirmations.length,0,'unsettled work cannot be discarded through confirmation');
+    const writes=f.calls.filter(q=>q.op==='insert'||q.op==='upload').length;
+    p.commit();await delay();
+    assert.equal(f.form(),form);assert.equal(f.notices.length,0);assert.equal(reload(),true);
+    assert.equal(form.querySelector('[type=submit]').disabled,true);assert.equal(f.w.document.querySelector('[data-close]').disabled,true);
+    f.submit(form);await delay();assert.equal(f.calls.filter(q=>q.op==='insert'||q.op==='upload').length,writes,'late settlement never resumes its abandoned pipeline');
+    f.respond(null);f.uploads(null);form.querySelector('[data-recover]').click();await delay();
+    if(stage!=='history'){assert.equal(form.querySelector('[type=submit]').disabled,false);f.submit(form);await delay()}
+    assert.equal(f.form(),null);assert.equal(reload(),false);assert.equal(f.blobs.size,1);assert.equal(f.documents.length,1);assert.equal(f.rows.length,1);
+    assert.equal(f.rows[0].source_document_id,f.documents[0].id);assert.equal(f.documents[0].storage_path,p.path);
+    assert.equal(f.calls.filter(q=>q.op==='upload').length,1);
+  });
+});
+
+test('each overlapping same-ID history request must settle and be checked before an absent save can be discarded',async t=>{
+  const f=fixture(t);await f.api.load(1);f.clock(true);const form=f.open();f.fill(form);const requests=[];
+  f.respond(q=>{if(q.op==='insert'&&q.table==='membership_history')return new Promise((resolve,reject)=>requests.push({id:q.row.id,resolve,reject}))});
+  f.submit(form);await delay();f.expire();await delay();form.querySelector('[data-recover]').click();await delay();
+  f.submit(form);await delay();f.expire();await delay();assert.equal(requests.length,2);assert.equal(requests[0].id,requests[1].id);
+  requests[0].reject(new Error('PRIVATE_SYNTHETIC_TRANSPORT'));await delay();
+  assert.equal(form.querySelector('[type=submit]').disabled,true);form.querySelector('[data-recover]').click();await delay();
+  assert.equal(form.querySelector('[type=submit]').disabled,false);assert.equal(f.w.document.querySelector('[data-close]').disabled,true,'settling one request leaves the other protected');
+  f.w.document.querySelector('dialog').dispatchEvent(new f.w.Event('cancel',{cancelable:true}));assert.equal(f.form(),form);
+  requests[1].resolve({data:null,error:{message:'PRIVATE_SYNTHETIC_RESPONSE'}});await delay();
+  assert.equal(f.w.document.querySelector('[data-close]').disabled,true,'settlement itself cannot replace reconciliation');
+  form.querySelector('[data-recover]').click();await delay();assert.equal(f.w.document.querySelector('[data-close]').disabled,false);
+  assert.doesNotMatch(form.textContent,/PRIVATE_SYNTHETIC/);f.w.document.querySelector('[data-close]').click();assert.equal(f.form(),null);assert.equal(f.rows.length,0);
+});
+
+test('settlement during an absence check prevents that stale read from clearing uncertainty',async t=>{
+  const p=await pendingStage(t,'history'),{f,form}=p;let finishRead;
+  f.respond(q=>q.op==='select'&&q.table==='membership_history'&&q.single?new Promise(resolve=>finishRead=resolve):undefined);
+  form.querySelector('[data-recover]').click();await delay();
+  p.commit();await delay();finishRead({data:null,error:null});await delay();
+  assert.equal(f.form(),form);assert.equal(form.querySelector('[type=submit]').disabled,true);assert.equal(f.w.document.querySelector('[data-close]').disabled,true);assert.equal(f.notices.length,0);
+  f.respond(null);form.querySelector('[data-recover]').click();await delay();assert.equal(f.form(),null);assert.equal(f.rows.length,1);assert.equal(f.notices.length,1);
+});
+
+test('confirmed durable history completes safely while an earlier same-ID request remains pending',async t=>{
+  const p=await pendingStage(t,'history'),{f,form}=p;form.querySelector('[data-recover]').click();await delay();
+  f.respond(null);f.submit(form);await delay();assert.equal(f.form(),null);assert.equal(f.rows.length,1);assert.equal(f.rows[0].id,p.payload.id);
+  const notices=f.notices.length,writes=f.calls.filter(q=>q.op==='insert'||q.op==='upload').length;
+  p.finish({data:null,error:{code:'23505'}});await delay();assert.equal(f.form(),null);assert.equal(f.rows.length,1);assert.equal(f.notices.length,notices);
+  assert.equal(f.calls.filter(q=>q.op==='insert'||q.op==='upload').length,writes);
+});
+
+test('auth clear removes protection immediately and late write settlements cannot change a replacement draft',async t=>{
+  for(const stage of ['upload','metadata','history'])await t.test(stage,async t=>{
+    const p=await pendingStage(t,stage),{f}=p;
+    const reload=()=>{const event=new f.w.Event('beforeunload',{cancelable:true});f.w.dispatchEvent(event);return event.defaultPrevented};
+    assert.equal(reload(),true);f.state.epoch=2;f.state.userId='synthetic-replacement';f.api.clear();assert.equal(reload(),false);assert.equal(f.form(),null);assert.equal(f.revoked.length,1);
+    f.respond(null);f.uploads(null);await f.api.load(2);const replacement=f.open();assert.equal(reload(),false);
+    const output=replacement.querySelector('output').textContent,writes=f.calls.filter(q=>q.op==='insert'||q.op==='upload').length;
+    if(stage==='metadata')p.reject(new Error('PRIVATE_LATE_OLD_SESSION'));else p.commit();await delay();
+    assert.equal(f.form(),replacement);assert.equal(replacement.querySelector('output').textContent,output);assert.equal(replacement.elements.details.disabled,false);
+    assert.equal(f.w.document.querySelector('[data-close]').disabled,false);assert.equal(reload(),false);assert.equal(f.notices.length,0);
+    assert.equal(f.calls.filter(q=>q.op==='insert'||q.op==='upload').length,writes);assert.doesNotMatch(f.w.document.body.textContent,/PRIVATE_LATE/);
+  });
 });
