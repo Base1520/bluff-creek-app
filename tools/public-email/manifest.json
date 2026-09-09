@@ -1,0 +1,24 @@
+{
+  "format_version": 1,
+  "state": "prepared_not_configured",
+  "templates": [
+    {
+      "kind": "confirmation",
+      "dashboard_template": "Confirm signup",
+      "file": "confirmation.html",
+      "subject": "Confirm your email \u00b7 Home @ the Creek"
+    },
+    {
+      "kind": "magic_link",
+      "dashboard_template": "Magic link",
+      "file": "magic-link.html",
+      "subject": "Your sign-in link \u00b7 Home @ the Creek"
+    }
+  ],
+  "confirmation_variable": "{{ .ConfirmationURL }}",
+  "intended_public_callback": "https://app.bluffcreekbaptistchurch.org/connection.html",
+  "flow": "implicit",
+  "email_settings_changed": false,
+  "messages_sent": false,
+  "hosted_template_routing_verified": false
+}
