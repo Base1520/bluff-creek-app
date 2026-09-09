@@ -99,6 +99,24 @@ test('transient load failure clears lists, preserves draft, and blocks saves unt
   f.control.error=null;await f.api.load(1);assert.equal(f.form().querySelector('[type="submit"]').disabled,false);await f.submit();assert.equal(f.rows.leader_followups[0].notes,'Synthetic retained draft');
 });
 
+test('a canceled parallel read stays unavailable after readiness returns until a fresh complete load',async t=>{
+  for(const canceledTable of ['leader_followups','leader_followup_contacts']){
+    const f=fixture(t,{plans:[plan],contacts:[{id:'sample-contact',owner_id:'sample-owner',followup_id:plan.id,contacted_on:'2026-01-01',outcome:'attempted',method:'phone',notes:'Fictional contact'}]});
+    await f.api.load(1);f.click('[data-followups-action="edit"]');f.set('notes','Fictional retained draft');
+    const pending={};f.control.read=(q,result)=>new Promise(resolve=>{pending[q.table]=()=>resolve(result);});
+    const loading=f.api.load(1);await tick();
+    f.setContext({epoch:1,userId:'sample-owner',role:'editor',canEdit:false,workspaceReady:false});f.api.render();
+    pending[canceledTable]();await tick();
+    f.setContext({epoch:1,userId:'sample-owner',role:'editor',canEdit:true,workspaceReady:true});
+    pending[canceledTable==='leader_followups'?'leader_followup_contacts':'leader_followups']();
+    assert.equal(await loading,false);assert.ok(f.form());assert.equal(f.form().elements.notes.value,'Fictional retained draft');
+    assert.equal(f.form().querySelector('[type="submit"]').disabled,true);assert.equal(f.summaries.at(-1).due,null);assert.equal(f.root.querySelectorAll('.followups-row').length,0);
+    await f.submit();assert.equal(f.calls.some(q=>q.op!=='select'),false);
+    f.control.read=null;assert.equal(await f.api.load(1),true);assert.equal(f.form().elements.notes.value,'Fictional retained draft');assert.equal(f.form().querySelector('[type="submit"]').disabled,false);
+    await f.submit();assert.equal(f.rows.leader_followups[0].notes,'Fictional retained draft');
+  }
+});
+
 test('auth errors and disappeared rows close private dialogs, including history',async t=>{
   const f=fixture(t,{plans:[plan]});await f.api.load(1);f.click('[data-followups-action="edit"]');f.set('notes','PRIVATE_DRAFT_CANARY');f.rows.leader_followups=[];await f.api.load(1);assert.equal(f.form(),null);assert.doesNotMatch(f.w.document.body.textContent,/PRIVATE_DRAFT_CANARY/);
   f.rows.leader_followups=[structuredClone(plan)];await f.api.load(1);f.click('[data-followups-action="history"]');f.control.error={code:'42501',message:'PRIVATE_AUTH_CANARY'};await f.api.load(1);assert.equal(f.w.document.querySelector('dialog'),null);assert.equal(f.root.textContent,'');assert.doesNotMatch(f.w.document.body.textContent,/PRIVATE_AUTH_CANARY/);

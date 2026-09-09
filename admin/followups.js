@@ -149,7 +149,8 @@
       try {
         var results=await Promise.all([fetchRows('leader_followups',epoch,owner,token),fetchRows('leader_followup_contacts',epoch,owner,token)]);
         if (!current(epoch,owner) || token !== request) { if(identity(epoch,owner) && token===request)unavailable(); return false; }
-        rows=results[0] || []; contacts=results[1] || []; ready=true; failed=false;
+        if (!Array.isArray(results[0]) || !Array.isArray(results[1])) throw new Error('incomplete records');
+        rows=results[0]; contacts=results[1]; ready=true; failed=false;
         if (draft && draft.requiresRefresh) {
           if (draft.newId && rows.some(function(row){return row.id === draft.newId && owns(row);})) { close(false); notify('This plan was saved. Open it to review the saved details.'); }
           else draft.requiresRefresh=false;
