@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>the Creek — Bluff Creek Baptist Church</title>
-<meta name="description" content="Home @ the Creek — Bluff Creek Baptist Church, 1706 Highway 63, Clinton, Louisiana. Connect, pray, see what's happening, give.">
+<meta name="description" content="Home @ the Creek — Bluff Creek Baptist Church, 1706 Highway 63, Clinton, Louisiana. Connect, pray, follow the sermon series, explore reading and music, see what's happening, and give.">
 <meta name="theme-color" content="#3C5A45">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -13,18 +13,26 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,500;0,600;0,700;1,500&family=Nunito+Sans:wght@400;600;700;800&display=swap">
+<link rel="preload" href="assets/fonts/bitter-latin-normal-v42.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/fonts.css">
+<link rel="stylesheet" href="css/grow.css">
+<link rel="stylesheet" href="css/app-status.css">
 <style>
   :root{
     --ivory:#F5EFE3;--surface:#FFFFFF;--surface2:#FBF6EC;--ink:#221F1A;--ink2:#5E574C;--ink3:#938a79;
-    --pine:#3C5A45;--pine-deep:#2E4636;--pine-tint:#EAF0EA;--wheat:#B08636;--wheat-tint:#F6EED9;--clay:#A8573E;
-    --moss:#6B8F5E;--creekblue:#557A82;--line:#E4DAC8;--line2:#EFE7D7;
+    --pine:#3C5A45;--pine-deep:#2E4636;--pine-tint:#EAF0EA;--wheat:#B08636;--wheat-ink:#826021;--wheat-tint:#F6EED9;--clay:#A8573E;
+    --moss:#6B8F5E;--creekblue:#557A82;--creekblue-ink:#486970;--line:#E4DAC8;--line2:#EFE7D7;
     --shadow:0 1px 2px rgba(40,33,20,.05),0 8px 24px rgba(40,33,20,.06);
     --sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);
   }
   *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  .form-status{font-size:14px;line-height:1.6;padding-top:14px;border-top:1px solid rgba(245,239,227,.25)}
+  .note{color:var(--ink2)}
+  .note a{color:var(--pine);font-weight:800}
+  .btn:focus-visible{outline:3px solid var(--pine);outline-offset:3px}
+  .panel .btn:focus-visible,.hero .btn:focus-visible{outline-color:var(--ivory)}
+  .event-details{display:block;margin-top:4px;font-size:12px;color:var(--ink2)}
   html,body{height:100%}
   body{margin:0;background:var(--ivory);color:var(--ink);font-family:"Nunito Sans",system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;overscroll-behavior-y:none}
   .app{max-width:520px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;background:var(--ivory)}
@@ -35,7 +43,7 @@
   header .brand img{height:26px;width:auto;display:block}
   header .brand{display:flex;align-items:center;gap:10px;text-decoration:none}
   .la63{display:block;width:30px;height:auto}
-  .byline{display:flex;align-items:center;gap:8px;font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)}
+  .byline{display:flex;align-items:center;gap:8px;font-size:10.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink2)}
   .byline .la63{width:20px}
 
   main{flex:1 1 auto;padding:16px 18px calc(96px + var(--sab))}
@@ -51,12 +59,12 @@
   .hero{background:linear-gradient(160deg,var(--pine-deep),var(--pine) 88%);color:#f4efe2;border-radius:22px;padding:22px 20px 20px;position:relative;overflow:hidden;box-shadow:var(--shadow)}
   .hero .wm{position:absolute;right:-14px;top:-30px;font-family:"Bitter",serif;font-weight:700;font-size:170px;line-height:1;color:#f4efe2;opacity:.06;letter-spacing:-.04em;pointer-events:none}
   .hero .eye{font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#d9c896;position:relative}
-  .hero h1{font-family:"Bitter",serif;font-weight:600;font-size:30px;line-height:1.06;margin:8px 0 6px;text-wrap:balance;position:relative}
+  .hero h1,.hero h3{font-family:"Bitter",serif;font-weight:600;font-size:30px;line-height:1.06;margin:8px 0 6px;text-wrap:balance;position:relative}
   .hero p{margin:0;font-size:14px;line-height:1.5;color:#e6ddc7;max-width:30ch;position:relative}
   .hero .creek{position:absolute;left:-6px;bottom:-6px;width:230px;height:52px;--c:#fff;opacity:.16}
   .times{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;position:relative}
   .t{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.16);border-radius:11px;padding:8px 11px;flex:1 1 auto;min-width:88px}
-  .t small{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#cdbf98;font-weight:800}
+  .t small{display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#f4efe2;font-weight:800}
   .t b{font-family:"Bitter",serif;font-weight:600;font-size:15px;color:#fff;font-variant-numeric:tabular-nums}
 
   .sec{margin-top:22px}
@@ -69,7 +77,7 @@
   .back{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:800;color:var(--pine);background:none;border:0;font-family:inherit;padding:0 0 10px;cursor:pointer}
 
   .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
-  .qa{appearance:none;border:1px solid var(--line);background:var(--surface);border-radius:16px;padding:12px 6px 10px;display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;color:var(--ink);font-family:inherit;box-shadow:var(--shadow);transition:transform .15s ease,border-color .15s ease}
+  .qa{appearance:none;border:1px solid var(--line);background:var(--surface);border-radius:16px;padding:12px 6px 10px;display:flex;flex-direction:column;align-items:center;gap:7px;cursor:pointer;color:var(--ink);font-family:inherit;text-decoration:none;box-shadow:var(--shadow);transition:transform .15s ease,border-color .15s ease}
   .qa:active{transform:scale(.97)} .qa:focus-visible{outline:2px solid var(--pine);outline-offset:2px}
   .qa .ic{width:34px;height:34px;display:grid;place-items:center;border-radius:11px;background:var(--pine-tint);color:var(--pine)}
   .qa.gold .ic{background:var(--wheat-tint);color:var(--wheat)}
@@ -82,18 +90,18 @@
   .ev{display:flex;gap:13px;align-items:center;padding:11px 4px}
   .ev + .ev{border-top:1px solid var(--line2)}
   .cal{flex:0 0 auto;width:50px;text-align:center;background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:6px 4px}
-  .cal small{display:block;font-size:9.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--wheat)}
+  .cal small{display:block;font-size:9.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--wheat-ink)}
   .cal b{font-family:"Bitter",serif;font-size:20px;line-height:1}
-  .ev .m{flex:1 1 auto;min-width:0}
+  .ev .m{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
   .ev .m b{display:block;font-size:14.5px;font-weight:800}
   .ev .m span{font-size:12.5px;color:var(--ink2)}
   .chip{font-size:10.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--pine);background:var(--pine-tint);border-radius:20px;padding:4px 9px;white-space:nowrap}
-  .chip.gold{color:var(--wheat);background:var(--wheat-tint)}
-  .chip.blue{color:var(--creekblue);background:#E7EFEF}
+  .chip.gold{color:var(--wheat-ink);background:var(--wheat-tint)}
+  .chip.blue{color:var(--creekblue-ink);background:#E7EFEF}
   .chip.moss{color:#3f5f33;background:#E9F0E4}
 
   .word{background:linear-gradient(180deg,var(--surface),var(--surface2));border:1px solid var(--line);border-radius:18px;padding:17px;box-shadow:var(--shadow)}
-  .word .eye{font-size:10.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--wheat)}
+  .word .eye{font-size:10.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--wheat-ink)}
   .word blockquote{margin:9px 0 8px;font-family:"Bitter",serif;font-weight:500;font-style:italic;font-size:16px;line-height:1.42}
   .word cite{font-style:normal;font-size:12.5px;color:var(--ink2);font-weight:700}
 
@@ -115,7 +123,7 @@
   .card .check{color:var(--ink2)}
   .check input{width:18px;height:18px;accent-color:var(--wheat)}
   .btn{appearance:none;border:0;cursor:pointer;font-family:inherit;font-weight:800;font-size:15px;border-radius:13px;padding:13px 16px;width:100%;background:var(--wheat);color:#231a06;box-shadow:var(--shadow);text-align:center;text-decoration:none;display:block}
-  .btn:active{transform:translateY(1px)} .btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
+  .btn:active{transform:translateY(1px)} .btn:focus-visible{outline-width:3px;outline-offset:3px}
   .btn.pine{background:var(--pine);color:#f4efe2}
   .btn.ghost{background:transparent;border:1.5px solid var(--line);color:var(--pine);box-shadow:none}
   .btn + .btn{margin-top:9px}
@@ -124,18 +132,18 @@
   .ok .badge{width:52px;height:52px;border-radius:50%;background:var(--wheat);color:#231a06;display:grid;place-items:center;margin:0 auto 10px}
   .ok b{font-family:"Bitter",serif;font-size:18px;color:#fff;display:block}
   .ok span{font-size:13px;color:#e2d9c3}
-  .note{font-size:12px;color:var(--ink3);line-height:1.5;margin:8px 2px 0}
+  .note{font-size:13px;color:var(--ink2);line-height:1.5;margin:8px 2px 0}
 
-  .menu button{appearance:none;background:var(--surface);border:1px solid var(--line);border-bottom:0;padding:15px;display:flex;align-items:center;gap:13px;cursor:pointer;font-family:inherit;font-size:14.5px;font-weight:700;color:var(--ink);text-align:left;width:100%}
-  .menu button:first-child{border-radius:16px 16px 0 0}
-  .menu button:last-child{border-radius:0 0 16px 16px;border-bottom:1px solid var(--line)}
-  .menu button:active{background:var(--surface2)}
+  .menu button,.menu a{appearance:none;background:var(--surface);border:1px solid var(--line);border-bottom:0;padding:15px;display:flex;align-items:center;gap:13px;cursor:pointer;font-family:inherit;font-size:14.5px;font-weight:700;color:var(--ink);text-align:left;width:100%;text-decoration:none}
+  .menu button:first-child,.menu a:first-child{border-radius:16px 16px 0 0}
+  .menu button:last-child,.menu a:last-child{border-radius:0 0 16px 16px;border-bottom:1px solid var(--line)}
+  .menu button:active,.menu a:active{background:var(--surface2)}
   .menu .mi{width:34px;height:34px;border-radius:10px;background:var(--pine-tint);color:var(--pine);display:grid;place-items:center;flex:0 0 auto}
   .menu .mi svg{width:18px;height:18px}
   .menu .ch{margin-left:auto;color:var(--ink3)}
 
   .lock{font-family:"Bitter",serif;font-weight:600;font-size:20px;line-height:1.1}
-  .lock .at{color:var(--wheat);font-style:italic;font-weight:500}
+  .lock .at{color:var(--wheat-ink);font-style:italic;font-weight:500}
   .mins{display:grid;grid-template-columns:1fr;gap:10px}
   .min{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 15px;box-shadow:var(--shadow)}
   .min .creek{width:110px;height:24px;margin:6px 0 8px}
@@ -150,7 +158,7 @@
   .pitem b{color:var(--ink)}
 
   nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;max-width:520px;margin:0 auto;background:rgba(250,246,236,.96);backdrop-filter:saturate(1.3) blur(10px);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);padding:8px 8px calc(8px + var(--sab))}
-  nav.tabs button{appearance:none;background:none;border:0;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--ink3);border-radius:14px;padding:6px 0}
+  nav.tabs button{appearance:none;background:none;border:0;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--ink2);border-radius:14px;padding:6px 0}
   nav.tabs button svg{width:22px;height:22px}
   nav.tabs button span{font-size:10px;font-weight:800}
   nav.tabs button.on{color:var(--pine)}
@@ -167,7 +175,7 @@
   footer{padding:26px 18px calc(100px + var(--sab));text-align:center}
   footer .byline{justify-content:center}
   footer .creek{width:120px;height:26px;margin:14px auto 0;opacity:.7}
-  footer small{display:block;margin-top:10px;font-size:11.5px;color:var(--ink3);line-height:1.5}
+  footer small{display:block;margin-top:10px;font-size:11.5px;color:var(--ink2);line-height:1.5}
 </style>
 </head>
 <body>
@@ -178,6 +186,12 @@
   </header>
 
   <main>
+    <aside class="app-status" id="appStatus" aria-label="App status" role="status" aria-live="polite" hidden>
+      <p id="appOffline" hidden></p>
+      <p id="appUpdate" hidden></p>
+      <p id="appSaveStatus" hidden></p>
+    </aside>
+    <noscript><div class="card"><p>The Creek app needs JavaScript for its tabs and calendar. You can also <a href="https://www.bluffcreekbaptistchurch.org/">visit the church website</a> for services, directions, and contact details.</p></div></noscript>
     <!-- HOME -->
     <section class="screen on" data-screen="home">
       <div class="hero">
@@ -194,13 +208,25 @@
           <button class="qa" data-go="new"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span>I'm New</span></button>
           <button class="qa" data-go="prayer"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.35-7-10a4 4 0 0 1 7-2.65A4 4 0 0 1 19 11c0 5.65-7 10-7 10z"/></svg></span><span>Prayer</span></button>
           <button class="qa gold" data-go="give"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-7M2 8h20v4H2zM12 8v12M12 8S10.5 3 7.5 3 5 8 12 8zM12 8s1.5-5 4.5-5S19 8 12 8z"/></svg></span><span>Give</span></button>
-          <button class="qa blue" id="watchBtn"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></span><span>Watch</span></button>
+          <a class="qa blue" id="watchBtn" href="https://www.youtube.com/channel/UC75FUMm1TckzTRpfYHd_ILQ/live" target="_blank" rel="noopener"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></span><span>Watch</span></a>
         </div>
+        <p class="note watch-note">No service live? <a id="watchArchive" href="https://www.youtube.com/channel/UC75FUMm1TckzTRpfYHd_ILQ" target="_blank" rel="noopener">Browse our YouTube channel ↗</a></p>
       </div>
 
       <div class="sec">
-        <div class="sec-h"><h2>This week</h2><a href="#" data-go="calendar">Full calendar →</a></div>
+        <a class="grow-entry" href="#grow" data-go="grow">
+          <span class="eye">In the Word together</span>
+          <strong id="homeSeriesTitle">Habakkuk</strong>
+          <p>Find your place in the series. Discover the world behind the Word.</p>
+          <span class="grow-entry-link">Explore the series, music &amp; books →</span>
+          <span class="creek" aria-hidden="true"></span>
+        </a>
+      </div>
+
+      <div class="sec">
+        <div class="sec-h"><h2>Coming up</h2><a href="#" data-go="calendar">Full calendar →</a></div>
         <div class="card tight" id="thisweek"></div>
+        <p class="note" id="homeCalendarStatus" role="status" aria-live="polite">Refreshing the calendar…</p>
       </div>
 
       <span class="creek divider" aria-hidden="true"></span>
@@ -215,9 +241,9 @@
         <div class="panel">
           <img class="sign" src="assets/la63.svg" alt="" aria-hidden="true">
           <div class="eye">Scan &amp; connect</div>
-          <h3>Get on the list.</h3>
-          <p>New here, or want <b>The 63</b> — our weekly update — plus prayer and announcements? Add your name. That's all it takes.</p>
-          <button class="btn" data-go="new">Sign me up</button>
+          <h3>Let’s stay connected.</h3>
+          <p>New here, have a question, or want to hear from the church? Send a note so we can help you connect.</p>
+          <button class="btn" data-go="new">Connect with us</button>
         </div>
         <div class="install" id="installCard"></div>
       </div>
@@ -228,24 +254,25 @@
       <button class="back" data-go="home">‹ Home</button>
       <div class="byline" style="margin-bottom:8px"><span>First stop on the 63</span></div>
       <h2 class="page">Connect with us.</h2>
-      <p class="lead">Tell us who you are so we can welcome you well. Your info stays with our church office — we never share it.</p>
+      <p class="lead">Tell us who you are so we can welcome you well. We’ll prepare a message for you to review and send in your email app.</p>
       <div class="panel">
-        <form id="joinForm" novalidate>
+        <form id="joinForm" aria-describedby="joinNote" hidden>
           <div class="row2">
             <div class="field"><label for="jf">First name</label><input id="jf" name="first" required autocomplete="given-name"></div>
             <div class="field"><label for="jl">Last name</label><input id="jl" name="last" autocomplete="family-name"></div>
           </div>
           <div class="field"><label for="je">Email</label><input id="je" name="email" type="email" required autocomplete="email" inputmode="email" placeholder="you@email.com"></div>
-          <div class="field"><label for="jp">Mobile (for text updates)</label><input id="jp" name="phone" type="tel" autocomplete="tel" inputmode="tel" placeholder="(225) 000-0000"></div>
+          <div class="field"><label for="jp">Mobile (optional)</label><input id="jp" name="phone" type="tel" autocomplete="tel" inputmode="tel" placeholder="(225) 000-0000"></div>
           <label class="check"><input type="checkbox" name="guest"> This was my first visit</label>
-          <label class="check"><input type="checkbox" name="texts" checked> Yes, text me church updates</label>
-          <label class="check"><input type="checkbox" name="the63" checked> Send me The 63 (weekly email)</label>
+          <label class="check"><input type="checkbox" name="texts"> I’m interested in text updates</label>
+          <label class="check"><input type="checkbox" name="the63"> I’m interested in future church email updates</label>
           <div class="field"><label for="jq">Anything we can pray for? (optional)</label><textarea id="jq" name="prayer" placeholder="Share as much or as little as you'd like…"></textarea></div>
-          <button class="btn" type="submit">Join the Creek family</button>
+          <button class="btn" type="submit">Open email draft</button>
         </form>
-        <div class="ok" id="joinOk"><div class="badge"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div><b>You're in.</b><span>Welcome home. Someone from the church will reach out this week.</span></div>
+        <p class="form-status" id="joinStatus" role="status" aria-live="polite" hidden></p>
       </div>
-      <p class="note" id="joinNote"></p>
+      <p class="note" id="joinNote">Review and send in your email app. Update preferences are an inquiry to the office; this form does not enroll you in a mailing or texting list. Your entries stay on this page until you leave. <a class="direct-email">Email the church office directly</a>.</p>
+      <div class="card"><h3>Prefer an online connection?</h3><p>View the church’s online connection options. If they’re unavailable, you can use the email form above.</p><a class="btn pine" href="connection.html">Online connection options</a></div>
       <h3>What to expect on Sunday</h3>
       <div class="card plain">
         <ul>
@@ -261,21 +288,21 @@
     <section class="screen" data-screen="prayer">
       <h2 class="page">Prayer @ the Creek</h2>
       <div class="card">
-        <div class="prayercount"><b id="prayN">—</b><span>prayers lifted with the Creek this month</span></div>
-        <p class="lead" style="margin:0">Send a request to our pastor and prayer team, or lift one another up. Personal requests go <b>privately</b> to the pastor and prayer team — never posted publicly.</p>
+        <h3 style="margin-top:0">How can we pray for you?</h3>
+        <p class="lead" style="margin:0">Share a request with the church office in an email draft. You choose what to include and when to send it.</p>
       </div>
       <div class="panel" style="margin-top:14px">
         <div class="eye">Send a request</div>
-        <form id="prayForm" novalidate style="margin-top:8px">
-          <div class="field"><label for="pn">Your name (optional)</label><input id="pn" name="name" autocomplete="name" placeholder="Or leave blank to stay anonymous"></div>
+        <form id="prayForm" aria-describedby="prayNote" style="margin-top:8px" hidden>
+          <div class="field"><label for="pn">Your name (optional)</label><input id="pn" name="name" autocomplete="name" placeholder="Your name, if you’d like to share it"></div>
           <div class="field"><label for="pc">How can we reach you? (optional)</label><input id="pc" name="contact" placeholder="Phone or email"></div>
           <div class="field"><label for="pr">How can we pray?</label><textarea id="pr" name="req" required placeholder="Share your request…"></textarea></div>
-          <label class="check"><input type="checkbox" name="private" checked> Keep this private to the pastor &amp; prayer team</label>
-          <button class="btn" type="submit">Send to the prayer team</button>
+          <label class="check"><input type="checkbox" name="private" checked> Please keep this within the pastor &amp; prayer team</label>
+          <button class="btn" type="submit">Open email draft</button>
         </form>
-        <div class="ok" id="prayOk"><div class="badge"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.35-7-10a4 4 0 0 1 7-2.65A4 4 0 0 1 19 11c0 5.65-7 10-7 10z"/></svg></div><b>We're praying.</b><span>Your request is with our team. You are not alone.</span></div>
+        <p class="form-status" id="prayStatus" role="status" aria-live="polite" hidden></p>
       </div>
-      <p class="note" id="prayNote"></p>
+      <p class="note" id="prayNote">Choose what to include, then review and send in your email app. <a class="direct-email">Email the church office directly</a>.</p>
       <div class="sec"><div class="sec-h"><h2 style="font-size:15px">Lifting up together</h2></div>
         <div class="card" id="prayerWall"></div>
       </div>
@@ -283,7 +310,11 @@
 
     <!-- CALENDAR -->
     <section class="screen" data-screen="calendar">
-      <h2 class="page">This month at the Creek</h2>
+      <h2 class="page">Coming up at the Creek</h2>
+      <p class="note" id="calendarStatus" role="status" aria-live="polite">Loading the church calendar…</p>
+      <p><a class="btn pine" id="submitEvent" target="_blank" rel="noopener" hidden>Submit an event for approval</a></p>
+      <p class="note">Requests go to the church for review. Approved changes are added to the church calendar.</p>
+      <p class="note"><a id="calendarDownload" href="calendar.ics" download="bluff-creek-calendar.ics">Download calendar</a> · A copy of the dates currently listed.</p>
       <div class="card tight" id="calendarList"></div>
       <span class="creek divider" aria-hidden="true"></span>
       <div class="sec"><div class="word"><div class="eye">Every week</div>
@@ -294,9 +325,9 @@
     <!-- GIVE -->
     <section class="screen" data-screen="give">
       <h2 class="page">Give @ the Creek</h2>
-      <div class="hero" style="background:linear-gradient(160deg,#7c5f22,var(--wheat) 92%)">
+      <div class="hero" style="background:linear-gradient(160deg,#7c5f22,var(--wheat-ink) 92%)">
         <div class="eye" style="color:#fff5df">Cheerfully &amp; regularly</div>
-        <h1 style="font-size:26px">Support the Lord's work here.</h1>
+        <h3 style="font-size:26px">Support the Lord's work here.</h3>
         <p style="color:#fbf3df">Your giving sustains worship, discipleship, missions, and the care of our people and our community.</p>
       </div>
       <div class="sec" id="giveActions"></div>
@@ -309,6 +340,60 @@
       </div>
     </section>
 
+    <!-- GROW -->
+    <section class="screen" data-screen="grow">
+      <div class="grow-intro"><span class="grow-eyebrow">Rooted in the Word</span><h2 class="page">Keep growing.</h2><p class="lead">A little deeper on Sunday. Something to carry through the week.</p></div>
+      <div class="grow-jump" aria-label="Explore Grow"><button type="button" data-grow-scroll="growStudy">The series</button><button type="button" data-grow-scroll="growListen">Listen</button><button type="button" data-grow-scroll="growRead">Books</button></div>
+
+      <div id="growStudy" style="scroll-margin-top:80px">
+        <div class="grow-cover">
+          <span class="grow-eyebrow">Our current series</span>
+          <h3 id="growSeriesTitle">Habakkuk</h3>
+          <p class="grow-subtitle" id="growSeriesSubtitle">Bringing our questions before God.</p>
+          <span class="creek" aria-hidden="true"></span>
+          <p id="growSeriesIntroduction">Over the coming months, we’re walking through Habakkuk—bringing honest questions to God and learning to trust Him as we wait.</p>
+          <p class="grow-cover-meta">Three chapters · An honest conversation with God</p>
+        </div>
+        <div class="grow-current" id="growCurrent" hidden><span class="grow-eyebrow" id="growPassageLabel">Where we are</span><b id="growCurrentReference"></b><p id="growCurrentDate"></p></div>
+        <aside class="grow-pause" id="growPause" hidden><b id="growPauseTitle"></b><p id="growPauseDescription"></p></aside>
+      </div>
+
+      <div class="grow-section">
+        <span class="grow-eyebrow">Before you read</span><h3>The world behind the words.</h3>
+        <p class="grow-lead">Habakkuk sees violence and injustice around him. He brings a hard question to God: how long will this continue?</p>
+        <div class="grow-facts" aria-label="Historical setting"><span>Judah</span><span>Babylon rising</span><span>Late 600s BC · approximate</span></div>
+        <details class="grow-details"><summary>A small kingdom in a changing world</summary><p>Habakkuk speaks from the troubled world of Judah, the southern kingdom. Assyria’s power is fading, and Babylon is rising. The Chaldeans named in Habakkuk 1:6 are the Babylonians.</p><p>Scholars commonly place the book near the end of the seventh century BC. The exact date is uncertain: Habakkuk names no year or reigning king. This historical placement is inferred from the setting. <a href="https://www.esv.org/resources/esv-global-study-bible/introduction-to-habakkuk/" target="_blank" rel="noopener noreferrer">Historical introduction ↗</a></p></details>
+        <details class="grow-details"><summary>Why God’s answer raises another question</summary><p>The prophet first asks about violence and distorted justice among his own people (1:2–4). God’s answer introduces Babylon (1:5–11), raising a new question: how can a holy God use such a violent nation in judgment (1:12–17)?</p><p>Babylon’s power will not excuse its wrongdoing. The judgments in chapter 2 confront plunder, unjust gain, bloodshed, humiliation, and idolatry. <a href="https://www.biblegateway.com/passage/?search=Habakkuk+1-2&amp;version=ESV" target="_blank" rel="noopener noreferrer">Read Habakkuk 1–2 ↗</a></p></details>
+        <details class="grow-details"><summary>What to listen for as we study</summary><p><b>Honest lament.</b> Habakkuk brings his grief into conversation with God and keeps listening.</p><p><b>Justice and accountability.</b> The book confronts wrongdoing among God’s people and powerful nations. It also invites us to examine our treatment of others.</p><p><b>Faith that perseveres.</b> Habakkuk 2:4 connects life with faith. The New Testament returns to this verse in Romans 1:17, Galatians 3:11, and Hebrews 10:38. Waiting on God belongs within a life of trust and obedience.</p></details>
+      </div>
+
+      <div class="grow-section"><span class="grow-eyebrow">The shape of the book</span><h3>From questions to trust.</h3><p>This is a reading guide for the whole book. Follow along at your own pace.</p>
+        <ol class="grow-chapters">
+          <li><span class="chapter-number" aria-hidden="true">01</span><div><h4>Chapter 1 · Bring the hard question</h4><p>Habakkuk asks about injustice. God answers, and the prophet wrestles with what he hears.</p><a href="https://www.biblegateway.com/passage/?search=Habakkuk+1&amp;version=ESV" target="_blank" rel="noopener noreferrer">Read chapter 1 ↗</a></div></li>
+          <li><span class="chapter-number" aria-hidden="true">02</span><div><h4>Chapter 2 · Listen and wait</h4><p>The prophet takes his place as a watchman. God’s answer calls for faith and exposes the abuse of power.</p><a href="https://www.biblegateway.com/passage/?search=Habakkuk+2&amp;version=ESV" target="_blank" rel="noopener noreferrer">Read chapter 2 ↗</a></div></li>
+          <li><span class="chapter-number" aria-hidden="true">03</span><div><h4>Chapter 3 · Worship through uncertainty</h4><p>A prayer remembers God’s saving power. Still trembling, Habakkuk resolves to rejoice in God even if crops and livestock fail.</p><a href="https://www.biblegateway.com/passage/?search=Habakkuk+3&amp;version=ESV" target="_blank" rel="noopener noreferrer">Read chapter 3 ↗</a></div></li>
+        </ol>
+        <div class="grow-reflection"><span class="grow-eyebrow">Take it into the week</span><h3>Read. Reflect. Talk together.</h3><ol class="grow-questions"><li>In 1:2–4, what troubles Habakkuk? What concern could you bring honestly to God?</li><li>How do 2:4 and 2:6–20 connect trust in God with the way we treat our neighbors?</li><li>In 3:17–19, what does Habakkuk choose when security is threatened? What might a faithful next step look like this week?</li></ol></div>
+        <details class="grow-details" style="margin-top:18px"><summary>Explore the sources</summary><ul class="grow-source-list"><li><a href="https://www.biblegateway.com/passage/?search=Habakkuk+1-3&amp;version=ESV" target="_blank" rel="noopener noreferrer">Read Habakkuk 1–3 (ESV)</a> — the biblical text behind this guide.</li><li><a href="https://www.esv.org/resources/esv-global-study-bible/introduction-to-habakkuk/" target="_blank" rel="noopener noreferrer">ESV Global Study Bible: Habakkuk</a> — historical setting, dating uncertainty, and themes.</li><li><a href="https://bibleproject.com/guides/book-of-habakkuk/" target="_blank" rel="noopener noreferrer">BibleProject: Habakkuk</a> — the movement of the book and its conversation with God.</li></ul></details>
+      </div>
+
+      <div class="grow-section" id="growListen"><div class="grow-resource">
+        <svg class="resource-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M19 34V12l21-5v22M19 20l21-5"/><ellipse cx="12" cy="35" rx="7" ry="5"/><ellipse cx="33" cy="30" rx="7" ry="5"/></svg>
+        <span class="grow-eyebrow">Listen through the week</span><h3 id="growSpotifyTitle">Songs @ the Creek</h3><p id="growSpotifyDescription">Psalms, hymns, and songs of hope. Worship centered on Christ and grounded in Scripture.</p>
+        <p class="resource-pending" id="growSpotifyPending">We’re preparing a playlist for the week ahead. Listen here once it’s available.</p>
+        <div id="growSpotifyActions" hidden><button class="btn pine" id="growSpotifyLoad" type="button">Load Spotify player</button><a class="btn ghost" id="growSpotifyLink" target="_blank" rel="noopener noreferrer">Open in Spotify ↗</a><p class="spotify-status">Loading the player connects to Spotify. Listening needs an internet connection; availability is managed by Spotify.</p><div class="spotify-player" id="growSpotifyPlayer" hidden></div><button class="link" id="growSpotifyClose" type="button" hidden>Close player</button><p class="spotify-status" id="growSpotifyStatus" role="status" aria-live="polite"></p></div>
+      </div></div>
+
+      <div class="grow-section" id="growRead"><div class="grow-resource">
+        <svg class="resource-icon" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M24 12C18 8 10 8 4 10v29c7-2 14-2 20 2 6-4 13-4 20-2V10c-6-2-14-2-20 2v29M10 17c3-1 6 0 9 1M29 18c3-1 6-2 9-1"/></svg>
+        <span class="grow-eyebrow">Pastor Cole recommends</span><h3>A good book. A deeper faith.</h3><p>Books to help us understand Scripture and follow Jesus in everyday life.</p>
+        <p class="resource-pending" id="growBooksPending">The reading list is unavailable right now. Please check back soon.</p>
+        <div class="book-tools" id="growBookTools" hidden><label for="growBookSearch">Find your next book</label><input type="search" id="growBookSearch" placeholder="Title, author or topic…" aria-controls="growBooks" autocomplete="off"><div class="book-search-status"><p id="growBookCount" role="status" aria-live="polite"></p><button type="button" class="link" id="growBookClear" hidden>Clear search</button></div></div>
+        <div class="grow-shelf" id="growBooks"></div><p id="growBooksEmpty" hidden>No books match your search. Try a title, author or another topic.</p>
+      </div></div>
+      <p class="note grow-footnote">Previously saved reading pages may be available offline. Music and linked resources need an internet connection.</p>
+    </section>
+
     <!-- MORE -->
     <section class="screen" data-screen="more">
       <h2 class="page">Bluff Creek</h2>
@@ -316,14 +401,19 @@
         <blockquote style="font-style:normal;font-size:15px;line-height:1.5">A country church on Highway 63 in Clinton, Louisiana — rooted in the Word, sharing Christ with our community and the world, and walking together as one family in Him.</blockquote>
         <cite>Southern Baptist · Baptist Faith &amp; Message 2000</cite></div>
       <div class="menu">
+        <button data-go="grow"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 5C8 3 5 3 2 4v16c4-1 7-1 10 1 3-2 6-2 10-1V4c-3-1-6-1-10 1v16"/></svg></span>Grow — series, music &amp; books<span class="ch">›</span></button>
+        <button data-go="give"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 8h18v4H3zM5 12v8h14v-8M12 8v12M12 8C5 8 6 2 9 4zM12 8c7 0 6-6 3-4z"/></svg></span>Give to the church<span class="ch">›</span></button>
         <button data-go="new"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>I'm new — connect<span class="ch">›</span></button>
         <button data-go="about"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 4.5-3.4 7.7-8 9-4.6-1.3-8-4.5-8-9V7z"/></svg></span>What we believe<span class="ch">›</span></button>
         <button data-go="membership"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13A4 4 0 0 1 16 11"/></svg></span>Becoming a member<span class="ch">›</span></button>
         <button data-go="ministries"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/></svg></span>Ministries @ the Creek<span class="ch">›</span></button>
         <button data-go="policies"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></span>Policies &amp; safety<span class="ch">›</span></button>
         <button data-go="contact"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>Find us · contact<span class="ch">›</span></button>
+        <a href="connection.html"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a7 7 0 0 1 14 0v2M20 8v6m-3-3h6"/></svg></span>Online connection options<span class="ch">›</span></a>
+        <a href="admin/"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>Staff sign in<span class="ch">›</span></a>
       </div>
       <div class="install" id="installCard2"></div>
+      <div class="card" id="legacyDrafts" hidden><h3>Old drafts on this device</h3><p>Earlier versions saved form drafts on this device. You can clear those copies here without changing your email.</p><button class="btn pine" type="button" id="clearLegacyDrafts">Clear old form drafts</button><p id="legacyDraftStatus" role="status" aria-live="polite"></p></div>
     </section>
 
     <!-- ABOUT / BELIEFS -->
@@ -426,14 +516,20 @@
     <button class="on" data-tab="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg><span>Home</span></button>
     <button data-tab="prayer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.35-7-10a4 4 0 0 1 7-2.65A4 4 0 0 1 19 11c0 5.65-7 10-7 10z"/></svg><span>Prayer</span></button>
     <button data-tab="calendar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span>Calendar</span></button>
-    <button data-tab="give"><svg class="give" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-7M2 8h20v4H2zM12 8v12M12 8S10.5 3 7.5 3 5 8 12 8zM12 8s1.5-5 4.5-5S19 8 12 8z"/></svg><span>Give</span></button>
+    <button data-tab="grow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5C8 3 5 3 2 4v16c4-1 7-1 10 1 3-2 6-2 10-1V4c-3-1-6-1-10 1v16"/></svg><span>Grow</span></button>
     <button data-tab="more"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>More</span></button>
   </nav>
 </div>
 
+<script src="js/calendar-config.js"></script>
+<script src="js/calendar-feed.js"></script>
+<script src="js/app-forms.js"></script>
+<script src="js/grow-content.js"></script>
+<script src="js/grow.js"></script>
+<script src="js/app-status.js"></script>
 <script>
 /* =========================================================================
-   CONFIG — the only things you need to edit. Everything else is built.
+   Public app settings. Shared calendar rules live in events.json.
    ========================================================================= */
 var CONFIG = {
   CHURCH_EMAIL: "bluffcreekbaptist@gmail.com",   // sign-ups & prayer requests are emailed here
@@ -443,117 +539,124 @@ var CONFIG = {
   YT_CHANNEL_ID: "UC75FUMm1TckzTRpfYHd_ILQ", // @bluffcreekbc — Bluff Creek Baptist Church (created 2026-09-04)
   FACEBOOK_URL: "https://www.facebook.com/bluffcreekbaptist",
   WATCH_URL: "https://www.facebook.com/bluffcreekbaptist", // computed below: YouTube when YT_CHANNEL_ID is set
-  FORM_ENDPOINT: "",           // optional: a form/webhook URL (Zapier, Google Apps Script) — auto-captures submissions
+  EVENTS_URL: "./events.json",
+  EVENTS_CSV_URL: CreekCalendar.CSV_URL,
   TIMES: [                     // real schedule (from bluffcreekbaptistchurch.org, 2026-09-04)
     {label:"Sun · Sunday School", time:"9:00a"},
     {label:"Sun · Worship",       time:"10:15a"},
     {label:"Sun · Evening",       time:"6:00p"},
     {label:"Wed · Youth & Prayer",time:"6:00p"}
   ],
-  WEEKLY: "Sunday School 9:00a (all ages) · Worship 10:15a · Youth discipleship 5:30p · Evening service 6:00p · Wednesday: prayer 6:00p & Youth @ the Creek 6:00–8:00p · Women's study Monday 6:30p · Yoga @ the Creek Tue/Thu 5:00p · WMU 3rd Tuesday 6:00p.",
+  WEEKLY: "Sunday School 9:00a (all ages) · Worship 10:15a · Youth discipleship 5:30p · Evening service 6:00p · Wednesday: prayer 6:00p & Youth @ the Creek 6:00–8:00p · Women's study Monday 6:30p · Yoga @ the Creek Tue/Thu 3:45p · WMU 3rd Tuesday 5:00p.",
   VERSE: {text:"\"But as for me and my house, we will serve the LORD.\"", ref:"Joshua 24:15"},
-  EVENTS: [                    // offline fallback; events.json is the live source
-    {when:"2026-09-06", time:"9:00a", title:"Sunday School", where:"Fellowship Building", tag:"Weekly"},
-    {when:"2026-09-06", time:"10:15a", title:"Sunday Worship", where:"Sanctuary", tag:"Weekly"},
-    {when:"2026-09-06", time:"5:30p", title:"Youth discipleship", where:"Fellowship Building", tag:"Weekly"},
-    {when:"2026-09-06", time:"6:00p", title:"Evening service", where:"Sanctuary", tag:"Weekly"},
-    {when:"2026-09-07", time:"6:30p", title:"Women’s Bible study", where:"Contact church office for location", tag:"Weekly"},
-    {when:"2026-09-08", time:"5:00p", title:"Yoga @ the Creek", where:"Fellowship Building", tag:"Weekly"},
-    {when:"2026-09-09", time:"6:00p", title:"Prayer meeting", where:"Sanctuary", tag:"Weekly"},
-    {when:"2026-09-09", time:"6:00p", title:"Youth @ the Creek — MDWK", where:"Fellowship Building", tag:"Weekly"},
-    {when:"2026-09-10", time:"5:00p", title:"Yoga @ the Creek", where:"Fellowship Building", tag:"Weekly"}
-  ],
   PRAYER_WALL: [               // shared, non-personal items only
     {b:"Traveling mercies", t:"for our folks on the road this week."},
     {b:"Our next youth minister", t:"— that God would bring the right leader to Youth @ the Creek."},
     {b:"Thanksgiving", t:"for every family that calls the Creek home."}
-  ],
-  PRAYER_COUNT: 148
+  ]
 };
 
 (function(){
   var $=function(s,r){return (r||document).querySelector(s)}, $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
   var screens=$$('.screen'), tabs=$$('nav.tabs button');
-  var tabFor={home:'home',prayer:'prayer',calendar:'calendar',give:'give',more:'more',new:'more',about:'more',membership:'more',ministries:'more',policies:'more',contact:'more'};
-  function show(name){
-    screens.forEach(function(s){s.classList.toggle('on',s.dataset.screen===name)});
-    tabs.forEach(function(t){t.classList.toggle('on',t.dataset.tab===(tabFor[name]||'home'))});
-    window.scrollTo({top:0,behavior:'instant' in window ? 'instant':'auto'});
-    try{history.replaceState(null,'','#'+name)}catch(e){}
+  var tabFor={home:'home',prayer:'prayer',calendar:'calendar',grow:'grow',give:'more',more:'more',new:'more',about:'more',membership:'more',ministries:'more',policies:'more',contact:'more'};
+  function show(name,push,focusHeading){
+    var target=screens.find(function(screen){return screen.dataset.screen===name});
+    if(!target){name='home';target=screens[0]}
+    screens.forEach(function(screen){var current=screen===target;screen.classList.toggle('on',current);screen.hidden=!current});
+    tabs.forEach(function(tab){var current=tab.dataset.tab===(tabFor[name]||'home');tab.classList.toggle('on',current);if(current)tab.setAttribute('aria-current','page');else tab.removeAttribute('aria-current')});
+    window.scrollTo({top:0,behavior:'auto'});
+    try{if(location.hash!=='#'+name)history[push?'pushState':'replaceState'](null,'','#'+name)}catch(e){}
+    if(focusHeading){var heading=target.querySelector('h1,h2');if(heading){heading.tabIndex=-1;heading.focus({preventScroll:true})}}
+    if(push&&name==='calendar')refreshCalendar();
   }
-  tabs.forEach(function(t){t.addEventListener('click',function(){show(t.dataset.tab)})});
-  $$('[data-go]').forEach(function(b){b.addEventListener('click',function(e){e.preventDefault();show(b.dataset.go)})});
-  var start=(location.hash||'#home').slice(1); if(!document.querySelector('.screen[data-screen="'+start+'"]')) start='home'; show(start);
+  tabs.forEach(function(tab){tab.addEventListener('click',function(){show(tab.dataset.tab,true,true)})});
+  $$('[data-go]').forEach(function(button){button.addEventListener('click',function(event){event.preventDefault();show(button.dataset.go,true,true)})});
+  window.addEventListener('popstate',function(){show((location.hash||'#home').slice(1),false,true)});
+  show((location.hash||'#home').slice(1),false,false);
 
   // content
   $('#times').innerHTML=CONFIG.TIMES.map(function(t){return '<div class="t"><small>'+t.label+'</small><b>'+t.time+'</b></div>'}).join('');
   $('#weeklyRhythm').textContent=CONFIG.WEEKLY;
   $('#verseText').textContent=CONFIG.VERSE.text; $('#verseRef').textContent=CONFIG.VERSE.ref;
   function esc(s){var d=document.createElement('div');d.textContent=String(s||'');return d.innerHTML}
-  function ev(e){var dt=new Date(e.when+'T12:00:00');var day=dt.toLocaleDateString('en-US',{weekday:'short'});var n=String(dt.getDate()).padStart(2,'0');var sub=[e.time,e.where].filter(Boolean).join(' · ');return '<div class="ev"><div class="cal"><small>'+esc(day)+'</small><b>'+esc(n)+'</b></div><div class="m"><b>'+esc(e.title)+'</b><span>'+esc(sub)+'</span></div>'+(e.tag?'<span class="chip'+(e.tag==='Special'?' gold':e.tag==='Monthly'?' blue':'')+'">'+esc(e.tag)+'</span>':'')+'</div>'}
-  var today=new Date(); today.setHours(0,0,0,0);
-  function validEvent(e){return e&&/^\d{4}-\d{2}-\d{2}$/.test(e.when)&&e.time&&e.title&&e.where&&['Weekly','Monthly','Special'].indexOf(e.tag)>-1}
-  function renderEvents(events){var clean=events.filter(validEvent).sort(function(a,b){return a.when.localeCompare(b.when)});var upcoming=clean.filter(function(e){return new Date(e.when+'T12:00:00')>=today});var shown=upcoming.length?upcoming:clean;$('#thisweek').innerHTML=shown.slice(0,3).map(ev).join('');$('#calendarList').innerHTML=shown.map(ev).join('')}
-  renderEvents(CONFIG.EVENTS);
-  fetch('./events.json',{cache:'no-cache'}).then(function(r){if(!r.ok)throw new Error('Events feed unavailable');return r.json()}).then(function(data){if(!data||!Array.isArray(data.events))throw new Error('Events feed invalid');renderEvents(data.events)}).catch(function(){/* offline fallback already rendered */});
+  function ev(event){
+    var date=new Date(event.when+'T12:00:00Z');
+    var day=date.toLocaleDateString('en-US',{weekday:'short',timeZone:'UTC'});
+    var month=date.toLocaleDateString('en-US',{month:'short',timeZone:'UTC'});
+    var number=String(date.getUTCDate()).padStart(2,'0');
+    var details=event.details?'<span class="event-details">'+esc(event.details)+'</span>':'';
+    return '<div class="ev"><div class="cal"><small>'+esc(day)+'</small><b>'+esc(number)+'</b><small>'+esc(month)+'</small></div><div class="m"><b>'+esc(event.title)+'</b><span>'+esc([CreekCalendar.eventTimeLabel(event),event.where].filter(Boolean).join(' · '))+'</span>'+details+'</div>'+(event.tag?'<span class="chip'+(event.tag==='Special'?' gold':event.tag==='Monthly'?' blue':'')+'">'+esc(event.tag)+'</span>':'')+'</div>';
+  }
+  function renderEvents(events){
+    var empty='<div class="ev"><p>No dated events are listed. See the regular weekly gatherings below.</p></div>';
+    $('#thisweek').innerHTML=events.length?events.slice(0,3).map(ev).join(''):'<div class="ev"><p>See our regular service times and the weekly rhythm in the calendar.</p></div>';
+    $('#calendarList').innerHTML=events.length?events.map(ev).join(''):empty;
+  }
+  var calendarRequest=0;
+  function refreshCalendar(){
+    var request=++calendarRequest;
+    CreekCalendar.load({jsonUrl:CONFIG.EVENTS_URL,csvUrl:CONFIG.EVENTS_CSV_URL,calendarUrl:(window.CREEK_PUBLIC_CALENDAR||{}).endpoint||'',fetcher:window.fetch.bind(window),now:new Date(),fallback:CreekCalendar.DEFAULT_FEED}).then(function(result){
+      if(request!==calendarRequest)return;
+      renderEvents(result.events);
+      $('#calendarStatus').textContent=CreekCalendar.statusText(result);
+      $('#homeCalendarStatus').textContent=CreekCalendar.statusText(result);
+    }).catch(function(){if(request===calendarRequest){$('#calendarStatus').textContent='The calendar could not be refreshed. See the regular weekly gatherings below.';$('#homeCalendarStatus').textContent='The calendar could not be refreshed. Open the calendar for the regular weekly gatherings.'}});
+  }
+  renderEvents([]);
+  $('#submitEvent').href=CreekCalendar.FORM_URL;$('#submitEvent').hidden=false;
+  var calendarEndpoint=(window.CREEK_PUBLIC_CALENDAR||{}).endpoint;
+  if(calendarEndpoint)$('#calendarDownload').href=calendarEndpoint+'?format=ics';
+  refreshCalendar();
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)refreshCalendar()});
   $('#prayerWall').innerHTML=CONFIG.PRAYER_WALL.map(function(p){return '<div class="pitem"><b>'+p.b+'</b> '+p.t+'</div>'}).join('');
-  var pc=CONFIG.PRAYER_COUNT; try{pc+=(JSON.parse(localStorage.getItem('creek_prayer')||'[]')).length}catch(e){} $('#prayN').textContent=pc;
 
   // watch / give / contact actions from config
   if(CONFIG.YT_CHANNEL_ID){ CONFIG.WATCH_URL='https://www.youtube.com/channel/'+CONFIG.YT_CHANNEL_ID+'/live'; }
-  $('#watchBtn').addEventListener('click',function(){ if(CONFIG.WATCH_URL) window.open(CONFIG.WATCH_URL,'_blank','noopener'); else ping('Live stream link coming soon'); });
+  $('#watchBtn').href=CONFIG.WATCH_URL;
+  $('#watchBtn').hidden=!CONFIG.WATCH_URL;
+  $('#watchArchive').href=CONFIG.YT_CHANNEL_ID?'https://www.youtube.com/channel/'+CONFIG.YT_CHANNEL_ID:CONFIG.WATCH_URL;
+  $('#watchArchive').parentElement.hidden=!CONFIG.YT_CHANNEL_ID;
   var ga=$('#giveActions');
   ga.innerHTML = CONFIG.GIVE_URL
-    ? '<a class="btn pine" href="'+CONFIG.GIVE_URL+'" target="_blank" rel="noopener">Give online securely</a>'+(CONFIG.RECURRING_URL?'<a class="btn ghost" href="'+CONFIG.RECURRING_URL+'" target="_blank" rel="noopener">Set up recurring giving</a>':'')+'<div class="card" style="margin-top:14px"><p class="lead" style="margin:0">You can also give by check on Sunday or by mail to the church. Every gift is recorded by the church treasurer for your year-end statement.</p></div>'
-    : '<div class="card"><b style="font-family:Bitter,serif;font-size:16px">Online giving is coming soon.</b><p class="lead" style="margin:6px 0 0">For now, give by check or cash on Sunday, or by mail to the church at 1706 Highway 63, Clinton, LA 70722. Every gift is recorded by the church treasurer for your year-end statement.</p></div>';
+    ? '<a class="btn pine" href="'+CONFIG.GIVE_URL+'" target="_blank" rel="noopener">Give online securely</a>'+(CONFIG.RECURRING_URL?'<a class="btn ghost" href="'+CONFIG.RECURRING_URL+'" target="_blank" rel="noopener">Set up recurring giving</a>':'')+'<div class="card" style="margin-top:14px"><p class="lead" style="margin:0">You can also give by check on Sunday or by mail to the church.</p></div>'
+    : '<div class="card"><b style="font-family:Bitter,serif;font-size:16px">Online giving is coming soon.</b><p class="lead" style="margin:6px 0 0">For now, give by check or cash on Sunday, or by mail to the church at 1706 Highway 63, Clinton, LA 70722.</p></div>';
   var ca=$('#contactActions'), acts='';
-  if(CONFIG.CHURCH_PHONE) acts+='<a class="btn ghost" href="tel:'+CONFIG.CHURCH_PHONE.replace(/[^0-9+]/g,'')+'">Call the office · '+CONFIG.CHURCH_PHONE+'</a>';
+  if(CONFIG.CHURCH_PHONE){
+    var officePhone=CONFIG.CHURCH_PHONE.replace(/[^0-9+]/g,'');
+    if(/^\d{10}$/.test(officePhone))officePhone='+1'+officePhone;
+    else if(/^1\d{10}$/.test(officePhone))officePhone='+'+officePhone;
+    acts+='<a class="btn ghost" href="tel:'+officePhone+'">Call the office · '+CONFIG.CHURCH_PHONE+'</a>';
+  }
   if(CONFIG.CHURCH_EMAIL) acts+='<a class="btn ghost" href="mailto:'+CONFIG.CHURCH_EMAIL+'">Email the office</a>';
   ca.innerHTML=acts;
 
   // toast
   var toast=$('#toast'),tm=$('#toastMsg'),tt; function ping(m){tm.textContent=m;toast.classList.add('on');clearTimeout(tt);tt=setTimeout(function(){toast.classList.remove('on')},2600)}
 
-  // submissions: endpoint (auto) → email handoff → local backup. Always confirm.
-  function keep(key,obj){try{var a=JSON.parse(localStorage.getItem(key)||'[]');a.push(obj);localStorage.setItem(key,JSON.stringify(a))}catch(e){}}
-  function deliver(kind,data,subject,body){
-    keep('creek_'+kind,data);
-    if(CONFIG.FORM_ENDPOINT){ try{ fetch(CONFIG.FORM_ENDPOINT,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({kind:kind,when:new Date().toISOString()},data))}); }catch(e){} return 'sent'; }
-    if(CONFIG.CHURCH_EMAIL){ var href='mailto:'+CONFIG.CHURCH_EMAIL+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body); setTimeout(function(){location.href=href},350); return 'mail'; }
-    return 'local';
-  }
-  var joinForm=$('#joinForm');
-  joinForm.addEventListener('submit',function(e){
-    e.preventDefault(); var f=joinForm;
-    if(!f.first.value.trim()||!f.email.value.trim()){ping('Add your name and email');return}
-    var d={first:f.first.value.trim(),last:f.last.value.trim(),email:f.email.value.trim(),phone:f.phone.value.trim(),guest:f.guest.checked,texts:f.texts.checked,the63:f.the63.checked,prayer:f.prayer.value.trim()};
-    var body='New connection from the Creek app\n\nName: '+d.first+' '+d.last+'\nEmail: '+d.email+'\nPhone: '+d.phone+'\nFirst visit: '+(d.guest?'yes':'no')+'\nText updates: '+(d.texts?'yes':'no')+'\nThe 63 weekly: '+(d.the63?'yes':'no')+'\nPrayer: '+d.prayer;
-    var how=deliver('join',d,'Connect @ the Creek — '+d.first+' '+d.last,body);
-    joinForm.style.display='none'; $('#joinOk').classList.add('on');
-    $('#joinNote').textContent = how==='mail' ? 'If your email app opened, just tap Send — that’s how it reaches our office.' : '';
-    ping('Welcome to the Creek 🌾');
-  });
-  var prayForm=$('#prayForm');
-  prayForm.addEventListener('submit',function(e){
-    e.preventDefault(); var f=prayForm;
-    if(!f.req.value.trim()){ping('Share your request first');return}
-    var d={name:f.name.value.trim()||'Anonymous',contact:f.contact.value.trim(),req:f.req.value.trim(),private:f.private.checked};
-    var body='Prayer request from the Creek app\n\nFrom: '+d.name+'\nContact: '+d.contact+'\nPrivate: '+(d.private?'yes':'no')+'\n\n'+d.req;
-    var how=deliver('prayer',d,'Prayer @ the Creek — '+d.name,body);
-    prayForm.style.display='none'; $('#prayOk').classList.add('on');
-    $('#prayN').textContent=(parseInt($('#prayN').textContent,10)||0)+1;
-    $('#prayNote').textContent = how==='mail' ? 'If your email app opened, tap Send to deliver it to the prayer team.' : '';
-    ping('Your request is with the team');
-  });
+  // Each form opens an email draft; this page never asserts delivery.
+  $$('.direct-email').forEach(function(link){if(CONFIG.CHURCH_EMAIL)link.href='mailto:'+CONFIG.CHURCH_EMAIL;else link.hidden=true});
+  CreekForms.initialize(document,{email:CONFIG.CHURCH_EMAIL});
 
   // install to home screen
   var deferred=null, standalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
-  var isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  var isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent)||(/Macintosh/i.test(navigator.userAgent)&&navigator.maxTouchPoints>1);
   function installCard(html){$('#installCard').innerHTML=html;$('#installCard').classList.add('on');$('#installCard2').innerHTML=html;$('#installCard2').classList.add('on')}
-  window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferred=e; if(!standalone) installCard('<b>Put the Creek on your home screen.</b> One tap, and it opens like an app.<button class="btn" id="installBtn">Install the Creek app</button>');
-    $$('#installBtn').forEach(function(b){b.addEventListener('click',function(){deferred.prompt()})});});
-  if(isIOS&&!standalone){ installCard('<b>Add the Creek to your home screen.</b> Tap the <b>Share</b> button below, then <b>Add to Home Screen</b>. It opens like an app.'); }
-  if('serviceWorker' in navigator){ window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})}); }
+  function clearInstallCards(){['#installCard','#installCard2'].forEach(function(id){$(id).innerHTML='';$(id).classList.remove('on')})}
+  window.addEventListener('beforeinstallprompt',function(e){
+    e.preventDefault();deferred=e;
+    if(!standalone)installCard('<b>Put the Creek on your home screen.</b> One tap, and it opens like an app.<button class="btn" data-install>Install the Creek app</button>');
+    $$('[data-install]').forEach(function(button){button.addEventListener('click',function(){
+      if(!deferred)return;
+      var prompt=deferred;deferred=null;
+      $$('[data-install]').forEach(function(item){item.disabled=true});
+      try{Promise.resolve(prompt.prompt()).then(function(){return prompt.userChoice}).catch(function(){ping('Use your browser menu to install the Creek app.')}).finally(clearInstallCards)}
+      catch(error){clearInstallCards();ping('Use your browser menu to install the Creek app.')}
+    })});
+  });
+  window.addEventListener('appinstalled',function(){deferred=null;clearInstallCards()});
+  if(isIOS&&!standalone){ installCard('<b>Add the Creek to your home screen.</b> Tap the <b>Share</b> button, then <b>Add to Home Screen</b>. It opens like an app.'); }
+  CreekAppStatus.initialize(document);
 })();
 </script>
 </body>
