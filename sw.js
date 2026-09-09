@@ -26,7 +26,11 @@ const ASSET_URLS = new Set(SHELL.filter(url => url !== APP_URL));
 self.addEventListener('install', event => {
   // Wait for existing app windows to close so unfinished forms survive an update.
   // The live feeds are optional and must not prevent the offline shell installing.
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)));
+  // Fetch this version's shell without reusing earlier HTTP-cache responses.
+  const requests = SHELL.map(url => new Request(url, {
+    cache: 'reload', redirect: 'error', credentials: 'omit'
+  }));
+  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(requests)));
 });
 
 self.addEventListener('activate', event => {

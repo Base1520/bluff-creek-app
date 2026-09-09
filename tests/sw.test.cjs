@@ -11,7 +11,7 @@ function harness(scope = 'https://app.example.test/', endpoint = '') {
   const stores = new Map();
   const calls = [];
   const state = {
-    scope, calls, stores, installed: [], skipWaiting: 0, claimed: 0,
+    scope, calls, stores, installed: [], installedRequests: [], skipWaiting: 0, claimed: 0,
     fetch: async () => { throw new Error('Network offline'); },
     beforePut: async () => {}
   };
@@ -25,7 +25,7 @@ function harness(scope = 'https://app.example.test/', endpoint = '') {
         await state.beforePut();
         store.set(key(request), response.clone());
       },
-      addAll: async urls => { state.installed.push(...urls); }
+      addAll: async requests => { state.installedRequests.push(...requests); state.installed.push(...requests.map(key)); }
     };
   }
   const context = {
@@ -111,7 +111,16 @@ for (const scope of ['https://app.example.test/', 'http://localhost:8080/church/
     assert(worker.installed.includes(new URL('js/app-status.js', scope).href));
     assert(worker.installed.includes(new URL('css/app-status.css', scope).href));
     assert(!worker.installed.some(url => url.includes('events.json') || url.includes('/admin')));
+    assert.equal(worker.installed.length, 21);
+    for (const request of worker.installedRequests) {
+      assert(request instanceof Request, 'Installation must use worker-owned Requests.');
+      assert.equal(new URL(request.url).origin, new URL(scope).origin);
+      assert.equal(request.cache, 'reload', 'A fresh older home in HTTP cache must not seed the new shell.');
+      assert.equal(request.redirect, 'error', 'Unexpected redirects must fail shell installation.');
+      assert.equal(request.credentials, 'omit', 'Public shell requests must not carry account credentials.');
+    }
     assert.equal(worker.skipWaiting, 0);
+    assert.equal(worker.claimed, 0);
   });
 
   test(`valid events replace the feed, including an explicit empty array: ${scope}`, async () => {
