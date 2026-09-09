@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="referrer" content="no-referrer">
+  <title>Staff password help — Creek Office</title>
+  <link rel="stylesheet" href="../css/fonts.css">
+  <link rel="stylesheet" href="admin.css">
+  <script src="config.js" defer></script>
+  <script src="recovery.js" defer></script>
+</head>
+<body>
+<main class="center"><section class="auth-card" aria-labelledby="recovery-title">
+  <img src="../assets/logo.png" alt="Bluff Creek Baptist Church">
+  <p class="eyebrow">Creek Office</p>
+  <h1 id="recovery-title">Staff password help.</h1>
+  <p id="recovery-status" role="status" aria-live="polite">Checking the office connection…</p>
+  <div id="recovery-request" hidden>
+    <p>Use the email address approved for your staff account. A new account or staff access cannot be requested here.</p>
+    <form id="recovery-request-form">
+      <label for="recovery-email">Staff email<input id="recovery-email" type="email" autocomplete="email" required maxlength="254"></label>
+      <button id="recovery-send" type="submit">Request a reset link</button>
+    </form>
+  </div>
+  <div id="recovery-access-pending" hidden>
+    <p>Your invitation is verified. Your workspace administrator still needs to finish your staff access.</p>
+    <p>When they confirm it is ready, check again here. Keep this page open; reloading or closing it ends this setup.</p>
+    <button id="recovery-check-access" type="button">Check staff access</button>
+  </div>
+  <div id="recovery-password-panel" hidden>
+    <p id="recovery-account"></p>
+    <p>Use at least 12 characters. Your workspace administrator may require a stronger password.</p>
+    <form id="recovery-password-form" autocomplete="off">
+      <label for="recovery-password">New password<input id="recovery-password" type="password" autocomplete="new-password" required minlength="12" maxlength="256"></label>
+      <label for="recovery-confirm">Confirm new password<input id="recovery-confirm" type="password" autocomplete="new-password" required minlength="12" maxlength="256"></label>
+      <button id="recovery-save" type="submit">Save password</button>
+    </form>
+  </div>
+  <button id="recovery-cancel" class="quiet" type="button" hidden>Close password setup</button>
+  <p><a id="recovery-restart" class="auth-link" href="recovery.html" hidden>Request a new link</a></p>
+  <p><a id="recovery-login" class="auth-link" href="index.html">Return to staff sign in →</a></p>
+  <noscript><p>JavaScript is needed for password recovery. Ask your workspace administrator for help.</p></noscript>
+</section></main>
+</body>
+</html>

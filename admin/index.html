@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Creek Office — Bluff Creek Baptist Church</title>
+  <link rel="stylesheet" href="../css/fonts.css">
+  <link rel="stylesheet" href="admin.css">
+  <link rel="stylesheet" href="membership.css">
+  <link rel="stylesheet" href="care.css">
+  <link rel="stylesheet" href="office-content.css">
+  <link rel="stylesheet" href="signups.css">
+  <link rel="stylesheet" href="followups.css">
+  <link rel="stylesheet" href="reminder-calendar.css">
+</head>
+<body>
+  <noscript><main class="center"><section class="auth-card"><h1>Creek Office needs JavaScript.</h1><p>Enable JavaScript to sign in to the private staff workspace.</p><a href="../">Return to Home @ the Creek</a></section></main></noscript>
+  <main id="loading" class="center hidden" aria-live="polite"><section class="auth-card"><h1>Opening your workspace.</h1><p>Checking staff access…</p></section></main>
+  <main id="setup" class="center hidden">
+    <section class="auth-card">
+      <img src="../assets/logo.png" alt="Bluff Creek Baptist Church">
+      <p class="eyebrow">Creek Office</p>
+      <h1>The office is not connected yet.</h1>
+      <a href="help.html#connection">Setup and recovery help →</a>
+      <p>A workspace administrator needs to finish connecting the secure church workspace before staff can sign in. Your information has not been submitted.</p>
+    </section>
+  </main>
+
+  <main id="login" class="center hidden">
+    <section class="auth-card">
+      <img src="../assets/logo.png" alt="Bluff Creek Baptist Church">
+      <p class="eyebrow">Creek Office</p>
+      <h1>Sign in to serve.</h1>
+      <p>Church staff and approved ministry leaders only.</p>
+      <form id="login-form">
+        <label>Email<input id="email" type="email" autocomplete="email" required></label>
+        <label>Password<input id="password" type="password" autocomplete="current-password" required></label>
+        <button id="login-submit" type="submit">Sign in</button>
+        <p id="login-error" class="error" role="alert"></p>
+      </form>
+      <p><a class="auth-link" href="recovery.html">Forgot your password?</a></p>
+    </section>
+  </main>
+
+  <div id="workspace" class="shell hidden">
+    <aside>
+      <a class="office-brand" href="#dashboard"><img src="../assets/logo.png" alt=""><span>Creek Office<small>Church operations</small></span></a>
+      <nav id="workspace-nav" aria-label="Workspace">
+        <a href="#dashboard" data-view="dashboard">Overview</a>
+        <a href="#followups" data-view="followups" data-private-module>My follow-ups <span id="followup-badge" class="personal-nav-badge"></span></a>
+        <a href="#calendar" data-view="calendar">Staff calendar</a>
+        <a href="#announcements" data-view="announcements" data-private-module>Announcements</a>
+        <a href="#slides" data-view="slides" data-private-module>Sunday slides</a>
+        <a href="#prayers" data-view="prayers" data-private-module>Prayer requests</a>
+        <a href="#committees" data-view="committees" data-private-module>Committee contacts</a>
+        <a href="#signups" data-view="signups" data-private-module>App signups</a>
+        <a href="#people" data-view="people">People &amp; membership</a>
+        <a href="#history" data-view="history" data-private-module>Member history</a>
+        <a href="#care" data-view="care" data-private-module>Guests &amp; care</a>
+        <a href="#documents" data-view="documents">Documents</a>
+        <a href="#activity" data-view="activity">Activity</a>
+      </nav>
+      <div class="account"><span id="user-label"></span><span id="role-label"></span><button id="logout" class="quiet">Sign out</button></div>
+    </aside>
+
+    <section class="content">
+      <header><button id="menu" class="menu" aria-label="Workspace menu" aria-controls="workspace-nav" aria-expanded="false">☰</button><div><p class="eyebrow">Bluff Creek Baptist Church</p><h1 id="page-title">Overview</h1></div><button id="primary-action">Add</button></header>
+      <p id="notice" class="notice hidden" role="status"></p>
+      <section id="workspace-health" class="workspace-health hidden" aria-label="Workspace connection" role="status">
+        <div><p id="workspace-health-message"></p><p id="workspace-setup-help" class="hidden">Ask the workspace administrator to check the connection and required setup. <a href="help.html#connection">Read setup and recovery help →</a></p></div>
+        <button id="workspace-refresh" type="button" class="quiet">Refresh workspace</button>
+      </section>
+
+      <section id="dashboard-view" class="view">
+        <section class="panel member-journey" data-private-module aria-labelledby="member-journey-title">
+          <div class="member-journey-intro"><p class="eyebrow">Caring for our church family</p><h2 id="member-journey-title">Start with a person.</h2><p>Keep their story together, and make the next conversation a little easier.</p></div>
+          <ol class="member-journey-steps">
+            <li><a href="#people"><span class="journey-number" aria-hidden="true">01</span><span><strong>People &amp; membership <span aria-hidden="true">→</span></strong><span class="journey-description">Search first, then add or update one person’s record.</span></span></a></li>
+            <li><a href="#history"><span class="journey-number" aria-hidden="true">02</span><span><strong>Member history <span aria-hidden="true">→</span></strong><span class="journey-description">Keep the original page and review the wording. Mark anything uncertain.</span></span></a></li>
+            <li><a href="#care"><span class="journey-number" aria-hidden="true">03</span><span><strong>Guests &amp; care <span aria-hidden="true">→</span></strong><span class="journey-description">Assign the next contact, choose when it is due, and record each visit or call.</span></span></a></li>
+          </ol>
+        </section>
+        <section class="panel office-care-dashboard" data-private-module aria-labelledby="office-care-title">
+          <div class="panel-head"><div><p class="eyebrow">Keep care moving</p><h2 id="office-care-title">Who needs our attention?</h2></div><a href="#care">Guests &amp; care →</a></div>
+          <p id="dashboard-care-status" class="membership-note" role="status">Loading the care queues…</p>
+          <div class="office-care-actions">
+            <button type="button" data-care-queue="due" disabled><span>Due care plans</span><b id="care-due-count">—</b><small>Open due &amp; overdue →</small></button>
+            <button type="button" data-care-queue="unassigned" disabled><span>Unassigned plans</span><b id="care-unassigned-count">—</b><small>Choose a care owner →</small></button>
+            <button type="button" data-care-queue="coverage" disabled><span>Coverage gaps</span><b id="care-gaps-count">—</b><small>Review monthly &amp; quarterly care →</small></button>
+          </div>
+        </section>
+        <section class="panel personal-dashboard" data-private-module aria-labelledby="personal-dashboard-title">
+          <div class="panel-head"><div><p class="eyebrow">Your people. Your next step.</p><h2 id="personal-dashboard-title">Make room to reach out.</h2></div><a href="#followups">My follow-ups →</a></div>
+          <p id="dashboard-followup-status" role="status">Loading your personal reminders…</p>
+          <div id="dashboard-followup-list"></div>
+        </section>
+        <div class="metrics">
+          <article><span>Upcoming events</span><b id="event-count">—</b></article>
+          <article><span>People records</span><b id="people-count">—</b></article>
+          <article><span>Documents</span><b id="document-count">—</b></article>
+          <article data-private-module><span>Signups to review</span><b id="signup-count">—</b><a class="signup-dashboard-link" href="#signups">Open signup queue →</a></article>
+        </div>
+        <div class="panel"><div class="panel-head"><div><p class="eyebrow">Coming up</p><h2>Next events</h2></div><a href="#calendar">Open calendar →</a></div><div id="dashboard-events" class="rows"></div></div>
+        <section class="panel office-help-card"><div><p class="eyebrow">A little help, right here</p><h2>Know what happens next.</h2><p>Find help with saving, recovering an interrupted task, and keeping church information current.</p></div><a href="help.html">Open the office guide →</a></section>
+      </section>
+
+      <section id="calendar-view" class="view hidden">
+        <div class="panel calendar-guide"><p class="eyebrow">Church calendar</p><h2>Keep everyone on the same page.</h2><p>The church calendar is maintained in iCloud. Open Apple Calendar or iCloud Calendar with an account invited by the calendar owner to add or change church events.</p><p><a href="https://www.icloud.com/calendar/" target="_blank" rel="noopener">Open iCloud Calendar ↗</a></p><details><summary>How editor access works</summary><p>The calendar owner invites each editor through Apple Calendar sharing and enables editing. Creek Office access and iCloud permissions are separate. Use Apple Calendar on iPhone, or iCloud Calendar on a tablet or computer.</p><p><a href="https://support.apple.com/guide/icloud/share-a-calendar-mm6b1a9479/icloud" target="_blank" rel="noopener">Apple’s calendar-sharing instructions ↗</a></p></details><p class="calendar-note">Community requests are still collected in the <a href="https://docs.google.com/spreadsheets/d/13PVdvLzOd02hiL1My1cY0ZzGrwGxYdAaogNOwWRGe_c/edit" target="_blank" rel="noopener">event request sheet</a>. Review a request, then make the approved change in iCloud. The sheet alone does not update this calendar.</p></div>
+        <h2>Private staff planning</h2><p class="calendar-note">Events below stay in Creek Office. They do not change iCloud or the public calendar.</p>
+        <div class="toolbar"><input id="event-search" aria-label="Search staff calendar" type="search" placeholder="Search calendar"><select id="event-filter" aria-label="Filter events by type"><option value="">All types</option><option>Weekly</option><option>Monthly</option><option>Special</option></select><select id="event-status-filter" aria-label="Filter archived events"><option value="active">Active events</option><option value="archived">Archived events</option><option value="all">All events</option></select></div>
+        <div class="panel"><div id="events-list" class="rows"></div></div>
+      </section>
+
+      <section id="people-view" class="view hidden">
+        <div id="people-sheet-tools" class="panel membership-sheet-tools hidden" hidden><div><h2>The full membership roll</h2><p>See the overall record in the working Google Sheet. Google account access applies; office changes do not sync to the sheet.</p></div><a id="people-sheet-link" class="membership-sheet-button" target="_blank" rel="noopener noreferrer">Open membership spreadsheet ↗</a></div>
+        <p class="membership-note">Search before adding a person to keep their history and care in one place. Search by name, former name, member number, household or contact details. Keep uncertain historical dates as written; inactive records stay in the archive.</p>
+        <div class="toolbar"><input id="people-search" aria-label="Search people" type="search" placeholder="Name, member number, household…"><select id="people-filter" aria-label="Filter people by status"><option value="">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="visitor">Visitor</option></select></div>
+        <div class="panel table-wrap"><table><thead><tr><th>Name</th><th>Status</th><th>Household</th><th>Updated</th><th></th></tr></thead><tbody id="people-list"></tbody></table></div>
+      </section>
+
+      <section id="history-view" class="view hidden"></section>
+      <section id="followups-view" class="view hidden">
+        <div id="followups-module"></div>
+        <section class="panel personal-calendar"><div><p class="eyebrow">Keep it in view</p><h2>A weekly moment for your leaders.</h2><p>Set aside time to open this list, pray for your leaders, and choose who to call. Add a recurring check-in to your personal calendar.</p></div><button type="button" class="quiet" id="weekly-reminder">Weekly calendar reminder</button></section>
+      </section>
+      <section id="care-view" class="view hidden"></section>
+      <section id="signups-view" class="view hidden"></section>
+      <section id="announcements-view" class="view hidden"></section>
+      <section id="committees-view" class="view hidden"></section>
+      <section id="slides-view" class="view hidden"></section>
+      <section id="prayers-view" class="view hidden"></section>
+
+      <section id="documents-view" class="view hidden">
+        <p class="membership-note document-guide">Keep policies, minutes and spreadsheets together. General documents here are available to all approved office staff. Uploaded spreadsheets are saved copies; use the working Google Sheet for shared editing.</p>
+        <div class="toolbar"><input id="document-search" aria-label="Search documents" type="search" placeholder="Search documents"><select id="document-filter" aria-label="Filter documents by category"><option value="">All categories</option><option value="policy">Policies</option><option value="spreadsheet">Spreadsheets</option><option value="form">Forms</option><option value="minutes">Minutes</option><option value="ministry">Ministry</option><option value="other">Other</option></select></div>
+        <div class="panel table-wrap"><table><thead><tr><th>Document</th><th>Category</th><th>Updated</th><th></th></tr></thead><tbody id="documents-list"></tbody></table></div>
+      </section>
+
+      <section id="activity-view" class="view hidden"><div class="panel"><div id="activity-list" class="rows"></div></div></section>
+    </section>
+  </div>
+
+  <dialog id="editor" aria-labelledby="editor-title"><form id="editor-form"><header><div><p class="eyebrow" id="editor-kicker"></p><h2 id="editor-title"></h2></div><button class="icon" type="button" data-close-editor aria-label="Close">×</button></header><div id="editor-fields"></div><footer><button id="event-delete" class="quiet hidden" type="button">Archive event</button><button id="editor-refresh" class="quiet hidden" type="button">Refresh workspace</button><button class="quiet" type="button" data-close-editor>Cancel</button><button id="save" type="submit">Save</button></footer><p id="editor-error" class="error" role="alert"></p></form></dialog>
+
+  <dialog id="document-dialog" aria-labelledby="document-title"><div class="document-sheet"><h2 id="document-title">Open document</h2><div id="document-result" role="status"></div><button id="close-document" class="quiet" type="button">Close</button></div></dialog>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
+  <script src="config.js"></script>
+  <script src="membership.js"></script>
+  <script src="care.js"></script>
+  <script src="office-content.js"></script>
+  <script src="signups.js"></script>
+  <script src="followups.js"></script>
+  <script src="reminder-calendar.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
