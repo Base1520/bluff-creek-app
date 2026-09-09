@@ -1,0 +1,38 @@
+{
+  "format_version": 1,
+  "status": "prepared_not_applied",
+  "opt_in": true,
+  "baseline": {
+    "manifest_path": "tools/office-preflight/manifest.json",
+    "manifest_sha256": "089264fcadda508ff4f971148a1c0a89af59ab8fcf12df680ffebdd49c6fa107",
+    "sql_file_count": 7,
+    "after_version": "20260908220718",
+    "intake_state": "paused",
+    "schema_revision": "20260907174301"
+  },
+  "migration": {
+    "path": "tools/public-intake/migrations/20260909010555_reopen_verified_public_app_intake.sql",
+    "sha256": "91e26914d33c9e8e5f01c18840e1973eef89f068fdc67971425eb97d51af6f81",
+    "version": "20260909010555",
+    "name": "reopen_verified_public_app_intake",
+    "created_with": "supabase migration new reopen_verified_public_app_intake",
+    "cli_version": "2.117.0",
+    "filename_origin": "CLI-generated in an isolated scratch project; moved without renaming"
+  },
+  "expected_effect": {
+    "authenticated_submission_execute": true,
+    "anon_submission_execute": false,
+    "public_submission_execute": false,
+    "function_definitions_changed": true,
+    "table_privileges_changed": false,
+    "schema_revision_changed": false,
+    "auth_settings_changed": false,
+    "public_configuration_enabled": false,
+    "changed_function_definitions": [
+      "private.verified_connection_email()"
+    ],
+    "deleted_accounts_denied": true,
+    "active_bans_denied": true
+  },
+  "hosted_applied": false
+}
