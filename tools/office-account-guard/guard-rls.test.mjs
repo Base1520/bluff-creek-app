@@ -1,3 +1,4 @@
+// Historical before/after proof uses the byte-identical seven-migration snapshot.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -7,7 +8,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(new URL('../../admin/tests/package.json', import.meta.url));
 const { PGlite } = require('@electric-sql/pglite');
 const { pgcrypto } = require('@electric-sql/pglite/contrib/pgcrypto');
-const baselineBytes = await readFile(new URL('../office-preflight/manifest.json', import.meta.url));
+const baselineBytes = await readFile(new URL('../office-preflight/history/manifest-seven-2026-09-08.json', import.meta.url));
 const baseline = JSON.parse(baselineBytes);
 const optional = JSON.parse(await readFile(new URL('./manifest.json', import.meta.url), 'utf8'));
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -262,7 +263,7 @@ test('the optional staff guard enforces current account eligibility without broa
     const data = await snapshot(), catalog = await inventory();
     await pg.exec(optionalSql);
     assert.deepEqual(await snapshot(), data); assert.deepEqual(await inventory(), catalog);
-    assert.equal(digest(await readFile(new URL('../office-preflight/manifest.json', import.meta.url))), optional.baseline_manifest_sha256);
+    assert.equal(digest(await readFile(new URL('../office-preflight/history/manifest-seven-2026-09-08.json', import.meta.url))), optional.baseline_manifest_sha256);
     for (const row of baseline.sql_files) assert.equal(digest(await readFile(new URL('../../' + row.path, import.meta.url))), row.sha256);
   });
 });

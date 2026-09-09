@@ -1,5 +1,5 @@
 {
-  "format_version": 3,
+  "format_version": 2,
   "schema_revision": "20260907174301",
   "sql_files": [
     {
@@ -47,13 +47,6 @@
       "sha256": "8eba1837cffba0ca00934faccc4308239b4b49f534a4ba1a968a71bd7eeb00e3",
       "depends_on": [
         "supabase/migrations/20260908220707_office_record_recovery.sql"
-      ]
-    },
-    {
-      "path": "supabase/migrations/20260909124122_require_eligible_staff_auth_account.sql",
-      "sha256": "7530eb7cd955ec1522943a179aebc03088a3ebc8126a4f4300e08eb5695bdc7b",
-      "depends_on": [
-        "supabase/migrations/20260908220718_pause_public_app_intake.sql"
       ]
     }
   ],
@@ -115,6 +108,5 @@
     "leader_followup_contacts"
   ],
   "readiness_sql_file": "supabase/migrations/20260908220707_office_record_recovery.sql",
-  "intake_pause_sql_file": "supabase/migrations/20260908220718_pause_public_app_intake.sql",
-  "staff_account_guard_sql_file": "supabase/migrations/20260909124122_require_eligible_staff_auth_account.sql"
+  "intake_pause_sql_file": "supabase/migrations/20260908220718_pause_public_app_intake.sql"
 }

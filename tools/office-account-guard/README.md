@@ -1,5 +1,9 @@
 # Staff account eligibility guard — hosted application pending
 
+**Current status, September 9:** this guard was explicitly approved and applied at recorded version `20260909124122`; its byte-identical active copy is now required as migration eight. See [hosted application and limits](../../docs/office-account-guard-hosted-2026-09-09.md). The prepared SQL and manifest here remain unchanged historical evidence, not another pending migration. The before/after tests below use the frozen seven-file manifest.
+
+## Historical preparation and local verification
+
 This optional migration closes a specific office access gap. The seven-file baseline looks up a staff role by user ID but does not check the current Auth account state. A valid existing token can therefore still exercise that staff role after an account is temporarily banned or marked deleted. The baseline also accepts staff accounts that become unconfirmed, anonymous, or lose their email. The browser alone is not an authorization boundary for direct API requests.
 
 Local PostgreSQL reproduction demonstrated private contact reads, Storage row reads, the office readiness RPC and editor/admin event writes under those ineligible account states. A role deletion already stops protected office operations; the new guard preserves that behavior.

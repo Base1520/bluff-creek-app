@@ -115,7 +115,7 @@ test('report/checklist redact key values and preserve pending ownership/signup/s
     assert.match(redacted,/does not disable Auth signup or email sending/);
     assert.match(redacted,/allow-new-signups/);assert.match(redacted,/Do not copy the local rehearsal setting auth.enable_signup=true/);
     assert.match(redacted,/does not disable backend Auth signup or RPCs/);
-    assert.match(redacted,/staff_roles/);assert.match(redacted,/seven-file migration manifest/);
+    assert.match(redacted,/staff_roles/);assert.match(redacted,/eight-file migration manifest/);
     assert.doesNotMatch(redacted,/supabase db push|supabase migration up|psql |INSERT INTO|curl /i);
   }
 });

@@ -39,8 +39,9 @@ function summary(results) {
 }
 
 test('prepared staff setup binds only the two verified Auth identities, atomically and without altering existing grants', async t => {
-  assert.equal(manifest.sql_files.length, 7, 'test the complete staff-first migration sequence');
-  assert.match(manifest.sql_files.at(-1).path, /_pause_public_app_intake\.sql$/);
+  assert.equal(manifest.sql_files.length, 8, 'test the complete staff-first migration sequence');
+  assert.match(manifest.sql_files.at(-2).path, /_pause_public_app_intake\.sql$/);
+  assert.match(manifest.sql_files.at(-1).path, /20260909124122_require_eligible_staff_auth_account\.sql$/);
   const pg = new PGlite({ extensions: { pgcrypto } });
   t.after(() => pg.close());
   await pg.exec(`

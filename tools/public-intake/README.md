@@ -1,5 +1,7 @@
 # Optional public app intake rollout
 
+**Baseline scope after September 9:** the active staff setup now includes the applied account-eligibility guard as an eighth migration. This optional reopening remains unapplied. Its before/after tests deliberately retain the original seven-file manifest snapshot and their original scope; they do not certify reopening against the current hosted eight-version environment. Review current history and repeat the required acceptance before any later activation.
+
 Prepared September 8, 2026. **Draft only; not applied or approved for hosted activation.**
 
 `migrations/20260909010555_reopen_verified_public_app_intake.sql` is deliberately outside the active `supabase/migrations/` directory. The CLI-generated UTC filename was created with Supabase CLI 2.117.0 in an isolated scratch project and moved here without renaming. This directory is not discovered by the ordinary project migration workflow and is not part of either static release packet.

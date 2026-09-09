@@ -31,4 +31,4 @@ Before sending invitations, separately approve the hosted origin/callback and wo
 node --test tools/office-access/*.test.mjs
 ```
 
-The SQL tests use the exact seven manifest migrations, an in-memory PostgreSQL database and fictional `.invalid` accounts. They do not call a hosted service or validate live email. The filesystem/CLI tests verify parsing, duplicate rejection, private modes, no overwrite, path boundaries and redacted output. No baseline migration or rehearsal helper is changed.
+The SQL tests use the exact eight manifest migrations, an in-memory PostgreSQL database and fictional `.invalid` accounts. They do not call a hosted service or validate live email. The filesystem/CLI tests verify parsing, duplicate rejection, private modes, no overwrite, path boundaries and redacted output. No baseline migration or rehearsal helper is changed.

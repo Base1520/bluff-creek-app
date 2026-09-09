@@ -12,6 +12,7 @@ const repository = fileURLToPath(new URL('../../', import.meta.url));
 const cli = fileURLToPath(new URL('./cli.mjs', import.meta.url));
 const manifestPath = 'tools/office-preflight/manifest.json';
 const template = JSON.parse(await readFile(join(repository, manifestPath), 'utf8'));
+const guardFixture = await readFile(join(repository, template.staff_account_guard_sql_file), 'utf8');
 const pauseFixture = 'begin; revoke execute on function public.save_app_connection(text,text,text,text,boolean,text), private.save_app_connection(text,text,text,text,boolean,text) from public,anon,authenticated; commit;';
 const blankConfig = 'window.CREEK_OFFICE_CONFIG = {supabaseUrl: "", publishableKey: "", membershipSheetUrl: ""};';
 const digest = source => createHash('sha256').update(source).digest('hex');
@@ -31,7 +32,7 @@ async function fixture(t) {
   await put('admin/index.html', '<script src="https://assets.invalid/sdk.js"></script>');
   await put('admin/app.js', `const REQUIRED_REVISION = "${manifest.schema_revision}";\ndb.rpc("office_readiness");\nconst modules = ${JSON.stringify(manifest.readiness_modules)};`);
   for (const [index, row] of manifest.sql_files.entries()) {
-    const source = row.path === manifest.intake_pause_sql_file ? pauseFixture : row.path !== manifest.readiness_sql_file ? '-- synthetic ordered SQL fixture ' + index + '\n'
+    const source = row.path === manifest.staff_account_guard_sql_file ? guardFixture : row.path === manifest.intake_pause_sql_file ? pauseFixture : row.path !== manifest.readiness_sql_file ? '-- synthetic ordered SQL fixture ' + index + '\n'
       : `do $$ begin foreach v_table in array array[${manifest.prerequisite_tables.map(name => "'" + name + "'").join(',')}] loop\nif to_regclass('public.' || v_table) is null then raise exception 'missing dependency'; end if;\nend loop; end $$;\ncreate function public.office_readiness() returns jsonb language plpgsql stable security invoker as $$ begin return jsonb_build_object('schema_revision', '${manifest.schema_revision}', 'supported_modules', array[${manifest.readiness_modules.map(name => "'" + name + "'").join(',')}]); end $$;`;
     row.sha256 = digest(source);
     await put(row.path, source);
@@ -53,7 +54,8 @@ test('the real local checkout matches the reviewed setup manifest without claimi
   const report = await runPreflight(repository);
   assert.equal(report.status, 'passed', textReport(report));
   assert.equal(report.schema_revision, '20260907174301');
-  assert.equal(report.sql_apply_order.length, 7);
+  assert.equal(report.sql_apply_order.length, 8);
+  assert.equal(check(report, 'eligible_staff_account_guard_declared'), true);
   assert.equal(check(report, 'staff_first_intake_pause_declared'), true);
   assert.ok(['not_configured', 'supplied_unverified'].includes(report.configuration.status));
   assert.equal(report.hosted_services, 'not_assessed');
@@ -263,12 +265,12 @@ test('CLI has useful exit codes and sanitized text/JSON without accepting servic
 test('staff-first pause cannot be omitted from the declared packet even when inventory is changed with it', async t => {
   const f = await fixture(t);
   await rm(join(f.root, f.manifest.intake_pause_sql_file));
-  f.manifest.sql_files.pop();
+  f.manifest.sql_files = f.manifest.sql_files.filter(row => row.path !== f.manifest.intake_pause_sql_file);
   await f.saveManifest();
   assert.equal(check(await runPreflight(f.root), 'manifest_structure'), false);
 });
 
-test('the readiness source is explicit and remains separate from the final privilege-only migration', async t => {
+test('the readiness source is explicit and remains separate from the pause and account guard', async t => {
   const f = await fixture(t);
   let report = await runPreflight(f.root);
   assert.equal(check(report, 'readiness_revision_agrees'), true);
@@ -293,4 +295,48 @@ test('both submission signatures and every browser grant must be revoked without
     assert.equal(check(report, 'staff_first_intake_pause_declared'), false);
     assert.equal(report.status, 'failed');
   }
+});
+
+test('fresh setup cannot omit the applied account guard or declare the older format', async t => {
+  const f = await fixture(t);
+  await rm(join(f.root, f.manifest.staff_account_guard_sql_file));
+  f.manifest.sql_files.pop();
+  await f.saveManifest();
+  assert.equal(check(await runPreflight(f.root), 'manifest_structure'), false);
+  f.manifest.format_version = 2;
+  delete f.manifest.staff_account_guard_sql_file;
+  await f.saveManifest();
+  assert.equal(check(await runPreflight(f.root), 'manifest_structure'), false);
+});
+
+test('the account guard must follow the pause and cannot be substituted for it', async t => {
+  const f = await fixture(t);
+  [f.manifest.sql_files[6], f.manifest.sql_files[7]] = [f.manifest.sql_files[7], f.manifest.sql_files[6]];
+  await f.saveManifest();
+  assert.equal(check(await runPreflight(f.root), 'manifest_structure'), false);
+  [f.manifest.sql_files[6], f.manifest.sql_files[7]] = [f.manifest.sql_files[7], f.manifest.sql_files[6]];
+  f.manifest.staff_account_guard_sql_file = f.manifest.intake_pause_sql_file;
+  await f.saveManifest();
+  assert.equal(check(await runPreflight(f.root), 'manifest_structure'), false);
+});
+
+test('weakened eligibility fails even when the manifest digest is refreshed', async t => {
+  const f = await fixture(t);
+  for (const next of [guardFixture.replace('account.is_anonymous is false', 'true'),
+    guardFixture.replace('and account.email_confirmed_at is not null', ''),
+    guardFixture.replace('and account.deleted_at is null', ''),
+    guardFixture.replace('and (account.banned_until is null or account.banned_until <= now())', ''),
+    guardFixture + '\ngrant execute on function private.current_staff_role() to public;\n']) {
+    await f.alterSql(() => next, f.manifest.staff_account_guard_sql_file);
+    const report = await runPreflight(f.root);
+    assert.equal(report.checks.filter(row => row.name === 'sql_digest_matches').every(row => row.ok), true);
+    assert.equal(check(report, 'eligible_staff_account_guard_declared'), false);
+    assert.equal(report.status, 'failed');
+  }
+});
+
+test('the retained optional preparation copy cannot also enter the active inventory', async t => {
+  const f = await fixture(t);
+  await f.put('supabase/migrations/20260909024020_require_eligible_staff_auth_account.sql', guardFixture);
+  assert.equal(check(await runPreflight(f.root), 'migration_inventory_matches'), false);
 });

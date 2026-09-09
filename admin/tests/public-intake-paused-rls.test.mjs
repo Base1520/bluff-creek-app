@@ -11,14 +11,15 @@ const ids = Object.fromEntries(['admin', 'editor', 'viewer', 'member', 'other', 
 const denied = operation => assert.rejects(operation, error => error.code === '42501');
 
 test('the complete staff-first packet pauses submission at both function boundaries while preserving review and read access', async t => {
-  assert.equal(manifest.sql_files.length, 7);
-  assert.equal(manifest.sql_files.at(-1).path, pausePath);
+  assert.equal(manifest.sql_files.length, 8);
+  assert.equal(manifest.sql_files[6].path, pausePath);
+  assert.match(manifest.sql_files[7].path, /20260909124122_require_eligible_staff_auth_account\.sql$/);
   const pg = new PGlite({ extensions: { pgcrypto } });
   t.after(() => pg.close());
   await pg.exec(`
     create role anon nologin; create role authenticated nologin; create role intake_outsider nologin;
     create schema auth;
-    create table auth.users(id uuid primary key, email text, email_confirmed_at timestamptz, is_anonymous boolean not null default false);
+    create table auth.users(id uuid primary key, email text, email_confirmed_at timestamptz, is_anonymous boolean not null default false, deleted_at timestamptz, banned_until timestamptz);
     create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
     grant usage on schema auth to anon, authenticated;
     grant execute on function auth.uid() to anon, authenticated;
@@ -35,7 +36,7 @@ test('the complete staff-first packet pauses submission at both function boundar
     assert.equal(createHash('sha256').update(source).digest('hex'), row.sha256);
     sql.push(source);
   }
-  for (const source of sql.slice(0, -1)) await pg.exec(source);
+  for (const source of sql.slice(0, 6)) await pg.exec(source);
   for (const [role, id] of Object.entries(ids)) {
     await pg.query('insert into auth.users(id,email,email_confirmed_at,is_anonymous) values ($1,$2,$3,$4)', [id, `${role}@example.invalid`, '2026-09-08', role === 'anonymous']);
     if (['admin', 'editor', 'viewer'].includes(role)) await pg.query('insert into public.staff_roles(user_id,role) values ($1,$2)', [id, role]);
@@ -57,7 +58,7 @@ test('the complete staff-first packet pauses submission at both function boundar
   const other = (await as('other', submission('private'))).rows[0].result;
   const readiness = (await as('admin', 'select public.office_readiness() result')).rows[0].result;
   const before = await snapshot();
-  await pg.exec(sql.at(-1));
+  for (const source of sql.slice(6)) await pg.exec(source);
 
   await t.test('migration preserves all preexisting rows and leaves the staff capability revision unchanged', async () => {
     assert.deepEqual(await snapshot(), before);

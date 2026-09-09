@@ -1,5 +1,7 @@
 # Creek Office: after-demo activation
 
+**September 9 schema update:** the explicitly approved account guard is now applied as version `20260909124122`, with exact approved bytes and 14 pre/14 post catalog checks. The active setup requires eight migrations. Verify existing hosted versions; do not replay them. This is schema/catalog evidence, not staff sign-in, email or release acceptance. See the [guard record](office-account-guard-hosted-2026-09-09.md). Earlier September 8 observations below remain dated evidence.
+
 Updated September 8, 2026 after the approved hosted schema application. This is the wiring and acceptance path for the private office. Staff access, email, hosted acceptance and release remain open. Today's local demonstration remains available separately.
 
 ## Reviewed destination
@@ -31,14 +33,14 @@ The private spreadsheet identifier is intentionally excluded from generated brow
 | Step | Work and evidence required | Current state |
 | --- | --- | --- |
 | 1. Owners and visibility | Two intended administrators are supplied privately. Use the identity-bound access preparation path; wider staff roles still need selection. Admin/editor accounts currently have broad office access. Assigned-deacon/teacher-only access is not built. | Initial identities selected; wider visibility decision open |
-| 2. Exact schema | All seven approved migrations applied after empty-target recheck. Hosted statement hashes match approved SQL; local versions aligned with recorded history, preserving provenance. | Hosted schema applied and catalog verified |
+| 2. Exact schema | Original seven migrations plus the September 9 account guard are applied. All approved statement hashes and recorded versions are retained; fresh setup requires all eight, existing hosted setup verifies them without replay. | Eight-migration schema applied; signed-in acceptance separate |
 | 3. Hosted sign-in | Review exact HTTPS origin and `/admin/recovery.html` callback. Configure the approved email provider and signup posture, then assign approved real identities through the reviewed access process. | Staged browser settings; hosted configuration and invitations pending |
 | 4. Hosted verification | Rehearse fictional viewer/editor/admin/nonstaff and revoked-access cases; password reset/first password; private source uploads/downloads; stale/interrupted saves and separate personal leadership notes. | Local service passed; hosted evidence pending |
 | 5. Recovery | Establish database **and original uploaded-file** copies, approved separate restore destination, retention and operators. Restore both and compare records/policies/source bytes; record loss window and recovery time. | Local restore passed; hosted/off-device arrangement pending |
 | 6. Operator pilot | Primary and backup independently complete and recover ordinary office work. Record actual results in the pilot worksheet and resolve failures. | Worksheets prepared; acceptance pending |
 | 7. Release and records | Review exact app release, browser settings and rollback. Release only on the final instruction. Import a small approved membership batch only after separate source/identity/mapping and restore gates. | Separate release/import decisions |
 
-The existing [migration guide](office-migrations.md) is the authoritative seven-file sequence; the [launch board](launch-readiness.md) records overall scope. General Documents are available to viewers. Restricted material must stay outside general uploads until an appropriate access model exists.
+The existing [migration guide](office-migrations.md) is the authoritative eight-file sequence; the [launch board](launch-readiness.md) records overall scope. General Documents are available to viewers. Restricted material must stay outside general uploads until an appropriate access model exists.
 
 ## Public signup follows its own rehearsal
 
