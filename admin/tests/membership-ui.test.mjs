@@ -26,7 +26,7 @@ function fixture(t,options={}){
   }};if(options.noRange)delete chain.range;return chain},storage:{from(){return{
     upload(path,file){calls.push({op:'upload',path,size:file.size});if(control.storageError)return Promise.resolve({error:control.storageError});blobs.add(path);return uploads?uploads():Promise.resolve({data:{path},error:null})},
     list(folder,options){calls.push({op:'storage-list',folder,options});if(control.storageError)return Promise.resolve({error:control.storageError});return Promise.resolve({data:[...blobs].filter(p=>p.startsWith(folder+'/')).map(p=>({name:p.split('/').at(-1)})),error:null})},
-    createSignedUrl(){return Promise.resolve({data:{signedUrl:control.signedUrl}})}
+    createSignedUrl(path){calls.push({op:'signedUrl',path});return control.signing||Promise.resolve({data:{signedUrl:control.signedUrl}})}
   }}}};
   api=w.CreekMembership.create({root:w.document.getElementById('history-view'),db,sheetUrl:options.sheetUrl,documentUrl:options.documentUrl,getContext:()=>state,isCurrent:epoch=>epoch===state.epoch&&!!state.userId,people:()=>people,documents:()=>documents,ensureReady:async epoch=>{calls.push({op:'ensureReady',epoch});return gate?gate():state.workspaceReady},refresh:async()=>{},notice:(...args)=>notices.push(args)});
   const form=()=>w.document.querySelector('dialog form');
@@ -149,6 +149,56 @@ test('original page handoff uses the office URL policy without opening an automa
   [...f.w.document.querySelectorAll('.membership-entry button')].find(b=>b.textContent==='Open original page').click();await delay();
   const link=f.w.document.querySelector('dialog a');assert.ok(link);assert.equal(link.href,f.control.signedUrl);assert.equal(link.target,'_blank');assert.equal(link.rel,'noopener noreferrer');assert.match(link.textContent,/expires in one minute/);assert.deepEqual(checked,[f.control.signedUrl]);
   f.api.clear();assert.equal(f.w.document.querySelector('dialog'),null);
+});
+
+async function sourceFixture(t){
+  const f=fixture(t);f.rows.push({id:'sample-history',contact_id:'person-sample',event_type:'Fictional source',source_document_id:'sample-source'});f.documents.push({id:'sample-source',storage_path:'synthetic-user/page.png'});
+  f.control.signedUrl='https://files.example.invalid/first-source';await f.api.load(1);
+  f.sourceButton=()=>[...f.w.document.querySelectorAll('.membership-entry button')].find(b=>b.textContent==='Open original page');return f;
+}
+async function loseSourceAccess(f,kind){
+  if(kind==='workspace'){f.state.canEdit=false;f.state.workspaceReady=false;f.api.render();}
+  else{f.control.after=(q,result)=>q.table==='membership_history'&&q.op==='select'?{error:{message:'Fictional unavailable history'}}:result;await f.api.load(1);}
+}
+async function restoreSourceAccess(f){f.state.canEdit=true;f.state.workspaceReady=true;f.control.after=null;await f.api.load(1);}
+
+test('source availability loss removes issued links and blocks reopen while preserving photo drafts',async t=>{
+  for(const kind of ['workspace','history']){
+    const f=await sourceFixture(t),original=f.sourceButton();original.click();await delay();assert.ok(f.w.document.querySelector('dialog a'));
+    await loseSourceAccess(f,kind);assert.equal(f.w.document.querySelector('dialog'),null);const calls=f.calls.length;original.click();await delay();assert.equal(f.calls.length,calls);
+    await restoreSourceAccess(f);f.control.signedUrl='https://files.example.invalid/renewed-source';f.sourceButton().click();await delay();assert.equal(f.w.document.querySelector('dialog a').href,f.control.signedUrl);
+    f.w.document.querySelector('dialog button').click();const form=f.open();f.fill(form);f.photo(form);const file=form.elements.page.files[0];
+    await loseSourceAccess(f,kind);assert.equal(f.form(),form);assert.equal(form.elements.page.files[0],file);assert.equal(form.elements.date_text.value,'Summer 1956; day [unclear]');assert.equal(form.querySelector('[type=submit]').disabled,true);assert.equal(f.revoked.length,0);
+    await restoreSourceAccess(f);assert.equal(f.form(),form);assert.equal(form.querySelector('[type=submit]').disabled,false);
+  }
+});
+
+test('late source metadata and signing cannot replace a fresh dialog after availability recovery',async t=>{
+  for(const stage of ['metadata','signing'])for(const kind of ['workspace','history']){
+    const f=await sourceFixture(t);let release;const pending=new Promise(resolve=>release=resolve);
+    if(stage==='metadata')f.respond(q=>q.table==='documents'?pending:undefined);else f.control.signing=pending;
+    f.sourceButton().click();await delay();await loseSourceAccess(f,kind);assert.equal(f.w.document.querySelector('dialog'),null);
+    f.respond(null);f.control.signing=null;await restoreSourceAccess(f);f.control.signedUrl='https://files.example.invalid/current-source';f.sourceButton().click();await delay();
+    const currentLink=f.w.document.querySelector('dialog a'),signings=f.calls.filter(q=>q.op==='signedUrl').length;assert.equal(currentLink.href,f.control.signedUrl);
+    release(stage==='metadata'?{data:{storage_path:'synthetic-user/stale-page.png'}}:{data:{signedUrl:'https://files.example.invalid/stale-source'}});await delay();
+    assert.equal(f.w.document.querySelector('dialog a'),currentLink);assert.equal(currentLink.href,f.control.signedUrl);assert.equal(f.calls.filter(q=>q.op==='signedUrl').length,signings);
+  }
+});
+
+test('each source response rechecks workspace readiness even before the next render',async t=>{
+  for(const stage of ['metadata','signing']){
+    const f=await sourceFixture(t);let release;const pending=new Promise(resolve=>release=resolve);
+    if(stage==='metadata')f.respond(q=>q.table==='documents'?pending:undefined);else f.control.signing=pending;
+    f.sourceButton().click();await delay();f.state.canEdit=false;f.state.workspaceReady=false;
+    release(stage==='metadata'?{data:{storage_path:'synthetic-user/page.png'}}:{data:{signedUrl:'https://files.example.invalid/stale-source'}});await delay();
+    assert.equal(f.w.document.querySelector('dialog'),null);assert.equal(f.calls.filter(q=>q.op==='signedUrl').length,stage==='metadata'?0:1);
+  }
+});
+
+test('identity clearing immediately removes a pending source dialog and ignores late signing',async t=>{
+  const f=await sourceFixture(t);let release;f.control.signing=new Promise(resolve=>release=resolve);f.sourceButton().click();await delay();assert.ok(f.w.document.querySelector('dialog'));
+  f.state.epoch++;f.state.userId=null;f.state.role=null;f.state.canEdit=false;f.api.clear();assert.equal(f.w.document.querySelector('dialog'),null);assert.equal(f.w.document.getElementById('membership-history').textContent,'');
+  release({data:{signedUrl:'https://files.example.invalid/stale-source'}});await delay();assert.equal(f.w.document.querySelector('dialog'),null);assert.equal(f.notices.length,0);
 });
 
 test('source links without an office policy remain HTTPS-only and reject embedded credentials',async t=>{

@@ -1,4 +1,4 @@
-# Staff account eligibility guard — prepared only
+# Staff account eligibility guard — hosted application pending
 
 This optional migration closes a specific office access gap. The seven-file baseline looks up a staff role by user ID but does not check the current Auth account state. A valid existing token can therefore still exercise that staff role after an account is temporarily banned or marked deleted. The baseline also accepts staff accounts that become unconfirmed, anonymous, or lose their email. The browser alone is not an authorization boundary for direct API requests.
 
@@ -28,6 +28,8 @@ node tools/office-preflight/cli.mjs --json
 Tests use fictional `.invalid` identities and a disposable in-memory PostgreSQL instance, with all seven original migrations verified and executed. They are not real HTTP/JWT-signature checks or hosted acceptance. No real records, keys or recipients are inputs.
 
 September 8 verification passed all nine test results (one parent and eight subtests), covering 18 identity states. The suite reproduces the baseline gap, verifies protected contact/event/file operations, retains the limited own-role/profile exceptions, tests confirmation followed by role revocation, and proves the helper definition is the only catalog change. All 17 office tables plus Auth and Storage fixtures remain unchanged by guarded operations; the active source preflight still passes 43 checks. A second reviewer independently checked the SQL, manifest and these stated limits.
+
+September 9 real-service acceptance also passed eight milestones in a new, unlinked local stack with this guard present from startup. Four fictional password sessions exercised active staff controls, same-token ban/unban and role removal, private original upload/read/signing, paused intake and exact fixture containment. An earlier signed URL remained usable after the ban, confirming the stated bearer-link limit. All 32 preparation/service-guard tests passed; the new stack finished stopped with its volumes retained and six predecessor projects unchanged. [The separate result](../office-account-guard-service/results.json) does not establish a real-service pre-guard reproduction, hosted activation or email/phone acceptance. The optional file remains outside the unchanged seven-file active manifest and unapplied to the hosted project.
 
 Before any authorized application, independently review the exact optional file, confirm the intended church project and current migration history/helper definition/ACL, and reconcile unexpected drift. Do not replay the original seven migrations or replace this optional filename with a guessed timestamp. Hosted application is on hold with the other blocked activation actions; do not use this file as an alternate way to change a project setting or permission without authorization.
 

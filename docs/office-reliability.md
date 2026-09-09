@@ -36,6 +36,12 @@ These are consistency checks across separate reads, not a database snapshot. Con
 
 The September 9 combined source suites pass 331 staff tests and 71 public tests. Fictional coverage includes 600 people, 2,501 history entries across 70 date labels, a 500-row server cap, shifted signup pages and stale account/read responses. This does not establish hosted performance, live-member reconciliation or phone acceptance. The public Grow search accepts compact author initials; its precached code uses the new public `creek-v13` cache. The restricted office worker is unchanged.
 
+## Source-link readiness
+
+A read-only membership source dialog closes when its workspace or history list becomes unavailable. Metadata and signing responses recheck the current owner, session, request and readiness before adding a link. A late response cannot replace a newly opened dialog after recovery. Transcription drafts and selected photos remain in their existing recovery flow. The source dialog can be reopened after a successful refresh. This removes stale interface links; it does not revoke signed URLs already opened or copied.
+
+The source-readiness change passes 55 membership UI tests and 335 staff tests overall. Public app code is unchanged from the preceding 71-test revision.
+
 ## Migration and readiness contract
 
 For a fresh isolated setup, use every SQL file in the explicit order in `admin/README.md`. The sixth, `supabase/migrations/20260908220707_office_record_recovery.sql`, supplies readiness and save recovery; the seventh, `supabase/migrations/20260908220718_pause_public_app_intake.sql`, pauses profile submissions. Current filenames match the recorded hosted versions with all seven SQL byte hashes preserved. See [migration preparation](office-migrations.md); compare existing hosted history before any further application rather than replaying this baseline.
