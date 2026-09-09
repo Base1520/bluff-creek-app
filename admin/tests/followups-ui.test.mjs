@@ -16,17 +16,18 @@ function fixture(t,opts={}) {
   const rows={leader_followups:structuredClone(opts.plans||[]),leader_followup_contacts:structuredClone(opts.contacts||[])};
   const db={from(table){
     const q={table,op:'select',filters:[]};
-    const chain={select(fields){q.fields=fields;return chain;},eq(key,value){q.filters.push([key,value]);return chain;},order(){return chain;},range(a,b){q.range=[a,b];return chain;},single(){q.single=true;return chain;},insert(data){q.op='insert';q.data=data;return chain;},update(data){q.op='update';q.data=data;return chain;},then(resolve,reject){
+    const chain={select(fields,settings){q.fields=fields;q.selectOptions=settings;return chain;},eq(key,value){q.filters.push([key,value]);return chain;},order(){return chain;},range(a,b){q.range=[a,b];return chain;},single(){q.single=true;return chain;},insert(data){q.op='insert';q.data=data;return chain;},update(data){q.op='update';q.data=data;return chain;},then(resolve,reject){
       calls.push(q);if(control.hold)return control.hold(q).then(resolve,reject);
       if(control.error)return Promise.resolve({error:control.error}).then(resolve,reject);
-      let data;
-      if(q.op==='select'){data=rows[table].filter(r=>control.leakOwners||q.filters.every(([key,value])=>r[key]===value));data=data.slice(q.range?.[0]||0,q.range?q.range[1]+1:undefined);}
+      let data,count;
+      if(q.op==='select'){data=rows[table].filter(r=>control.leakOwners||q.filters.every(([key,value])=>r[key]===value));count=data.length;data=data.slice(q.range?.[0]||0,q.range?q.range[1]+1:undefined);}
       else if(control.noRows)data=null;
       else if(q.op==='insert'){data={id:'new-'+next++,owner_id:ctx.userId,version:1,last_contact_on:null,snoozed_until:null,...structuredClone(q.data)};rows[table].push(data);}
       else{data=rows[table].find(r=>q.filters.every(([key,value])=>r[key]===value));if(data)Object.assign(data,structuredClone(q.data),{version:data.version+1});}
       if(q.op!=='select'&&control.returnOverride)data=control.returnOverride(data);
-      return Promise.resolve({data:structuredClone(data),error:null}).then(resolve,reject);
-    }};return chain;
+      const result={data:structuredClone(data),count,error:null};
+      return Promise.resolve(q.op==='select'&&control.read?control.read(q,result):result).then(resolve,reject);
+    }};if(opts.noRange)delete chain.range;return chain;
   },rpc(name,args){const q={op:'rpc',name,data:args};calls.push(q);if(control.hold)return control.hold(q);if(control.error)return Promise.resolve({error:control.error});
     const row=rows.leader_followups.find(r=>r.id===args.p_id&&r.owner_id===ctx.userId&&r.version===args.p_version);if(!row||control.noRows)return Promise.resolve({data:null,error:null});
     if(args.p_outcome==='connected'){if(!row.last_contact_on||args.p_contacted_on>row.last_contact_on)row.last_contact_on=args.p_contacted_on;if(args.p_contacted_on===today())row.snoozed_until=null;}
@@ -246,4 +247,41 @@ test('replacement after discard confirmation refuses changed owner, epoch, readi
     };
     f.click('[data-followups-action="edit"]');assert.equal(f.form(),null,mode+' change must not reopen a private form');assert.equal(unloadCancelled(f),false);assert.equal(f.calls.some(q=>q.op!=='select'),false);
   }
+});
+
+test('personal history follows actual returned page sizes and retains later contacts',async t=>{
+  const contacts=Array.from({length:600},(_,i)=>({id:'capped-history-'+i,followup_id:plan.id,owner_id:plan.owner_id,contacted_on:'2026-09-01',created_at:'2026-09-01T12:00:00Z',method:'phone',outcome:'attempted',notes:i===599?'Final fictional contact':'Fictional attempt'}));
+  const f=fixture(t,{plans:[plan],contacts});f.control.read=(q,result)=>({...result,data:result.data.slice(0,500)});
+  assert.equal(await f.api.load(1),true);f.click('[data-followups-action="history"]');
+  assert.equal(f.w.document.querySelectorAll('.followups-history article').length,600);assert.match(f.w.document.querySelector('dialog').textContent,/Final fictional contact/);
+  assert.deepEqual(f.calls.filter(q=>q.table==='leader_followup_contacts').map(q=>q.range),[[0,999],[500,1499]]);
+  assert.ok(f.calls.every(q=>q.selectOptions.count==='exact'));
+});
+
+test('invalid personal history pages clear incomplete lists while preserving a locked plan draft',async t=>{
+  const first={id:'first-history',owner_id:plan.owner_id,followup_id:plan.id},second={...first,id:'second-history'};
+  for(const response of [{data:null,count:2},{data:[],count:2},{data:[second]},{data:[second],count:3},
+      {data:[second],count:-1},{data:[second],count:1.5},{data:[first],count:2},{data:[{id:''}],count:2},
+      {data:[second,{...second,id:'overflow'}],count:2}]){
+    const f=fixture(t,{plans:[plan],contacts:[first,second]});assert.equal(await f.api.load(1),true);
+    f.click('[data-followups-action="edit"]');f.set('notes','Keep this fictional leader draft');
+    f.control.read=(q,result)=>q.table!=='leader_followup_contacts'?result:q.range[0]===0?{data:[first],count:2}:response;
+    assert.equal(await f.api.load(1),false);assert.equal(f.summaries.at(-1).due,null);
+    assert.equal(f.form().elements.notes.value,'Keep this fictional leader draft');assert.equal(f.form().querySelector('[type="submit"]').disabled,true);
+    assert.equal(f.root.querySelectorAll('.followups-row').length,0);
+  }
+});
+
+test('personal reads without range accept only an exactly complete response',async t=>{
+  const f=fixture(t,{plans:[plan],noRange:true});assert.equal(await f.api.load(1),true);
+  f.control.read=(q,result)=>q.table==='leader_followups'?{data:[plan],count:2}:result;
+  assert.equal(await f.api.load(1),false);assert.equal(f.summaries.at(-1).due,null);
+});
+
+test('personal paging cannot continue into an owner replacement after the first held page',async t=>{
+  const f=fixture(t,{plans:[plan]});let release;
+  f.control.read=(q,result)=>q.table==='leader_followups'?new Promise(resolve=>release=resolve):result;
+  const loading=f.api.load(1);await tick();f.setContext({epoch:2,userId:'another-fictional-owner',role:'editor',canEdit:true});f.api.clear();
+  release({data:[plan],count:2});await loading;
+  assert.equal(f.calls.filter(q=>q.table==='leader_followups').length,1);assert.equal(f.root.textContent,'');assert.equal(f.summaries.at(-1).due,null);
 });

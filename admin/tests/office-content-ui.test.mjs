@@ -15,16 +15,16 @@ function fixture(t, options={}) {
   const roots=Object.fromEntries(names.map(n=>[n,w.document.getElementById(n)]));
   const db={from(table){
     const q={table,op:'select',filters:[]};
-    const chain={select(fields){q.fields=fields;return chain;},order(){return chain;},range(a,b){q.range=[a,b];return chain;},eq(k,v){q.filters.push([k,v]);return chain;},single(){q.single=true;return chain;},maybeSingle(){q.single=true;return chain;},insert(data){q.op='insert';q.data=data;return chain;},update(data){q.op='update';q.data=data;return chain;},then(resolve,reject){
+    const chain={select(fields,opts){q.fields=fields;q.count=opts?.count;return chain;},order(){return chain;},range(a,b){q.range=[a,b];return chain;},eq(k,v){q.filters.push([k,v]);return chain;},single(){q.single=true;return chain;},maybeSingle(){q.single=true;return chain;},insert(data){q.op='insert';q.data=data;return chain;},update(data){q.op='update';q.data=data;return chain;},then(resolve,reject){
       calls.push(q);
       if(control.hold)return control.hold(q).then(resolve,reject);
       if(control.error)return Promise.resolve({error:typeof control.error==='object'?control.error:{message:control.error}}).then(resolve,reject);
       if(q.op!=='select'&&control.noRows)return Promise.resolve({data:null,error:null}).then(resolve,reject);
       let data;
-      if(q.op==='select')data=rows[table].filter(r=>q.filters.every(([k,v])=>r[k]===v)).slice(q.range?.[0]||0,q.range?q.range[1]+1:undefined);
+      if(q.op==='select') { const selected=rows[table].filter(r=>q.filters.every(([k,v])=>r[k]===v)); q.total=selected.length; const start=q.range?.[0]||0; data=selected.slice(start,q.range?Math.min(q.range[1]+1,start+(options.pageCap||1000)):undefined); }
       else if(q.op==='insert'){if(rows[table].some(r=>r.id===q.data.id))return Promise.resolve({error:{code:'23505'}}).then(resolve,reject);data={id:'new-'+nextId++,version:1,...structuredClone(q.data)};rows[table].push(data);}
       else{data=rows[table].find(r=>q.filters.every(([k,v])=>r[k]===v));if(data)Object.assign(data,structuredClone(q.data),{version:data.version+1});}
-      return Promise.resolve({data:structuredClone(q.single?(Array.isArray(data)?data[0]||null:data||null):data),error:null}).then(resolve,reject);
+      return Promise.resolve({data:structuredClone(q.single?(Array.isArray(data)?data[0]||null:data||null):data),error:null,count:q.count==='exact'?q.total:null}).then(resolve,reject);
     }};return chain;
   }};
   const docs=options.documents||[{id:'sample-document',title:'Sample presentation'}];let api;
@@ -173,4 +173,34 @@ test('an earlier content discard decision cannot erase a replacement draft', asy
   assert.equal(f.form().elements.committee_name.value, 'Keep replacement draft');
   assert.equal(f.w.document.querySelectorAll('.office-content-dialog').length, 1);
   assert.equal(f.calls.some(q => q.op !== 'select'), false);
+});
+
+test('content reads past a lower server cap and finds the final record',async t=>{
+  const rows=Array.from({length:600},(_,i)=>({id:'synthetic-announcement-'+i,title:i===599?'Final synthetic announcement':'Sample '+i,body:'Sample body',status:'draft'}));
+  const f=fixture(t,{rows:{office_announcements:rows},pageCap:500});assert.equal(await f.api.load(1),true);
+  assert.deepEqual(f.calls.filter(q=>q.table==='office_announcements').map(q=>q.range),[[0,999],[500,1499]]);
+  const search=f.roots.announcements.querySelector('[data-office-search]');search.value='Final synthetic announcement';search.dispatchEvent(new f.w.Event('input',{bubbles:true}));assert.equal(f.roots.announcements.querySelectorAll('.office-content-row').length,1);
+});
+
+test('invalid later content pages never promote partial results and preserve the draft',async t=>{
+  for(const kind of ['null-page','missing-count','changed-count','duplicate'])await t.test(kind,async t=>{
+    const f=fixture(t);await f.api.load(1);f.api.open('announcements');f.set('title','Keep this draft');f.set('body','Synthetic draft text');
+    f.control.hold=async q=>{
+      if(q.table!=='office_announcements')return {data:[],count:0};
+      const row={id:'synthetic-page',version:1,title:'Partial record',body:'Sample',status:'draft'};
+      if(q.range[0]===0)return {data:[row],count:2};
+      if(kind==='null-page')return {data:null,count:2};
+      if(kind==='missing-count')return {data:[{...row,id:'second'}]};
+      if(kind==='changed-count')return {data:[{...row,id:'second'}],count:3};
+      return {data:[row],count:2};
+    };
+    assert.equal(await f.api.load(1),false);assert.equal(f.roots.announcements.querySelectorAll('.office-content-row').length,0);assert.match(f.roots.announcements.textContent,/could not load/);
+    assert.equal(f.form().elements.body.value,'Synthetic draft text');assert.equal(f.form().querySelector('[type=submit]').disabled,true);
+  });
+});
+
+test('a failed content reload during the save readiness check prevents the write',async t=>{
+  let allow;const f=fixture(t,{ensureReady:()=>new Promise(resolve=>allow=resolve)});await f.api.load(1);f.api.open('announcements');f.set('title','Keep this draft');f.set('body','Synthetic pending check');
+  const saving=f.submit();await tick();f.control.error='synthetic network failure';assert.equal(await f.api.load(1),false);f.control.error=null;allow(true);await saving;
+  assert.equal(f.calls.some(q=>q.op==='insert'),false);assert.equal(f.form().elements.body.value,'Synthetic pending check');assert.equal(f.form().querySelector('[type=submit]').disabled,true);
 });

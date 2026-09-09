@@ -21,7 +21,9 @@
     var words=bookSearchText(query).split(' ').filter(Boolean);
     return (Array.isArray(value)?value:[]).filter(function(book){
       if(!book || book.approved!==true || typeof book.title!=='string' || !book.title.trim() || typeof book.author!=='string' || !book.author.trim())return false;
-      var text=bookSearchText([book.title,book.subtitle,book.author,book.category,book.note,book.reader].join(' '));
+      // Keep spaced initials searchable while accepting compact author spellings such as CS Lewis.
+      var authorAlias=bookSearchText(book.author).replace(/\b(?:[a-z] ){1,}[a-z]\b/g,function(initials){return initials.replace(/ /g,'')});
+      var text=bookSearchText([book.title,book.subtitle,book.author,authorAlias,book.category,book.note,book.reader].join(' '));
       return words.every(function(word){return text.indexOf(word)!==-1});
     });
   }

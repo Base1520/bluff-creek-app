@@ -45,16 +45,26 @@
     async function load(epoch) {
       if (!identity(epoch)) { clear(); return false; }
       if (!current(epoch)) { unavailable(); return false; }
-      mount(); var id = ++request, all = [];
+      mount(); var id = ++request, all = [], total = null, seen = new Set(), offset = 0;
       try {
-        for (var offset = 0;; offset += 1000) {
-          var query = options.db.from('app_connections').select('*').order('updated_at', {ascending:false}).order('id', {ascending:true});
-          var result = await deadline(typeof query.range === 'function' ? query.range(offset, offset + 999) : query);
+        while (current(epoch) && id === request) {
+          var query = options.db.from('app_connections').select('*', {count:'exact'}).order('updated_at', {ascending:false}).order('id', {ascending:true});
+          var ranged = typeof query.range === 'function';
+          var result = await deadline(ranged ? query.range(offset, offset + 999) : query);
           if (!current(epoch) || id !== request) { if(identity(epoch) && id===request)unavailable(); return false; }
           if (result.error) throw result.error;
-          all = all.concat(result.data || []);
-          if (!result.data || result.data.length < 1000 || typeof query.range !== 'function') break;
+          var page = result.data;
+          if (!Array.isArray(page) || !Number.isSafeInteger(result.count) || result.count < 0 || total !== null && result.count !== total) throw new Error('incomplete records');
+          total = result.count;
+          page.forEach(function(row){
+            if (!row || typeof row.id !== 'string' || !row.id.trim() || seen.has(row.id)) throw new Error('incomplete records');
+            seen.add(row.id);
+          });
+          all = all.concat(page); offset += page.length;
+          if (offset > total || offset < total && (!page.length || !ranged)) throw new Error('incomplete records');
+          if (offset === total) break;
         }
+        if (!current(epoch) || id !== request) return false;
         rows = all; ready = true; failed = false;
         if(dialog && review && !review.busy) {
           var latest=rows.find(function(r){return r.id===dialog.dataset.signupId;});

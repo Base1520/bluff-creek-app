@@ -259,6 +259,7 @@ test('the response lifetime awaits cache writes, and storage failure preserves f
 test('activation only deletes old Creek caches and does not claim open clients', async () => {
   const worker = harness();
   await worker.seed('index.html', html('Old'), 'creek-v3');
+  await worker.seed('js/grow.js', new Response('Previous Grow script'), 'creek-v12');
   await worker.seed('index.html', html('New'));
   await worker.seed('unrelated', new Response('Keep'), 'other-application');
   await worker.lifecycle('activate');

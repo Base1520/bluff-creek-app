@@ -26,9 +26,19 @@
     function closeDialog(force){if(force!==true&&draft&&(draft.pending||draft.uncertain||draft.unresolvedWrites>0||(draft.uploaded&&!draft.filed)))return;if(force!==true&&draft&&draft.initialForm&&formFingerprint()!==draft.initialForm&&!doc.defaultView.confirm(draft.filed?'Discard this review draft? The uploaded source page will remain in Documents.':'Discard this unsaved review? Your transcription and selected photo will be cleared.'))return;requestId++;draft=null;syncUnload();if(previewURL){URL.revokeObjectURL(previewURL);previewURL=null}if(dialog){if(dialog.open)dialog.close();dialog.remove();dialog=null}}
     function clear(){clearSheetLink();loadId++;rows=[];selected='';failed=false;ready=false;loadedOwner=null;closeDialog(true);find('membership-person').replaceChildren(new Option('All people',''));find('membership-search').value='';find('membership-history').replaceChildren();find('membership-status').textContent=''}
     async function load(epoch){
-      if(!active(epoch)){clear();return}if(loadedOwner&&loadedOwner!==context().userId)clear();loadedOwner=context().userId;var currentLoad=++loadId,all=[];failed=false;
-      try{for(var offset=0;;offset+=1000){var query=options.db.from('membership_history').select('*').order('created_at',{ascending:false}).order('id',{ascending:true});var result=await deadline(typeof query.range==='function'?query.range(offset,offset+999):query);
-        if(!active(epoch)||currentLoad!==loadId)return;if(result.error)throw result.error;all=all.concat(result.data||[]);if(!result.data||result.data.length<1000||typeof query.range!=='function')break;
+      if(!active(epoch)){clear();return}if(loadedOwner&&loadedOwner!==context().userId)clear();loadedOwner=context().userId;var currentLoad=++loadId,all=[],total=null,seen=new Set();failed=false;
+      try{for(var offset=0;;){
+        if(!active(epoch)||currentLoad!==loadId)return;
+        var query=options.db.from('membership_history').select('*',{count:'exact'}).order('created_at',{ascending:false}).order('id',{ascending:true}),paged=typeof query.range==='function';
+        var result=await deadline(paged?query.range(offset,offset+999):query);
+        if(!active(epoch)||currentLoad!==loadId)return;if(result&&result.error)throw result.error;
+        if(!result||!Array.isArray(result.data)||!Number.isSafeInteger(result.count)||result.count<0||(total!==null&&result.count!==total))throw new Error('Incomplete history response');
+        total=result.count;
+        if(all.length+result.data.length>total)throw new Error('Incomplete history response');
+        result.data.forEach(function(row){if(!row||typeof row.id!=='string'||!row.id.trim()||seen.has(row.id))throw new Error('Incomplete history response');seen.add(row.id)});
+        all=all.concat(result.data);offset=all.length;
+        if(offset===total)break;
+        if(!paged||!result.data.length)throw new Error('Incomplete history response');
       }rows=all;ready=true;render()}catch(error){if(active(epoch)&&currentLoad===loadId){if(authError(error)){clear();return}rows=[];ready=false;failed=true;render();find('membership-status').textContent='History could not load. Your review draft is retained; restore the connection before saving.'}}
     }
     function render(){
@@ -131,7 +141,7 @@
       };d.initialForm=formFingerprint();doc.body.appendChild(dialog);dialog.showModal();syncForm();
     }
     find('membership-person').onchange=function(){selected=find('membership-person').value;render()};find('membership-search').oninput=render;find('membership-add').onclick=function(){openForm()};
-    return{load:load,render:render,clear:clear,selectPerson:function(id){selected=id;find('membership-person').value=id;render();location.hash='history'}};
+    return{load:load,render:render,clear:clear,selectPerson:function(id){selected=id;find('membership-person').value=id;find('membership-search').value='';render();location.hash='history'}};
   }
   root.CreekMembership={create:create,sheetLink:sheetLink};
 }(typeof window!=='undefined'?window:globalThis));

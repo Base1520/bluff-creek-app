@@ -28,6 +28,14 @@ These guards track client requests, not database transaction completion. A rejec
 
 Announcements, committee contacts, slides and prayer editors bind discard decisions to the original dialog and draft. Opening the next record rechecks the user, role, readiness and current record after confirmation. An outdated confirmation cannot resurrect cleared details or erase a replacement draft.
 
+## Complete record loads
+
+The core event/People/document loaders and membership, care, signup, personal-follow-up and office-content loaders request an exact server count on every page. They advance by the number actually received, require a stable nonnegative total and unique record IDs, and accept the list only when all expected rows arrive. A short server page is not an end-of-list signal. Missing counts, malformed/empty incomplete pages, changing totals, duplicated IDs and overflow fail the load. Existing drafts are retained and the affected list cannot authorize saves; account or newer-load changes stop further pages from the old request.
+
+These are consistency checks across separate reads, not a database snapshot. Concurrent changes that leave the total unchanged can still evade count/ID checks; refresh after changes and retain server-side version checks for writes. The activity panel intentionally remains the latest 100 audit entries rather than the full archive. Membership and content list rendering remains capped at 100 matching rows, while search operates on the full successfully loaded list. Opening History from People clears an unrelated archive search.
+
+The September 9 combined source suites pass 330 staff tests and 71 public tests. Fictional coverage includes 600 people, 2,501 history entries across 70 date labels, a 500-row server cap, shifted signup pages and stale account/read responses. This does not establish hosted performance, live-member reconciliation or phone acceptance. The public Grow search accepts compact author initials; its precached code uses the new public `creek-v13` cache. The restricted office worker is unchanged.
+
 ## Migration and readiness contract
 
 For a fresh isolated setup, use every SQL file in the explicit order in `admin/README.md`. The sixth, `supabase/migrations/20260908220707_office_record_recovery.sql`, supplies readiness and save recovery; the seventh, `supabase/migrations/20260908220718_pause_public_app_intake.sql`, pauses profile submissions. Current filenames match the recorded hosted versions with all seven SQL byte hashes preserved. See [migration preparation](office-migrations.md); compare existing hosted history before any further application rather than replaying this baseline.

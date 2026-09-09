@@ -45,7 +45,7 @@
     async function ensure(epoch) { return (!options.ensureReady || await options.ensureReady(epoch)) && current(epoch) && allowed(context()); }
     function freezeDialog() {
       if (!dialog) return;
-      var locked = saving || (draft && (draft.uncertain || draft.conflict)) || !allowed(context());
+      var locked = saving || (draft && (draft.uncertain || draft.conflict)) || !allowed(context()) || !ready[dialogView];
       dialog.querySelectorAll('input, select, textarea').forEach(function (node) { node.disabled = locked; });
       if (!locked) updatePrayerApproval();
       dialog.querySelector('[type="submit"]').disabled = locked;
@@ -133,14 +133,25 @@
       Object.keys(views).forEach(renderView); freezeDialog();
     }
     async function rowsFor(view, epoch, token) {
-      var rows = [];
+      var rows = [], seen = new Set(), total = null;
       try {
-        for (var offset = 0; current(epoch) && token === loadId; offset += 1000) {
-          var result = await deadline(options.db.from(views[view].table).select('*').order('id', { ascending: true }).range(offset, offset + 999));
+        for (var offset = 0; current(epoch) && token === loadId;) {
+          var query = options.db.from(views[view].table).select('*', { count: 'exact' }).order('id', { ascending: true });
+          var paged = typeof query.range === 'function';
+          var result = await deadline(paged ? query.range(offset, offset + 999) : query);
           if (!current(epoch) || token !== loadId) return null;
-          if (result.error) throw result.error;
-          var page = result.data || []; rows = rows.concat(page);
-          if (page.length < 1000) return { rows: rows, failed: false };
+          if (result && result.error) throw result.error;
+          if (!result || !Array.isArray(result.data) || !Number.isSafeInteger(result.count) || result.count < 0 || (total !== null && result.count !== total)) throw new Error('Incomplete record response');
+          total = result.count;
+          result.data.forEach(function (row) {
+            if (!row || typeof row.id !== 'string' || !row.id.trim() || seen.has(row.id)) throw new Error('Incomplete record response');
+            seen.add(row.id);
+          });
+          rows = rows.concat(result.data);
+          if (rows.length > total) throw new Error('Incomplete record response');
+          if (rows.length === total) return { rows: rows, failed: false };
+          if (!result.data.length || !paged) throw new Error('Incomplete record response');
+          offset += result.data.length;
         }
       } catch (error) { if (current(epoch) && token === loadId) { if (denied(error)) { clear(); return null; } return { rows: [], failed: true }; } }
       return null;
@@ -295,7 +306,7 @@
       var attempt = draft, submitted = false;
       saving = true; freezeDialog(); form.querySelector('.office-content-error').textContent = '';
       try {
-        if (!await ensure(epoch) || version !== formVersion) {
+        if (!await ensure(epoch) || version !== formVersion || !ready[view]) {
           if (current(epoch) && version === formVersion) form.querySelector('.office-content-error').textContent = 'The workspace connection needs attention. Refresh the workspace before saving; your draft is still here.';
           return;
         }

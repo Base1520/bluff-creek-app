@@ -120,14 +120,25 @@
     }
     function action(kind,label,id,quiet) { return '<button type="button" '+(quiet?'class="quiet" ':'')+'data-followups-action="'+kind+'" data-followup-id="'+safe(id)+'">'+label+'</button>'; }
     async function fetchRows(table, epoch, owner, token) {
-      var all = [];
-      for (var offset=0;;offset+=1000) {
-        var result = await deadline(options.db.from(table).select('*').eq('owner_id',owner).order('id',{ascending:true}).range(offset,offset+999));
+      var all = [], offset = 0, total = null, seen = new Set();
+      while (current(epoch,owner) && token === request) {
+        var query = options.db.from(table).select('*',{count:'exact'}).eq('owner_id',owner).order('id',{ascending:true});
+        var ranged = typeof query.range === 'function';
+        var result = await deadline(ranged ? query.range(offset,offset+999) : query);
         if (!current(epoch,owner) || token !== request) return null;
         if (result.error) throw result.error;
-        var page = result.data || []; all = all.concat(page.filter(function(row){return row.owner_id === owner;}));
-        if (page.length < 1000) return all;
+        var page = result.data;
+        if (!Array.isArray(page) || !Number.isSafeInteger(result.count) || result.count < 0 || total !== null && result.count !== total) throw new Error('incomplete records');
+        total = result.count;
+        page.forEach(function(row){
+          if (!row || typeof row.id !== 'string' || !row.id.trim() || seen.has(row.id)) throw new Error('incomplete records');
+          seen.add(row.id);
+        });
+        all = all.concat(page); offset += page.length;
+        if (offset > total || offset < total && (!page.length || !ranged)) throw new Error('incomplete records');
+        if (offset === total) return all.filter(function(row){return row.owner_id === owner;});
       }
+      return null;
     }
     async function load(epoch) {
       var owner = context().userId;

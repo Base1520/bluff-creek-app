@@ -304,13 +304,26 @@
     await loadAll(epoch); if (current(epoch)) route();
   }
 
-  async function fetchRecords(table, column, ascending) {
-    var all = [];
-    for (var offset = 0;; offset += 1000) {
-      var query = db.from(table).select("*").order(column, { ascending: ascending }).order("id", { ascending: true });
-      var result = await deadline(typeof query.range === "function" ? query.range(offset, offset + 999) : query);
-      if (result.error) return result; all = all.concat(result.data || []);
-      if (!result.data || result.data.length < 1000 || typeof query.range !== "function") return { data: all };
+  async function fetchRecords(table, column, ascending, epoch, request) {
+    var all = [], seen = new Set(), total = null;
+    for (var offset = 0;;) {
+      if (!current(epoch) || request !== loadEpoch) return { error: { code: "STALE_READ" } };
+      var query = db.from(table).select("*", { count: "exact" }).order(column, { ascending: ascending }).order("id", { ascending: true });
+      var paged = typeof query.range === "function";
+      var result = await deadline(paged ? query.range(offset, offset + 999) : query);
+      if (!current(epoch) || request !== loadEpoch) return { error: { code: "STALE_READ" } };
+      if (result && result.error) return result;
+      if (!result || !Array.isArray(result.data) || !Number.isSafeInteger(result.count) || result.count < 0 || (total !== null && result.count !== total)) throw new Error("Incomplete record response");
+      total = result.count;
+      result.data.forEach(function (row) {
+        if (!row || typeof row.id !== "string" || !row.id.trim() || seen.has(row.id)) throw new Error("Incomplete record response");
+        seen.add(row.id);
+      });
+      all = all.concat(result.data);
+      if (all.length > total) throw new Error("Incomplete record response");
+      if (all.length === total) return { data: all };
+      if (!result.data.length || !paged) throw new Error("Incomplete record response");
+      offset += result.data.length;
     }
   }
   async function loadAll(epoch) {
@@ -323,8 +336,8 @@
       request = loadEpoch;
       var readDraft = { item: draft, revision: draft ? draft.writeRevision || 0 : 0 };
       var results = await Promise.all([
-        fetchRecords("events", "starts_at", true), fetchRecords("contacts", "last_name", true),
-        fetchRecords("documents", "updated_at", false), deadline(db.from("audit_log").select("*").order("created_at", { ascending: false }).limit(100))
+        fetchRecords("events", "starts_at", true, epoch, request), fetchRecords("contacts", "last_name", true, epoch, request),
+        fetchRecords("documents", "updated_at", false, epoch, request), deadline(db.from("audit_log").select("*").order("created_at", { ascending: false }).limit(100))
       ]);
       if (!current(epoch) || request !== loadEpoch) return;
       var failed = results.find(function (result) { return result.error || !Array.isArray(result.data); });

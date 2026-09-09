@@ -71,7 +71,7 @@ function fixture(t, opts={}) {
   function execute(query) {
     const all=query.table==='care_guidelines'?(rows[query.table]?[rows[query.table]]:[]):rows[query.table];
     const matching=all.filter(row=>Object.entries(query.filters||{}).every(([key,value])=>row[key]===value));
-    if(query.op==='select')return{data:query.range?matching.slice(query.range[0],query.range[1]+1):query.single?matching[0]||null:matching,error:null};
+    if(query.op==='select')return{data:query.range?matching.slice(query.range[0],query.range[1]+1):query.single?matching[0]||null:matching,count:matching.length,error:null};
     if(controller.emptySave)return{data:null,error:null};
     let record;
     if(query.op==='insert') {
@@ -88,13 +88,13 @@ function fixture(t, opts={}) {
   }
   const db={from(table){
     const query={table,op:'select',filters:{}};
-    const chain={select(fields){query.fields=fields;return chain;},single(){query.single=true;return chain;},order(){return chain;},range(a,b){query.range=[a,b];return chain;},eq(key,value){query.filters[key]=value;return chain;},maybeSingle(){query.single=true;return chain;},insert(data){query.op='insert';query.data={...data};return chain;},update(data){query.op='update';query.data={...data};return chain;},then(resolve,reject){
+    const chain={select(fields,settings){query.fields=fields;query.selectOptions=settings;return chain;},single(){query.single=true;return chain;},order(){return chain;},range(a,b){query.range=[a,b];return chain;},eq(key,value){query.filters[key]=value;return chain;},maybeSingle(){query.single=true;return chain;},insert(data){query.op='insert';query.data={...data};return chain;},update(data){query.op='update';query.data={...data};return chain;},then(resolve,reject){
       calls.push(query);
       if(controller.hold)return controller.hold(query).then(resolve,reject);
       if(controller.error)return Promise.resolve({error:typeof controller.error==='string'?{message:controller.error}:controller.error}).then(resolve,reject);
       const result=controller.respond?controller.respond(query,()=>execute(query)):execute(query);
       return Promise.resolve(result).then(resolve,reject);
-    }}; return chain;
+    }}; if(opts.noRange)delete chain.range;return chain;
   }};
   module=w.CreekCare.create({root:host,db,requestTimeoutMs:opts.requestTimeoutMs,getContext:()=>ctx,isCurrent:epoch=>!!ctx.userId&&ctx.epoch===epoch,ensureReady:async epoch=>{checks.push(epoch);return controller.ensureReady?controller.ensureReady(epoch):controller.ready;},people:()=>people,peopleReady:()=>controller.peopleReady,notice:(text,bad)=>notices.push({text,bad}),onSummary:opts.omitSummary?undefined:value=>summaries.push(value===null?null:JSON.parse(JSON.stringify(value))),refresh:async()=>{refreshes++;await module.load(ctx.epoch);}});
   const click=selector=>host.querySelector(selector).click();
@@ -113,7 +113,7 @@ test('overview care totals use all authorized people and distinguish due, comple
     {...assignment,id:'other-plan',contact_id:'person-other',care_role:'deacon',cadence_months:3,first_due_on:later,assigned_to:'Other team'},
     {...assignment,id:'visitor-plan',contact_id:'person-visitor',care_role:'custom',first_due_on:later,notes:'Private fixture note'},
     {...assignment,id:'orphan-plan',contact_id:'person-no-longer-loaded',care_role:'deacon',first_due_on:previous}
-  ],visits:[{...visit(date),care_role:'welcome'}, {...visit(date,'attempted'),care_role:'sunday_school'}, {...visit(later),care_role:'deacon'}]});
+  ],visits:[{...visit(date),id:'welcome-fixture-contact',care_role:'welcome'}, {...visit(date,'attempted'),id:'school-fixture-attempt',care_role:'sunday_school'}, {...visit(later),care_role:'deacon'}]});
   await f.module.load(1);
   assert.equal(f.summaries[0],null);
   const total={duePlans:2,overduePlans:1,unassignedPlans:2,coverageGaps:2};assert.deepEqual(f.summaries.at(-1),total);
@@ -562,4 +562,46 @@ test('bounded care writes stop waiting and require refresh before retrying an un
   assert.equal(f.host.querySelector('[data-care-action="retry"]').disabled,false);
   assert.equal(unloadBlocked(f),true);
   f.module.clear();assert.equal(unloadBlocked(f),false);
+});
+
+test('smaller care page caps still include the latest success and complete reminder totals',async t=>{
+  const records=Array.from({length:600},(_,i)=>({...visit(today(),i===599?'contacted':'attempted'),id:'capped-visit-'+i}));
+  const f=fixture(t,{assignments:[assignment],visits:records});
+  f.controller.respond=(q,execute)=>{const result=execute();if(q.table==='care_visits')result.data=result.data.slice(0,500);return result;};
+  assert.equal(await f.module.load(1),true);
+  assert.equal(f.summaries.at(-1).duePlans,0);
+  assert.match(f.host.querySelector('[data-care-list="assignments"]').textContent,/Last successful contact/);
+  assert.deepEqual(f.calls.filter(q=>q.table==='care_visits').map(q=>q.range),[[0,999],[500,1499]]);
+  assert.ok(f.calls.filter(q=>q.range).every(q=>q.selectOptions.count==='exact'));
+});
+
+test('incomplete care pages never promote partial data or reconcile away an existing draft',async t=>{
+  const second={...visit(today()),id:'second-visit'};
+  const bad=[{data:null,count:2},{data:[],count:2},{data:[second]},{data:[second],count:3},{data:[second],count:-1},
+    {data:[second],count:2.5},{data:[second],count:Number.MAX_SAFE_INTEGER+1},{data:[{...second,id:'first-visit'}],count:2},
+    {data:[{...second,id:' '}],count:2},{data:[second,{...second,id:'overflow'}],count:2}];
+  for(const response of bad){
+    const f=fixture(t,{assignments:[assignment],visits:[{...visit(today(),'attempted'),id:'first-visit'},second]});
+    assert.equal(await f.module.load(1),true);f.click('[data-care-list="assignments"] [data-care-action="assignment"]');f.set('notes','Keep this fictional care draft');
+    f.controller.respond=(q,execute)=>q.table!=='care_visits'?execute():q.range[0]===0?{data:[f.rows.care_visits[0]],count:2,error:null}:response;
+    assert.equal(await f.module.load(1),false);assert.equal(f.summaries.at(-1),null);
+    assert.equal(f.host.querySelector('[name="notes"]').value,'Keep this fictional care draft');
+    assert.equal(f.host.querySelector('[data-care-form] [type="submit"]').disabled,true);
+    assert.equal(f.host.querySelectorAll('[data-care-list="assignments"] .care-row').length,0);
+  }
+});
+
+test('care without range must prove its one response is complete, including an empty result',async t=>{
+  const f=fixture(t,{noRange:true,assignments:[assignment]});assert.equal(await f.module.load(1),true);
+  assert.ok(f.calls.filter(q=>q.table!=='care_guidelines').every(q=>q.selectOptions.count==='exact'));
+  f.controller.respond=(q,execute)=>q.table==='care_assignments'?{data:[assignment],count:2}:execute();
+  assert.equal(await f.module.load(1),false);assert.equal(f.summaries.at(-1),null);
+});
+
+test('care stops paginating after account clear even when the held first page has more records',async t=>{
+  const f=fixture(t);let release;
+  f.controller.respond=(q,execute)=>q.table==='care_visits'?new Promise(resolve=>release=resolve):execute();
+  const loading=f.module.load(1);await tick();f.setContext({epoch:2,userId:null,role:null,canEdit:false});f.module.clear();
+  release({data:[{...visit(today()),id:'held-first-visit'}],count:2});await loading;
+  assert.equal(f.calls.filter(q=>q.table==='care_visits').length,1);assert.equal(f.host.textContent,'');assert.equal(f.summaries.at(-1),null);
 });

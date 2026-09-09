@@ -14,16 +14,16 @@ function fixture(t,options={}){
   const people=[{id:'person-sample',first_name:'Synthetic',last_name:'Record',membership_number:'SAMPLE-01'}];
   const calls=[],notices=[],rows=[],documents=[],blobs=new Set();let respond=null,uploads=null,gate=null,api;
   const control={after:null,noWrite:false,storageError:null,signedUrl:'javascript:alert(1)'};
-  const db={from(table){const q={table,op:'select'};const chain={select(fields){q.fields=fields;return chain},order(){return chain},range(a,b){q.range=[a,b];return chain},eq(k,v){q[k]=v;return chain},maybeSingle(){q.single=true;return chain},single(){q.single=true;return chain},insert(row){q.op='insert';q.row=structuredClone(row);return chain},then(a,b){
+  const db={from(table){const q={table,op:'select'};const chain={select(fields,options){q.fields=fields;q.countRequested=options&&options.count;return chain},order(){return chain},range(a,b){q.range=[a,b];return chain},eq(k,v){q[k]=v;return chain},maybeSingle(){q.single=true;return chain},single(){q.single=true;return chain},insert(row){q.op='insert';q.row=structuredClone(row);return chain},then(a,b){
     calls.push(q);if(respond){const response=respond(q);if(response!==undefined)return Promise.resolve(response).then(a,b);}
     const tableRows=table==='membership_history'?rows:documents;let result;
     if(q.op==='insert'){
       if(control.noWrite)result={data:null,error:{message:'Synthetic unavailable'}};
       else if(tableRows.some(r=>r.id===q.row.id))result={data:null,error:{code:'23505'}};
       else{tableRows.push(structuredClone(q.row));result={data:{id:q.row.id},error:null};}
-    }else{let matches=tableRows.filter(r=>!q.id||r.id===q.id);if(q.range)matches=matches.slice(q.range[0],q.range[1]+1);result={data:q.single?(matches[0]||null):matches,error:null};}
+    }else{let matches=tableRows.filter(r=>!q.id||r.id===q.id);const count=q.countRequested==='exact'?matches.length:null;if(q.range)matches=matches.slice(q.range[0],q.range[1]+1);result={data:q.single?(matches[0]||null):matches,count,error:null};}
     if(control.after)result=control.after(q,result)||result;return Promise.resolve(result).then(a,b);
-  }};return chain},storage:{from(){return{
+  }};if(options.noRange)delete chain.range;return chain},storage:{from(){return{
     upload(path,file){calls.push({op:'upload',path,size:file.size});if(control.storageError)return Promise.resolve({error:control.storageError});blobs.add(path);return uploads?uploads():Promise.resolve({data:{path},error:null})},
     list(folder,options){calls.push({op:'storage-list',folder,options});if(control.storageError)return Promise.resolve({error:control.storageError});return Promise.resolve({data:[...blobs].filter(p=>p.startsWith(folder+'/')).map(p=>({name:p.split('/').at(-1)})),error:null})},
     createSignedUrl(){return Promise.resolve({data:{signedUrl:control.signedUrl}})}
@@ -73,7 +73,7 @@ test('page upload freezes review and close actions, retaining a complete submitt
 });
 
 test('history pagination includes later pages so searches do not silently stop at 1000',async t=>{
-  const f=fixture(t);f.respond(q=>({data:q.range[0]===0?Array.from({length:1000},(_,i)=>({id:String(i),contact_id:'person-sample',event_type:'Synthetic historic entry'})):[{id:'1001',contact_id:'person-sample',event_type:'Unique later event'}]}));await f.api.load(1);const input=f.w.document.getElementById('membership-search');input.value='Unique later';input.dispatchEvent(new f.w.Event('input'));assert.match(f.w.document.getElementById('membership-history').textContent,/Unique later event/);assert.deepEqual(f.calls.map(q=>q.range),[[0,999],[1000,1999]]);
+  const f=fixture(t);f.respond(q=>({data:q.range[0]===0?Array.from({length:1000},(_,i)=>({id:String(i),contact_id:'person-sample',event_type:'Synthetic historic entry'})):[{id:'1001',contact_id:'person-sample',event_type:'Unique later event'}],count:1001}));await f.api.load(1);const input=f.w.document.getElementById('membership-search');input.value='Unique later';input.dispatchEvent(new f.w.Event('input'));assert.match(f.w.document.getElementById('membership-history').textContent,/Unique later event/);assert.deepEqual(f.calls.map(q=>q.range),[[0,999],[1000,1999]]);assert.ok(f.calls.every(q=>q.countRequested==='exact'));
 });
 
 
@@ -273,4 +273,88 @@ test('auth clear removes protection immediately and late write settlements canno
     assert.equal(f.w.document.querySelector('[data-close]').disabled,false);assert.equal(reload(),false);assert.equal(f.notices.length,0);
     assert.equal(f.calls.filter(q=>q.op==='insert'||q.op==='upload').length,writes);assert.doesNotMatch(f.w.document.body.textContent,/PRIVATE_LATE/);
   });
+});
+
+test('a600person archive loads below the requested page size and People history navigation clears an unrelated search',async t=>{
+  const f=fixture(t);
+  f.people.splice(0,f.people.length,...Array.from({length:600},(_,i)=>({id:'fictional-person-'+i,first_name:'Fictional '+i,last_name:'Archive',membership_number:String(i+1).padStart(4,'0')})));
+  f.rows.push(...Array.from({length:2501},(_,i)=>({id:'fictional-history-'+i,contact_id:f.people[i%600].id,event_type:'Fictional history',date_text:String(1950+i%70),source_label:'Fictional page '+i,details:i===2500?'Unique final archive entry':'Fictional historical detail'})));
+  f.respond(q=>q.range?{data:f.rows.slice(q.range[0],Math.min(q.range[1]+1,q.range[0]+500)),count:f.rows.length,error:null}:undefined);
+  await f.api.load(1);
+  assert.equal(f.w.document.getElementById('membership-person').options.length,601);
+  assert.equal(f.w.document.querySelectorAll('.membership-entry').length,100);
+  assert.match(f.w.document.getElementById('membership-status').textContent,/2501 history entries/);
+  assert.deepEqual(f.calls.map(q=>q.range),[[0,999],[500,1499],[1000,1999],[1500,2499],[2000,2999],[2500,3499]]);
+  assert.ok(f.calls.every(q=>q.countRequested==='exact'));
+  const search=f.w.document.getElementById('membership-search');search.value='Unique final archive entry';search.dispatchEvent(new f.w.Event('input'));
+  assert.equal(f.w.document.querySelectorAll('.membership-entry').length,1);assert.match(f.w.document.getElementById('membership-history').textContent,/Unique final archive entry/);
+  f.api.selectPerson('fictional-person-599');
+  assert.equal(search.value,'');assert.equal(f.w.document.getElementById('membership-person').value,'fictional-person-599');
+  assert.equal(f.w.document.querySelectorAll('.membership-entry').length,4);assert.match(f.w.document.getElementById('membership-status').textContent,/4 history entries/);
+  const form=f.open();assert.equal(form.elements.contact_id.value,'fictional-person-599');assert.equal(f.calls.some(q=>q.op==='insert'||q.op==='upload'),false);
+});
+
+test('invalid later archive pages never promote a partial list or discard the open review and photo',async t=>{
+  const row=id=>({id,contact_id:'person-sample',event_type:'Fictional partial history'});
+  const cases={
+    'missing result':null,
+    'null data':{data:null,count:2,error:null},
+    'non-array data':{data:{length:1},count:2,error:null},
+    'missing count':{data:[row('partial-2')],error:null},
+    'negative count':{data:[row('partial-2')],count:-1,error:null},
+    'fractional count':{data:[row('partial-2')],count:2.5,error:null},
+    'unsafe count':{data:[row('partial-2')],count:Number.MAX_SAFE_INTEGER+1,error:null},
+    'changed count':{data:[row('partial-2')],count:3,error:null},
+    'empty before total':{data:[],count:2,error:null},
+    'overflow':{data:[row('partial-2'),row('partial-3')],count:2,error:null},
+    'duplicate ID':{data:[row('partial-1')],count:2,error:null},
+    'empty ID':{data:[row('  ')],count:2,error:null},
+    'missing ID':{data:[{contact_id:'person-sample',event_type:'Fictional malformed history'}],count:2,error:null}
+  };
+  for(const [label,result] of Object.entries(cases))await t.test(label,async t=>{
+    const f=fixture(t);f.rows.push({id:'verified-before-refresh',contact_id:'person-sample',event_type:'Previously loaded fictional history'});
+    await f.api.load(1);const form=f.open();f.fill(form);f.photo(form);
+    f.respond(q=>q.range?(q.range[0]===0?{data:[row('partial-1')],count:2,error:null}:result):undefined);
+    await f.api.load(1);
+    assert.equal(f.w.document.querySelectorAll('.membership-entry').length,0);assert.equal(f.w.document.getElementById('membership-add').disabled,true);
+    assert.match(f.w.document.getElementById('membership-status').textContent,/could not load/);assert.equal(f.form(),form);
+    assert.equal(form.elements.details.value,'<img src=x onerror=alert(1)> remains literal');assert.equal(form.querySelector('.page-preview').hidden,false);
+    assert.equal(form.querySelector('[type=submit]').disabled,true);
+    const reload=new f.w.Event('beforeunload',{cancelable:true});f.w.dispatchEvent(reload);assert.equal(reload.defaultPrevented,true);
+    f.submit(form);await delay();assert.equal(f.calls.some(q=>q.op==='insert'||q.op==='upload'),false);
+    assert.equal(f.calls.filter(q=>q.range).length,3,'failed page stops without further requests');
+    f.respond(null);await f.api.load(1);assert.equal(f.form(),form);assert.equal(f.w.document.getElementById('membership-add').disabled,false);
+    assert.equal(form.querySelector('[type=submit]').disabled,false);assert.equal(f.w.document.querySelectorAll('.membership-entry').length,1);
+  });
+});
+
+test('a query without range is accepted only when its single response proves the exact total',async t=>{
+  for(const complete of [true,false]){
+    const f=fixture(t,{noRange:true});f.rows.push({id:'fictional-single',contact_id:'person-sample',event_type:'Fictional complete history'});
+    if(!complete)f.respond(()=>({data:f.rows,count:2,error:null}));
+    await f.api.load(1);assert.equal(f.calls.length,1);assert.equal(f.calls[0].countRequested,'exact');
+    assert.equal(f.w.document.getElementById('membership-add').disabled,!complete);
+    assert.equal(f.w.document.querySelectorAll('.membership-entry').length,complete?1:0);
+  }
+});
+
+test('a newer complete archive load supersedes an old partial load without another page request',async t=>{
+  const f=fixture(t);let finish;
+  f.respond(q=>q.range[0]===0?{data:[{id:'old-first',contact_id:'person-sample',event_type:'Old fictional page'}],count:3,error:null}:new Promise(resolve=>finish=resolve));
+  const old=f.api.load(1);await delay();assert.equal(f.calls.length,2);
+  f.respond(()=>({data:[{id:'new-complete',contact_id:'person-sample',event_type:'New fictional complete archive'}],count:1,error:null}));
+  await f.api.load(1);finish({data:[{id:'old-second',contact_id:'person-sample',event_type:'Stale private page'}],count:3,error:null});await old;
+  assert.equal(f.calls.length,3);assert.equal(f.w.document.querySelectorAll('.membership-entry').length,1);
+  assert.match(f.w.document.getElementById('membership-history').textContent,/New fictional complete archive/);assert.doesNotMatch(f.w.document.getElementById('membership-history').textContent,/Old fictional|Stale private/);
+  assert.equal(f.w.document.getElementById('membership-add').disabled,false);
+});
+
+test('auth clearing during a later archive page stops paging and erases the photo draft',async t=>{
+  const f=fixture(t);await f.api.load(1);const form=f.open();f.fill(form);f.photo(form);let finish;
+  f.respond(q=>q.range[0]===0?{data:[{id:'first-page',contact_id:'person-sample',event_type:'Fictional first page'}],count:3,error:null}:new Promise(resolve=>finish=resolve));
+  const pending=f.api.load(1);await delay();f.state.epoch=2;f.state.userId=null;f.api.clear();
+  finish({data:[{id:'late-page',contact_id:'person-sample',event_type:'Late private fictional page'}],count:3,error:null});await pending;
+  assert.equal(f.calls.length,3);assert.equal(f.form(),null);assert.equal(f.revoked.length,1);
+  assert.equal(f.w.document.getElementById('membership-history').textContent,'');assert.equal(f.w.document.getElementById('membership-person').options.length,1);
+  const reload=new f.w.Event('beforeunload',{cancelable:true});f.w.dispatchEvent(reload);assert.equal(reload.defaultPrevented,false);
 });

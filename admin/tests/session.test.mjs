@@ -41,7 +41,7 @@ function fixture(t,options={}) {
     if(options.onQuery) { const result=options.onQuery(q,rows); if(result!==undefined)return Promise.resolve(result); }
     if(q.table==='staff_roles')return Promise.resolve({data:options.roles?.[q.owner]===null?null:{role:options.roles?.[q.owner]||'editor'}});
     const records=rows(q.owner)[q.table];
-    if(q.op==='select')return Promise.resolve({data:records.filter(row=>!q.id||row.id===q.id)});
+    if(q.op==='select') { const selected=records.filter(row=>!q.id||row.id===q.id); const start=q.range?.[0]||0; const end=q.range?Math.min(q.range[1]+1,start+(options.pageCap||1000)):undefined; return Promise.resolve({data:selected.slice(start,end),count:q.count==='exact'?selected.length:null}); }
     if(q.op==='insert') { if(records.some(row=>row.id===q.row.id))return Promise.resolve({error:{code:'23505'}}); const row={...q.row,version:1,updated_at:'2030-01-01',created_at:'2030-01-01'};records.push(row);return Promise.resolve({data:row}); }
     if(q.op==='update') {const row=records.find(row=>row.id===q.id&&row.version===q.version);if(!row)return Promise.resolve({data:null,error:null});Object.assign(row,q.row,{version:row.version+1,updated_at:'2030-01-01'});return Promise.resolve({data:row});}
     return Promise.resolve({data:null,error:null});
@@ -55,7 +55,7 @@ function fixture(t,options={}) {
   },rpc(name){calls.push({op:'rpc',name});const role=options.roles?.[current?.user.id]||'editor';return Promise.resolve(typeof options.readiness==='function'?options.readiness():options.readiness||{data:{schema_revision:'20260907174301',staff_role:role,supported_modules:['events','contacts','documents','activity','membership','care','office_content','app_signups','leader_followups']}});},from(table){
     assert.equal(insideCallback,false,'do not start database queries inside the auth callback');
     const q={table,owner:current?.user.id,op:'select'};
-    const chain={select(){return chain;},eq(k,v){q[k]=v;return chain;},order(){return chain;},limit(){return chain;},maybeSingle(){return chain;},single(){q.single=true;return chain;},insert(row){q.op='insert';q.row=row;return chain;},update(row){q.op='update';q.row=row;return chain;},delete(){q.op='delete';return chain;},then(a,b){return respond(q).then(a,b);}};return chain;
+    const chain={select(fields,opts){q.count=opts?.count;return chain;},range(a,b){q.range=[a,b];return chain;},eq(k,v){q[k]=v;return chain;},order(){return chain;},limit(){return chain;},maybeSingle(){return chain;},single(){q.single=true;return chain;},insert(row){q.op='insert';q.row=row;return chain;},update(row){q.op='update';q.row=row;return chain;},delete(){q.op='delete';return chain;},then(a,b){return respond(q).then(a,b);}};return chain;
   },storage:{from(){return {
     async upload(path,file){calls.push({op:'upload',path,size:file.size});if(options.uploadDeferred)return options.uploadDeferred.promise;return {error:null};},
     async list(path,opts){calls.push({op:'list',path,options:opts});return options.storageList||{data:[]};},
@@ -93,7 +93,7 @@ test('late account-A data and role responses cannot replace account-B state',asy
 });
 test('late table fetch after logout cannot repopulate private DOM',async t=>{
   const f=fixture(t,{initial:null});await pause();f.delayed.push(q=>q.owner==='a'&&q.table!=='staff_roles');f.emit(session('a'));await pause();assert.equal(f.pending.length,4);
-  f.emit(null);for(const p of f.pending)p.resolve({data:f.rows('a')[p.q.table]});await pause();
+  f.emit(null);for(const p of f.pending)p.resolve({data:f.rows('a')[p.q.table],count:f.rows('a')[p.q.table].length});await pause();
   assert.equal(f.el('people-list').textContent,'');assert.equal(f.el('documents-list').textContent,'');assert.equal(f.el('workspace').classList.contains('hidden'),true);
 });
 test('same-account token events preserve unsaved edits; viewer cannot open editor',async t=>{
@@ -164,7 +164,7 @@ test('document expiry removes the signed URL visibly',async t=>{
   f.el('documents-list').querySelector('button').click();await pause();assert.ok(f.el('document-result').querySelector('a'));expire();assert.equal(f.el('document-result').querySelector('a'),null);assert.match(f.el('document-result').textContent,/expired/);
 });
 test('text rendered into editor values cannot create markup or event attributes',async t=>{
-  const f=fixture(t,{initial:null});await pause();f.delayed.push(q=>q.table==='contacts');f.emit(session('a'));await pause();f.pending[0].resolve({data:[{...f.rows('a').contacts[0],first_name:'Synthetic" autofocus onfocus="alert(1)'}]});await pause();f.el('people-list').querySelector('button').click();const input=f.el('editor-fields').querySelector('[name=first_name]');assert.equal(input.hasAttribute('onfocus'),false);assert.equal(input.value,'Synthetic" autofocus onfocus="alert(1)');
+  const f=fixture(t,{initial:null});await pause();f.delayed.push(q=>q.table==='contacts');f.emit(session('a'));await pause();f.pending[0].resolve({data:[{...f.rows('a').contacts[0],first_name:'Synthetic" autofocus onfocus="alert(1)'}],count:1});await pause();f.el('people-list').querySelector('button').click();const input=f.el('editor-fields').querySelector('[name=first_name]');assert.equal(input.hasAttribute('onfocus'),false);assert.equal(input.value,'Synthetic" autofocus onfocus="alert(1)');
 });
 
 test('personal dashboard shows due leaders and clears names and badge on sign-out', async t => {
@@ -370,7 +370,7 @@ test('refresh landing during save must force review of the newly known match',as
   const pendingStaff=f.pending.find(p=>p.q.table==='staff_roles');assert.ok(pendingStaff);
   const existing={...f.rows('a').contacts[0],id:'parallel-person',first_name:'Synthetic',last_name:'New record'};
   f.rows('a').contacts.push(existing);
-  pendingContacts.resolve({data:f.rows('a').contacts});await pause();
+  pendingContacts.resolve({data:f.rows('a').contacts,count:f.rows('a').contacts.length});await pause();
   assert.equal(f.el('person-review').hidden,false);assert.equal(field(f,'person_match_reviewed').checked,false);
   f.delayed.length=0;pendingStaff.resolve({data:{role:'editor'}});await pause();
   assert.equal(f.calls.filter(q=>q.op==='insert'&&q.table==='contacts').length,0,'the new match must be reviewed before insertion');
@@ -540,7 +540,7 @@ test('a metadata absence snapshot predating late settlement cannot unlock or dis
   await until(()=>f.calls.some(q=>q.table==='documents'&&q.op==='insert'),'metadata write started');expire();await until(()=>f.el('editor-error').textContent.includes('could not be confirmed'),'deadline reported');
   const write=f.calls.find(q=>q.table==='documents'&&q.op==='insert'),before=structuredClone(f.rows('a').documents),reads=f.calls.filter(q=>q.table==='documents'&&q.op==='select').length;
   holdRead=true;f.el('editor-refresh').click();await until(()=>f.calls.filter(q=>q.table==='documents'&&q.op==='select').length>reads,'metadata recovery read started');
-  const saved={...write.row,version:1};f.rows('a').documents.push(saved);mutation.resolve({data:saved});await pause();reading.resolve({data:before});
+  const saved={...write.row,version:1};f.rows('a').documents.push(saved);mutation.resolve({data:saved});await pause();reading.resolve({data:before,count:before.length});
   await until(()=>f.el('workspace-refresh').disabled===false,'stale refresh completed');assert.equal(f.el('save').disabled,true);assert.equal(f.el('editor').open,true);
   assert.equal(f.w.document.querySelector('[data-close-editor]').disabled,true);holdRead=false;f.el('editor-refresh').click();
   await until(()=>!f.el('editor').open,'fresh durable record confirms the original write');assert.equal(f.calls.filter(q=>q.table==='documents'&&q.op==='insert').length,1);
@@ -577,4 +577,40 @@ test('an unresolved event save permits only its submitted retry and blocks alter
   f.el('event-delete').disabled=false;f.el('event-delete').click();await pause();
   assert.equal(f.calls.filter(q=>q.table==='events'&&q.op==='update').length,1,'the handler independently rejects an alternate archive payload');
   f.emit(null);mutation.resolve({error:{message:'Synthetic abandoned response'}});await pause();assert.equal(f.el('editor').open,false);
+});
+
+test('people load every record despite a lower server page cap',async t=>{
+  const f=fixture(t,{initial:null,pageCap:500});await pause();
+  f.rows('a').contacts=Array.from({length:600},(_,i)=>({id:'synthetic-person-'+i,version:1,updated_at:'2030-01-01',first_name:'Synthetic',last_name:i===599?'Final archive person':'Record '+i,status:'active'}));
+  f.emit(session('a'));await until(()=>f.el('people-count').textContent==='600','all 600 people loaded');
+  assert.deepEqual(f.calls.filter(q=>q.table==='contacts').map(q=>q.range),[[0,999],[500,1499]]);
+  assert.ok(f.calls.filter(q=>q.table==='contacts').every(q=>q.count==='exact'));
+  f.el('people-search').value='Final archive person';f.el('people-search').dispatchEvent(new f.w.Event('input'));assert.match(f.el('people-list').textContent,/Final archive person/);
+});
+
+test('incomplete or shifted record pages pause editing and retain the open draft',async t=>{
+  for(const kind of ['null-page','empty-page','missing-count','changed-count','duplicate','overflow'])await t.test(kind,async t=>{
+    let broken=false;
+    const options={onQuery(q,rows){
+      if(!broken||q.op!=='select'||q.table!=='contacts')return;
+      const row=rows('a').contacts[0];
+      if(q.range[0]===0)return {data:[row],count:kind==='overflow'?0:2};
+      if(kind==='null-page')return {data:null,error:null,count:2};
+      if(kind==='empty-page')return {data:[],count:2};
+      if(kind==='missing-count')return {data:[{...row,id:'second'}]};
+      if(kind==='changed-count')return {data:[{...row,id:'second'}],count:3};
+      return {data:[row],count:2};
+    }};
+    const f=fixture(t,options);await until(()=>f.el('people-list').querySelector('button'),'initial records loaded');
+    f.el('people-list').querySelector('button').click();field(f,'notes').value='Keep this synthetic draft';broken=true;f.el('workspace-refresh').click();
+    await until(()=>f.el('workspace-health-message').textContent.includes('could not be refreshed'),'load failure shown');
+    assert.equal(f.el('people-list').textContent,'');assert.equal(f.el('save').disabled,true);assert.equal(field(f,'notes').value,'Keep this synthetic draft');
+  });
+});
+
+test('a late first page cannot start the next page after sign-out',async t=>{
+  const held=deferred();const f=fixture(t,{initial:null,onQuery:q=>q.table==='contacts'?held.promise:undefined});await pause();f.emit(session('a'));
+  await until(()=>f.calls.some(q=>q.table==='contacts'),'first page started');f.emit(null);
+  held.resolve({data:Array.from({length:500},(_,i)=>({id:'synthetic-old-'+i,version:1})),count:600});await pause();
+  assert.equal(f.calls.filter(q=>q.table==='contacts').length,1);assert.equal(f.el('people-list').textContent,'');assert.equal(f.el('workspace').classList.contains('hidden'),true);
 });

@@ -34,6 +34,33 @@ test('book searches never expose unapproved or incomplete recommendations', () =
   assert.deepEqual(approvedBooks(null),[]);
 });
 
+test('author initials match compact, spaced and dotted spellings without changing query tokens', () => {
+  const books=[
+    {approved:true,title:'Synthetic selection one',author:'C. S. Lewis'},
+    {approved:true,title:'Synthetic selection two',author:'A. W. Tozer'},
+    {approved:true,title:'Synthetic selection three',author:'J. I. Packer'},
+    {approved:true,title:'Synthetic selection four',author:'R. C. Sproul'}
+  ];
+  for(const [index,queries] of [
+    [0,['CS Lewis','C.S. Lewis','C S Lewis','lewis cs']],
+    [1,['AW Tozer','A.W. Tozer','A W Tozer']],
+    [2,['JI Packer','J.I. Packer','J I Packer']],
+    [3,['RC Sproul','R.C. Sproul','R C Sproul']]
+  ])for(const query of queries)assert.deepEqual(approvedBooks(books,query),[books[index]],query);
+  assert.deepEqual(approvedBooks(books,'CS Lewis missing'),[],'every query word must still match');
+  assert.deepEqual(approvedBooks(books,'cs tozer'),[],'initial aliases must belong to the same author');
+});
+
+test('compact-initial aliases cannot expose unapproved books or join unrelated search text', () => {
+  const approved={approved:true,title:'Synthetic approved selection',author:'C. S. Lewis'};
+  const books=[approved,{approved:false,title:'Synthetic hidden selection',author:'C. S. Lewis'},
+    {approved:'true',title:'Synthetic unreviewed selection',author:'C. S. Lewis'},
+    {approved:true,title:'Synthetic unrelated selection',author:'Single Author',note:'C S notes'}];
+  assert.deepEqual(approvedBooks(books,'CS Lewis'),[approved]);
+  assert.deepEqual(approvedBooks(books,'CS hidden'),[]);
+  assert.deepEqual(approvedBooks(books,'CS unrelated'),[],'only author initials receive an alias');
+});
+
 test('the one-Sunday pause expires at Central midnight, not UTC midnight', () => {
   const pause={date:'2026-09-13'};
   assert.equal(pauseVisible(pause,new Date('2026-09-07T04:00:00Z')),true);

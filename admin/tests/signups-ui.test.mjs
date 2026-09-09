@@ -9,7 +9,7 @@ function fixture(t,opts={}){
  const dom=new JSDOM('<section id="signups"></section>',{url:'https://example.invalid/admin/',runScripts:'outside-only'}),w=dom.window;t.after(()=>w.close());
  w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};w.confirm=()=>true;w.eval(code);
  let ctx={epoch:1,userId:'sample-staff',role:opts.role||'editor',canEdit:opts.role!=='viewer'},rows=opts.rows||[{...row}],refreshes=0;
- const calls=[],notices=[],counts=[],control={peopleReady:true};const db={from(table){const q={table};const chain={select(){return chain},order(){return chain},range(a,b){q.range=[a,b];return chain},then(resolve,reject){calls.push(q);return (control.read?control.read():Promise.resolve({data:rows.slice(q.range?.[0]||0,q.range?q.range[1]+1:undefined)})).then(resolve,reject)}};return chain},rpc:async(name,args)=>{calls.push({name,args});if(control.write)return control.write();return{data:{id:row.id,version:row.version,contact_id:'sample-person',status:'reviewed'}}}};
+ const calls=[],notices=[],counts=[],control={peopleReady:true};const db={from(table){const q={table};const chain={select(fields,settings){q.fields=fields;q.selectOptions=settings;return chain},order(){return chain},range(a,b){q.range=[a,b];return chain},then(resolve,reject){calls.push(q);return (control.read?control.read(q):Promise.resolve({data:rows.slice(q.range?.[0]||0,q.range?q.range[1]+1:undefined),count:rows.length})).then(resolve,reject)}};if(opts.noRange)delete chain.range;return chain},rpc:async(name,args)=>{calls.push({name,args});if(control.write)return control.write();return{data:{id:row.id,version:row.version,contact_id:'sample-person',status:'reviewed'}}}};
  const host=w.document.getElementById('signups'),people=[{id:'sample-person',first_name:'Sample',last_name:'Person',email:'sample@example.invalid',status:'active'}];let api;
  api=w.CreekSignups.create({root:host,db,people:()=>people,peopleReady:()=>control.peopleReady,getContext:()=>ctx,ensureReady:async epoch=>control.ensure?await control.ensure(epoch):true,isCurrent:e=>ctx.epoch===e&&!!ctx.userId,notice:m=>notices.push(m),onCount:n=>counts.push(n),refresh:async()=>{refreshes++;}});
  const form=()=>w.document.querySelector('form');
@@ -136,4 +136,51 @@ test('an older signup discard decision cannot clear a replacement review',async 
  f.w.confirm=()=>{f.w.confirm=()=>true;f.api.open(row.id);replacement=f.form();change(f,'staff_notes','Synthetic replacement draft');return true;};
  f.api.open(row.id);assert.equal(f.form(),replacement);assert.equal(f.form().elements.staff_notes.value,'Synthetic replacement draft');assert.equal(unloadBlocked(f),true);
  f.api.clear();assert.equal(unloadBlocked(f),false);
+});
+
+test('signup totals and search include a smaller server-capped second page',async t=>{
+  const rows=Array.from({length:600},(_,i)=>({...row,id:'capped-signup-'+i,first_name:i===599?'Final capped signup':'Fictional '+i}));
+  const f=fixture(t,{rows});f.control.read=q=>Promise.resolve({data:rows.slice(q.range[0],q.range[0]+500),count:rows.length});
+  assert.equal(await f.api.load(1),true);assert.equal(f.counts.at(-1),600);
+  const search=f.host.querySelector('input');search.value='Final capped signup';search.dispatchEvent(new f.w.Event('input'));
+  assert.equal(f.host.querySelectorAll('.signup-row').length,1);assert.deepEqual(f.calls.map(q=>q.range),[[0,999],[500,1499]]);
+  assert.ok(f.calls.every(q=>q.selectOptions.count==='exact'));
+});
+
+test('signup updated across the page boundary fails the load instead of silently omitting it',async t=>{
+  const rows=Array.from({length:1001},(_,i)=>({...row,id:'shifted-'+i,first_name:i===1000?'Updated fictional signup':'Fictional '+i}));
+  const f=fixture(t,{rows});let shifted=false;
+  f.control.read=q=>{if(q.range[0]===1000&&!shifted){const updated=rows.pop();updated.updated_at='2026-09-09T12:00:00Z';rows.unshift(updated);shifted=true;}
+    return Promise.resolve({data:structuredClone(rows.slice(q.range[0],q.range[1]+1)),count:rows.length});};
+  assert.equal(await f.api.load(1),false);assert.equal(f.counts.at(-1),null);assert.equal(f.host.querySelectorAll('.signup-row').length,0);
+  assert.match(f.host.querySelector('[data-signup-status]').textContent,/could not load/);
+  assert.equal(await f.api.load(1),true);assert.equal(f.counts.at(-1),1001);
+  const search=f.host.querySelector('input');search.value='Updated fictional signup';search.dispatchEvent(new f.w.Event('input'));
+  assert.equal(f.host.querySelectorAll('.signup-row').length,1,'an explicit stable refresh includes the previously omitted update');
+});
+
+test('malformed signup pages keep a review draft locked and never publish a partial count',async t=>{
+  const second={...row,id:'second-signup'};
+  for(const response of [{data:null,count:2},{data:[],count:2},{data:[second]},{data:[second],count:3},
+      {data:[second],count:-1},{data:[second],count:1.5},{data:[row],count:2},{data:[{...second,id:' '}],count:2},
+      {data:[second,{...second,id:'overflow'}],count:2}]){
+    const f=fixture(t,{rows:[row,second]});assert.equal(await f.api.load(1),true);f.api.open(row.id);f.form().elements.staff_notes.value='Keep this fictional identity review';
+    f.control.read=q=>Promise.resolve(q.range[0]===0?{data:[row],count:2}:response);
+    assert.equal(await f.api.load(1),false);assert.equal(f.counts.at(-1),null);
+    assert.equal(f.form().elements.staff_notes.value,'Keep this fictional identity review');assert.equal(f.form().querySelector('[type="submit"]').disabled,true);
+    assert.equal(f.host.querySelectorAll('.signup-row').length,0);
+  }
+});
+
+test('signup no-range fallback requires a complete counted response and accepts genuine zero',async t=>{
+  const f=fixture(t,{noRange:true,rows:[]});assert.equal(await f.api.load(1),true);assert.equal(f.counts.at(-1),0);
+  f.control.read=()=>Promise.resolve({data:[row],count:1});assert.equal(await f.api.load(1),true);assert.equal(f.counts.at(-1),1);
+  f.control.read=()=>Promise.resolve({data:[row],count:2});assert.equal(await f.api.load(1),false);assert.equal(f.counts.at(-1),null);
+});
+
+test('signup pagination stops on account clear before requesting a subsequent page',async t=>{
+  const f=fixture(t);let release;f.control.read=()=>new Promise(resolve=>release=resolve);
+  const loading=f.api.load(1);await tick();f.setContext({epoch:2,userId:null,role:null,canEdit:false});f.api.clear();
+  release({data:[row],count:2});await loading;
+  assert.equal(f.calls.length,1);assert.equal(f.host.textContent,'');assert.equal(f.counts.at(-1),null);
 });

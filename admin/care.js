@@ -244,14 +244,23 @@
       syncDraft(); publishSummary();
     }
     async function allRows(table, epoch, token) {
-      var rows = [], offset = 0;
+      var rows = [], offset = 0, total = null, seen = new Set();
       while (current(epoch) && token === request) {
-        var result = await bounded(db.from(table).select('*').order('id', { ascending: true }).range(offset, offset + 999));
+        var query = db.from(table).select('*', { count: 'exact' }).order('id', { ascending: true });
+        var ranged = typeof query.range === 'function';
+        var result = await bounded(ranged ? query.range(offset, offset + 999) : query);
         if (!current(epoch) || token !== request) return { data: [] };
         if (result.error) return { error: result.error };
-        var page = result.data || []; rows = rows.concat(page);
-        if (page.length < 1000) return { data: rows };
-        offset += 1000;
+        var page = result.data;
+        if (!Array.isArray(page) || !Number.isSafeInteger(result.count) || result.count < 0 || total !== null && result.count !== total) throw new Error('incomplete records');
+        total = result.count;
+        page.forEach(function (row) {
+          if (!row || typeof row.id !== 'string' || !row.id.trim() || seen.has(row.id)) throw new Error('incomplete records');
+          seen.add(row.id);
+        });
+        rows = rows.concat(page); offset += page.length;
+        if (offset > total || offset < total && (!page.length || !ranged)) throw new Error('incomplete records');
+        if (offset === total) return { data: rows };
       }
       return { data: [] };
     }
