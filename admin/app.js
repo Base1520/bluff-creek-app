@@ -486,7 +486,11 @@
   function tableFor(kind) { return kind === "event" ? "events" : kind === "person" ? "contacts" : "documents"; }
   function valuesMatch(row, payload) { return Object.keys(payload || {}).every(function (key) { return ((key === "starts_at" || key === "ends_at") && row[key] && payload[key] && Date.parse(row[key]) === Date.parse(payload[key])) || row[key] === payload[key] || (row[key] == null && payload[key] == null); }); }
   function textValue(form, key) { return String(form.get(key) || "").trim(); }
-  function identityText(value) { return String(value || "").normalize("NFC").trim().replace(/\s+/g, " ").toLowerCase(); }
+  // Unicode Format (Cf), including zero-width spaces/joiners and direction marks,
+  // cannot supply a required field's content. This check never rewrites its value.
+  function hasTextContent(value) { return String(value || "").replace(/[\s\p{Cf}]/gu, "").length > 0; }
+  // Ignore Cf only for similar-record comparison; stored names and IDs keep them.
+  function identityText(value) { return String(value || "").normalize("NFC").replace(/\p{Cf}/gu, "").trim().replace(/\s+/g, " ").toLowerCase(); }
   function personReview(row) {
     var identity = [row.first_name, row.last_name, row.membership_number, row.legacy_member_id].map(identityText);
     var matches = state.people.filter(function (person) {
@@ -532,15 +536,15 @@
     var row;
     if (item.kind === "event") {
       var starts = new Date(form.get("starts_at")), ends = form.get("ends_at") ? new Date(form.get("ends_at")) : null;
-      if (!textValue(form, "title")) throw new Error("Enter a title.");
+      if (!hasTextContent(textValue(form, "title"))) throw new Error("Enter a title.");
       if (isNaN(starts) || (ends && (isNaN(ends) || ends < starts))) throw new Error("Choose a valid start time and an end time after it.");
       row = { title: textValue(form, "title"), tag: form.get("tag"), starts_at: starts.toISOString(), ends_at: ends ? ends.toISOString() : null, location: textValue(form, "location") || null, description: textValue(form, "description") || null };
     } else if (item.kind === "person") {
-      if (!textValue(form, "first_name")) throw new Error("Enter a first name.");
+      if (!hasTextContent(textValue(form, "first_name"))) throw new Error("Enter a first name.");
       row = { first_name: textValue(form, "first_name"), last_name: textValue(form, "last_name"), status: form.get("status"), needs_review: form.get("needs_review") === "Needs review" };
       ["household_name", "email", "phone", "notes", "membership_number", "legacy_member_id", "middle_name", "preferred_name", "former_names", "address", "birth_date_text", "received_date_text", "how_received", "baptism_date_text", "dismissal_date_text", "reason_for_decrease"].forEach(function (key) { row[key] = textValue(form, key) || null; });
     } else {
-      if (!textValue(form, "title")) throw new Error("Enter a title.");
+      if (!hasTextContent(textValue(form, "title"))) throw new Error("Enter a title.");
       row = { title: textValue(form, "title"), category: form.get("category"), description: textValue(form, "description") || null };
       if (item.isNew) {
         var file = item.file || form.get("file");

@@ -408,9 +408,33 @@ test('coverage flags recurring intervals beyond the monthly and quarterly care g
   let gaps=coverageFor(persons,[plan('deacon',12,28),plan('sunday_school',null,40)]);
   assert.equal(gaps.length,2);assert.ok(gaps.every(g=>g.reason==='Interval exceeds care goal'));
   assert.equal(coverageFor(persons,[plan('deacon',3,365),plan('sunday_school',1,365)]).length,0,'calendar months take precedence over retained day fields');
-  assert.equal(coverageFor(persons,[plan('deacon',null,90),plan('sunday_school',null,30)]).length,0);
+  assert.equal(coverageFor(persons,[plan('deacon',null,90),plan('sunday_school',null,28)]).length,0);
   gaps=coverageFor(persons,[plan('deacon',null,91),plan('sunday_school',2,28)]);
   assert.equal(gaps.length,2);assert.ok(gaps.every(g=>g.reason==='Interval exceeds care goal'));
+});
+
+test('monthly coverage rejects day intervals that can skip February without changing their scheduled dates', () => {
+  const persons=[{id:'active',status:'active'}];
+  const deacon={contact_id:'active',care_role:'deacon',assigned_to:'Fictional deacon',cadence_days:90};
+  for(const [year,monthlyDue,expectedDays] of [
+    ['2026','2026-02-28',{28:'2026-02-28',29:'2026-03-01',30:'2026-03-02'}],
+    ['2024','2024-02-29',{28:'2024-02-28',29:'2024-02-29',30:'2024-03-01'}]
+  ]){
+    const start=year+'-01-31',date=year+'-02-28';
+    const plan={contact_id:'active',care_role:'sunday_school',assigned_to:'Fictional teacher',started_on:start};
+    const contact={contact_id:'active',care_role:'sunday_school',contacted_on:start,outcome:'contacted'};
+    for(const days of [28,29,30]){
+      const dayPlan={...plan,cadence_days:days};
+      assert.equal(dueFor(dayPlan,[contact],date).due,expectedDays[days]);
+      const gaps=coverageFor(persons,[deacon,dayPlan]);
+      assert.equal(gaps.length,days===28?0:1,'day-based monthly coverage must hold in non-leap years too');
+      if(gaps.length){assert.equal(gaps[0].care_role,'sunday_school');assert.equal(gaps[0].reason,'Interval exceeds care goal');}
+      assert.equal(dayPlan.cadence_days,days,'coverage does not rewrite the chosen schedule');
+    }
+    const monthly={...plan,cadence_months:1,cadence_days:30};
+    assert.equal(dueFor(monthly,[contact],date).due,monthlyDue);
+    assert.equal(coverageFor(persons,[deacon,monthly]).length,0);
+  }
 });
 
 test('switching person loads only that person and selected role before saving', async t => {

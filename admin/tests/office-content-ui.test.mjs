@@ -204,3 +204,49 @@ test('a failed content reload during the save readiness check prevents the write
   const saving=f.submit();await tick();f.control.error='synthetic network failure';assert.equal(await f.api.load(1),false);f.control.error=null;allow(true);await saving;
   assert.equal(f.calls.some(q=>q.op==='insert'),false);assert.equal(f.form().elements.body.value,'Synthetic pending check');assert.equal(f.form().querySelector('[type=submit]').disabled,true);
 });
+
+test('replacement owner or epoch clears content and drafts before unavailable workspace handling',async t=>{
+  for(const entry of ['render','load','open']){
+    for(const next of [{epoch:2,userId:'replacement-user'},{epoch:1,userId:'replacement-user'},{epoch:2,userId:'sample-user'}]){
+      const f=fixture(t,{rows:{office_prayer_requests:[{id:'p',display_name:'OLD_RECORD_CANARY',request_text:'Fictional record',status:'active',share_scope:'staff_only'}]}});
+      await f.api.load(1);f.roots.prayers.querySelector('[data-office-edit]').click();f.set('care_notes','OLD_DRAFT_CANARY');
+      const before=new f.w.Event('beforeunload',{cancelable:true});f.w.dispatchEvent(before);assert.equal(before.defaultPrevented,true);
+      f.setContext({...next,role:'editor',canEdit:false,workspaceReady:false});
+      if(entry==='load')assert.equal(await f.api.load(next.epoch),false);else if(entry==='open')f.api.open('announcements');else f.api.render();
+      assert.equal(f.form(),null,entry+' clears old private content before preserving outage state');
+      assert.doesNotMatch(f.w.document.body.textContent,/OLD_RECORD_CANARY|OLD_DRAFT_CANARY/);
+      for(const host of Object.values(f.roots))assert.equal(host.textContent,'');
+      const after=new f.w.Event('beforeunload',{cancelable:true});f.w.dispatchEvent(after);assert.equal(after.defaultPrevented,false);
+      assert.equal(f.calls.some(q=>q.op!=='select'),false);
+    }
+  }
+});
+
+test('same identity outage keeps its content draft and unload warning until the connection returns',async t=>{
+  const f=fixture(t);await f.api.load(1);f.api.open('prayers');f.set('display_name','Fictional request');f.set('request_text','Retain this same-identity draft');
+  f.setContext({epoch:1,userId:'sample-user',role:'editor',canEdit:false,workspaceReady:false});
+  f.api.render();assert.equal(await f.api.load(1),false);assert.equal(f.form().elements.request_text.value,'Retain this same-identity draft');
+  assert.equal(f.form().querySelector('[type=submit]').disabled,true);assert.equal(f.form().elements.request_text.disabled,true);
+  const before=new f.w.Event('beforeunload',{cancelable:true});f.w.dispatchEvent(before);assert.equal(before.defaultPrevented,true);
+  f.setContext({epoch:1,userId:'sample-user',role:'editor',canEdit:true,workspaceReady:true});await f.api.load(1);
+  assert.equal(f.form().elements.request_text.value,'Retain this same-identity draft');assert.equal(f.form().querySelector('[type=submit]').disabled,false);
+});
+
+test('content page responses retain their starting owner even when an epoch number is unchanged',async t=>{
+  const f=fixture(t),pending=[];f.control.hold=q=>new Promise(resolve=>pending.push({q,resolve}));
+  const loading=f.api.load(1);await tick();assert.equal(pending.length,4);
+  f.setContext({epoch:1,userId:'replacement-user',role:'editor',canEdit:true,workspaceReady:true});
+  pending.forEach(({q,resolve})=>resolve({data:q.table==='office_announcements'?[{id:'old-row',title:'OLD_PAGE_CANARY',body:'Fictional',status:'draft'}]:[],count:q.table==='office_announcements'?2:0,error:null}));
+  assert.equal(await loading,false);assert.equal(f.calls.length,4,'no later pages are requested for the old owner');
+  assert.doesNotMatch(f.w.document.body.textContent,/OLD_PAGE_CANARY/);
+  f.control.hold=null;await f.api.load(1);f.api.open('prayers');f.set('request_text','Replacement draft');
+  assert.equal(f.form().elements.request_text.value,'Replacement draft');
+});
+
+test('same-epoch owner change during readiness never submits the former content draft',async t=>{
+  let finish;const f=fixture(t,{ensureReady:()=>new Promise(resolve=>finish=resolve)});
+  await f.api.load(1);f.api.open('prayers');f.set('display_name','Fictional request');f.set('request_text','OLD_SUBMISSION_CANARY');
+  const saving=f.submit();await tick();f.setContext({epoch:1,userId:'replacement-user',role:'editor',canEdit:true,workspaceReady:true});finish(true);await saving;
+  assert.equal(f.calls.some(q=>q.op!=='select'),false);assert.equal(f.refreshes(),0);assert.equal(f.notices.length,0);
+  f.api.render();assert.equal(f.form(),null);assert.doesNotMatch(f.w.document.body.textContent,/OLD_SUBMISSION_CANARY/);
+});

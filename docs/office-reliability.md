@@ -42,6 +42,16 @@ A read-only membership source dialog closes when its workspace or history list b
 
 The source-readiness change passes 55 membership UI tests and 335 staff tests overall. Public app code is unchanged from the preceding 71-test revision.
 
+## Account replacement and required entries
+
+Personal follow-ups, signup reviews and office-content drafts distinguish an outage for the same signed-in identity from a replacement account or session. Replacement clears the former identity’s records, draft and reload warning before outage handling. Captured owner/session checks prevent old record reads, readiness checks and save responses from completing replacement work. The same identity’s interrupted draft keeps its existing recovery behavior. These are client lifecycle protections alongside the server’s independent access controls.
+
+Required People first names, event/document titles and history type/source labels cannot consist only of whitespace and Unicode Format characters (General Category Cf, including zero-width spaces and joiners). Similar-record review ignores those format characters for comparison, so an invisible character cannot bypass a matching-name or identifier acknowledgment. Validation does not rewrite stored names, identifiers, titles, uncertain dates or transcription; internal joiners remain intact. This is form-entry validation, not a new database constraint or automatic person merge.
+
+Monthly Sunday school coverage accepts a one-calendar-month plan or a day interval of 28 or fewer. A 29- or 30-day interval can skip February, so those plans appear for review. This changes coverage classification only: saved cadence values, actual due-date calculations and the three-month/90-day deacon threshold remain unchanged. Coverage measures configured plans, not completed conversations or delivered reminders.
+
+These entry, identity and coverage changes pass all 353 staff tests: 71 core/session, 57 membership UI, 48 care, 33 personal follow-ups, 28 signup UI, 36 office-content UI and 80 other staff cases. Public app bytes remain unchanged from the preceding 71-test build; no new browser, hosted or phone acceptance is claimed.
+
 ## Migration and readiness contract
 
 For a fresh isolated setup, use every SQL file in the explicit order in `admin/README.md`. The sixth, `supabase/migrations/20260908220707_office_record_recovery.sql`, supplies readiness and save recovery; the seventh, `supabase/migrations/20260908220718_pause_public_app_intake.sql`, pauses profile submissions. Current filenames match the recorded hosted versions with all seven SQL byte hashes preserved. See [migration preparation](office-migrations.md); compare existing hosted history before any further application rather than replaying this baseline.

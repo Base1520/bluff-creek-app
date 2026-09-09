@@ -53,6 +53,24 @@ test('review checkbox and nonblank required values prevent a write',async t=>{
   form.elements.reviewed.checked=true;form.elements.source_label.value='   ';f.submit(form);await delay();assert(!f.calls.some(x=>x.op==='insert'));assert.match(form.querySelector('output').textContent,/source/);
 });
 
+test('format-only history type and source cannot be saved as reviewed entries',async t=>{
+  const f=fixture(t);await f.api.load(1);const form=f.open();f.fill(form);
+  for(const name of ['event_type','source_label'])for(const value of ['\u200b',' \u200c\u200d\u2060\u202e ']){
+    f.fill(form);form.elements[name].value=value;assert.equal(form.checkValidity(),true);f.submit(form);await delay();
+    assert.equal(f.calls.some(q=>q.op==='insert'||q.op==='upload'),false);assert.equal(f.form(),form);
+    assert.equal(form.elements[name].value,value);assert.equal(form.elements[name].disabled,false);assert.match(form.querySelector('output').textContent,/event type and source/);
+  }
+});
+
+test('history validation preserves internal Unicode joiners and original uncertain text',async t=>{
+  const f=fixture(t);await f.api.load(1);const form=f.open();f.fill(form);
+  const expected={event_type:'Received क्\u200dष',source_label:'Fictional ledger\u2060 page',date_text:'Summer\u200c 1956; [unclear]',details:'Original क्\u200dष transcription'};
+  for(const [name,value] of Object.entries(expected))form.elements[name].value=value;
+  f.submit(form);await delay();const write=f.calls.find(q=>q.table==='membership_history'&&q.op==='insert');assert.ok(write);
+  for(const [name,value] of Object.entries(expected))assert.equal(write.row[name],value,name);
+  assert.equal(write.row.event_date,null);assert.equal(f.w.document.querySelector('dialog'),null);
+});
+
 test('correction retains the previous entry and its original document',async t=>{
   const f=fixture(t);f.rows.push({id:'old-entry',contact_id:'person-sample',event_type:'Joined',date_text:'1956?',source_label:'Synthetic source',source_document_id:'doc-source',details:'Original wording'});await f.api.load(1);
   [...f.w.document.querySelectorAll('.membership-entry button')].find(x=>x.textContent==='Add correction').click();const form=f.w.document.querySelector('dialog form');form.elements.reviewed.checked=true;f.submit(form);await delay();

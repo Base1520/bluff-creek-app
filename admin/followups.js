@@ -101,8 +101,8 @@
     function render() {
       var c = context();
       if (!identity(c.epoch)) { clear(); return; }
-      if (!current(c.epoch)) { unavailable(); return; }
       if (mounted && (mountedEpoch !== c.epoch || mountedOwner !== c.userId)) clear();
+      if (!current(c.epoch)) { unavailable(); return; }
       mount(); q('[data-followups-new]').disabled = !ready;
       q('[data-followups-status]').textContent = failed ? 'Your follow-ups could not load. Refresh to try again.' : ready ? '' : 'Loading your follow-ups…';
       host.querySelectorAll('[data-followups-view]').forEach(function(node){node.setAttribute('aria-pressed',String(node.dataset.followupsView === filter));});
@@ -143,8 +143,8 @@
     async function load(epoch) {
       var owner = context().userId;
       if (!identity(epoch,owner)) { clear(); return false; }
-      if (!current(epoch,owner)) { unavailable(); return false; }
       if (mounted && (mountedEpoch !== epoch || mountedOwner !== owner)) clear();
+      if (!current(epoch,owner)) { unavailable(); return false; }
       mount(); var token=++request;
       try {
         var results=await Promise.all([fetchRows('leader_followups',epoch,owner,token),fetchRows('leader_followup_contacts',epoch,owner,token)]);

@@ -31,8 +31,8 @@
   function create(options) {
     var roots = options.roots, first = Object.keys(views).map(function (view) { return roots[view]; }).find(Boolean);
     if (!first) throw new Error('Office content needs a root section.');
-    var doc = first.ownerDocument, state = {}, filters = {}, ready = {}, failed = {}, mounted = {}, loadId = 0, mountedEpoch = null;
-    var dialog = null, formVersion = 0, dialogEpoch = null, dialogView = null, dialogRecord = null, returnFocus = null, saving = false, draft = null;
+    var doc = first.ownerDocument, state = {}, filters = {}, ready = {}, failed = {}, mounted = {}, loadId = 0, mountedEpoch = null, mountedOwner = null;
+    var dialog = null, formVersion = 0, dialogEpoch = null, dialogOwner = null, dialogView = null, dialogRecord = null, returnFocus = null, saving = false, draft = null;
     Object.keys(views).forEach(function (view) { state[view] = []; filters[view] = { search: '', status: 'current' }; ready[view] = false; failed[view] = false; });
     function deadline(promise) {
       var timer; return Promise.race([Promise.resolve(promise), new Promise(function (_resolve, reject) { timer = root.setTimeout(function () { reject(new Error('timeout')); }, 12000); })]).finally(function () { root.clearTimeout(timer); });
@@ -40,12 +40,12 @@
     function context() { return options.getContext() || {}; }
     function staff(ctx) { return !!ctx.userId && ['admin', 'editor'].indexOf(ctx.role) !== -1 && options.isCurrent(ctx.epoch); }
     function allowed(ctx) { return staff(ctx) && ctx.canEdit === true && ctx.workspaceReady !== false; }
-    function current(epoch) { var ctx = context(); return ctx.epoch === epoch && staff(ctx); }
+    function current(epoch, owner) { var ctx = context(); return ctx.epoch === epoch && ctx.userId === owner && staff(ctx); }
     function denied(error) { return error && (['42501', 'PGRST301', 'PGRST302'].includes(error.code) || [401, 403].includes(error.status)); }
-    async function ensure(epoch) { return (!options.ensureReady || await options.ensureReady(epoch)) && current(epoch) && allowed(context()); }
+    async function ensure(epoch, owner) { return (!options.ensureReady || await options.ensureReady(epoch)) && current(epoch, owner) && allowed(context()); }
     function freezeDialog() {
       if (!dialog) return;
-      var locked = saving || (draft && (draft.uncertain || draft.conflict)) || !allowed(context()) || !ready[dialogView];
+      var locked = saving || (draft && (draft.uncertain || draft.conflict)) || !current(dialogEpoch, dialogOwner) || !allowed(context()) || !ready[dialogView];
       dialog.querySelectorAll('input, select, textarea').forEach(function (node) { node.disabled = locked; });
       if (!locked) updatePrayerApproval();
       dialog.querySelector('[type="submit"]').disabled = locked;
@@ -127,19 +127,19 @@
     function render() {
       var ctx = context();
       if (!staff(ctx)) { clear(); return; }
+      if (mountedEpoch !== null && (mountedEpoch !== ctx.epoch || mountedOwner !== ctx.userId)) clear();
       if (!allowed(ctx)) { freezeDialog(); return; }
-      if (mountedEpoch !== null && mountedEpoch !== ctx.epoch) clear();
-      mountedEpoch = ctx.epoch;
+      mountedEpoch = ctx.epoch; mountedOwner = ctx.userId;
       Object.keys(views).forEach(renderView); freezeDialog();
     }
-    async function rowsFor(view, epoch, token) {
+    async function rowsFor(view, epoch, owner, token) {
       var rows = [], seen = new Set(), total = null;
       try {
-        for (var offset = 0; current(epoch) && token === loadId;) {
+        for (var offset = 0; current(epoch, owner) && token === loadId;) {
           var query = options.db.from(views[view].table).select('*', { count: 'exact' }).order('id', { ascending: true });
           var paged = typeof query.range === 'function';
           var result = await deadline(paged ? query.range(offset, offset + 999) : query);
-          if (!current(epoch) || token !== loadId) return null;
+          if (!current(epoch, owner) || token !== loadId) return null;
           if (result && result.error) throw result.error;
           if (!result || !Array.isArray(result.data) || !Number.isSafeInteger(result.count) || result.count < 0 || (total !== null && result.count !== total)) throw new Error('Incomplete record response');
           total = result.count;
@@ -153,18 +153,20 @@
           if (!result.data.length || !paged) throw new Error('Incomplete record response');
           offset += result.data.length;
         }
-      } catch (error) { if (current(epoch) && token === loadId) { if (denied(error)) { clear(); return null; } return { rows: [], failed: true }; } }
+      } catch (error) { if (current(epoch, owner) && token === loadId) { if (denied(error)) { clear(); return null; } return { rows: [], failed: true }; } }
       return null;
     }
     async function load(epoch) {
-      if (!current(epoch)) { clear(); return false; }
+      var owner = context().userId;
+      if (!current(epoch, owner)) { clear(); return false; }
+      if (mountedEpoch !== null && (mountedEpoch !== epoch || mountedOwner !== owner)) clear();
       if (!allowed(context())) { freezeDialog(); return false; }
-      if (mountedEpoch !== null && mountedEpoch !== epoch) clear();
+      mountedEpoch = epoch; mountedOwner = owner;
       var token = ++loadId, names = Object.keys(views);
-      var results = await Promise.all(names.map(function (view) { return roots[view] ? rowsFor(view, epoch, token) : Promise.resolve({ rows: [], failed: false }); }));
-      if (!current(epoch) || token !== loadId) return false;
+      var results = await Promise.all(names.map(function (view) { return roots[view] ? rowsFor(view, epoch, owner, token) : Promise.resolve({ rows: [], failed: false }); }));
+      if (!current(epoch, owner) || token !== loadId) return false;
       names.forEach(function (view, i) { state[view] = results[i] ? results[i].rows : []; failed[view] = !results[i] || results[i].failed; ready[view] = !failed[view]; });
-      mountedEpoch = epoch; render(); return names.every(function (view) { return !failed[view]; });
+      mountedEpoch = epoch; mountedOwner = owner; render(); return names.every(function (view) { return !failed[view]; });
     }
     function input(name, label, value, type, required, maximum, wide) {
       return '<label' + (wide ? ' class="office-content-wide"' : '') + '>' + safe(label) + '<input name="' + name + '" type="' + (type || 'text') + '" value="' + safe(value || '') + '"' + (required ? ' required' : '') + (maximum ? ' maxlength="' + maximum + '"' : '') + '></label>';
@@ -180,7 +182,7 @@
       if (!force && (saving || (draft && draft.uncertain))) return false;
       if (!force && dirty() && !root.confirm('Discard the unsaved changes in this draft?')) return false;
       if (!force && (dialog !== closing || draft !== attempt || formVersion !== version || saving || (draft && draft.uncertain))) return false;
-      formVersion++; saving = false; draft = null; dialogEpoch = null; dialogView = null; dialogRecord = null;
+      formVersion++; saving = false; draft = null; dialogEpoch = null; dialogOwner = null; dialogView = null; dialogRecord = null;
       if (dialog) { var old = dialog; dialog = null; if (old.open) old.close(); old.remove(); }
       if (restore && returnFocus && returnFocus.isConnected) returnFocus.focus();
       returnFocus = null; return true;
@@ -197,13 +199,14 @@
     }
     function openEditor(view, record, trigger) {
       var ctx = context(), config = views[view];
+      if (mountedEpoch !== null && (mountedEpoch !== ctx.epoch || mountedOwner !== ctx.userId)) { clear(); return; }
       if (!config || !roots[view] || !allowed(ctx) || saving || (draft && draft.uncertain)) return;
       if (!ready[view]) { notice('Wait for these records to load, or refresh the workspace before editing.', true); return; }
       var epoch = ctx.epoch, owner = ctx.userId, recordId = record && record.id;
-      if (!closeDialog(false) || !current(epoch) || context().userId !== owner || !allowed(context()) || !ready[view]) return;
+      if (!closeDialog(false) || !current(epoch, owner) || context().userId !== owner || !allowed(context()) || !ready[view]) return;
       ctx = context();
       if (recordId) { record = state[view].find(function (item) { return item.id === recordId; }); if (!record) return; }
-      dialogView = view; dialogEpoch = ctx.epoch; dialogRecord = record ? Object.assign({}, record) : null; draft = { id: record ? record.id : root.crypto.randomUUID(), version: record ? record.version : null, uncertain: false, conflict: false, payload: null }; returnFocus = trigger || doc.activeElement;
+      dialogView = view; dialogEpoch = ctx.epoch; dialogOwner = ctx.userId; dialogRecord = record ? Object.assign({}, record) : null; draft = { id: record ? record.id : root.crypto.randomUUID(), version: record ? record.version : null, uncertain: false, conflict: false, payload: null }; returnFocus = trigger || doc.activeElement;
       var row = record || {}, fields = '';
       if (view === 'announcements') fields = input('title', 'Title', row.title, 'text', true, 160, true) + textarea('body', 'Announcement text', row.body, true, 10000) + input('starts_on', 'Starts on (optional)', row.starts_on, 'date') + input('ends_on', 'Ends on (optional)', row.ends_on, 'date');
       if (view === 'committees') fields = input('committee_name', 'Committee', row.committee_name, 'text', true, 160) + input('contact_name', 'Contact name', row.contact_name, 'text', true, 160) + input('role_label', 'Role (optional)', row.role_label) + input('email', 'Email (optional)', row.email, 'email') + input('phone', 'Phone (optional)', row.phone, 'tel') + '<div></div>' + input('term_start', 'Term starts (optional)', row.term_start, 'date') + input('term_end', 'Term ends (optional)', row.term_end, 'date') + textarea('notes', 'Committee notes', row.notes);
@@ -261,23 +264,23 @@
     function matches(row, payload) {
       return row && Object.keys(payload).every(function (field) { return (row[field] == null ? null : row[field]) === (payload[field] == null ? null : payload[field]); });
     }
-    async function finishSave(epoch, message) {
+    async function finishSave(epoch, owner, message) {
       closeDialog(false, true); notice(message || 'Staff record saved.');
-      try { await options.refresh(); } catch (_) { if (current(epoch)) notice('Saved, but records could not refresh. Please refresh the workspace.', true); }
+      try { await options.refresh(); } catch (_) { if (current(epoch, owner)) notice('Saved, but records could not refresh. Please refresh the workspace.', true); }
     }
     async function reconcile() {
       if (!dialog || saving || !draft || !draft.uncertain) return;
-      var epoch = dialogEpoch, version = formVersion, view = dialogView, attempt = draft;
+      var epoch = dialogEpoch, owner = dialogOwner, version = formVersion, view = dialogView, attempt = draft;
       var errorNode = dialog.querySelector('.office-content-error');
       saving = true; freezeDialog();
       try {
-        if (!await ensure(epoch) || version !== formVersion) return;
+        if (!await ensure(epoch, owner) || version !== formVersion) return;
         var result = await deadline(options.db.from(views[view].table).select('*').eq('id', attempt.id).maybeSingle());
-        if (!current(epoch) || version !== formVersion) return;
+        if (!current(epoch, owner) || version !== formVersion) return;
         if (result.error) throw result.error;
         var row = result.data;
         if (row && row.id === attempt.id && matches(row, attempt.payload) && Number.isInteger(row.version) && (attempt.version === null || row.version > attempt.version)) {
-          await finishSave(epoch, 'Saved record found. Your submission is confirmed.'); return;
+          await finishSave(epoch, owner, 'Saved record found. Your submission is confirmed.'); return;
         }
         attempt.uncertain = false;
         if ((!row && attempt.version === null) || (row && row.id === attempt.id && row.version === attempt.version)) {
@@ -287,16 +290,16 @@
           errorNode.textContent = 'This record changed while your draft was open. Your draft has not replaced it. Keep any text you need, then close this draft and refresh records to review the latest version before editing again.';
         }
       } catch (error) {
-        if (current(epoch) && version === formVersion && dialog) {
+        if (current(epoch, owner) && version === formVersion && dialog) {
           if (denied(error)) { clear(); return; }
           errorNode.textContent = 'Saved progress could not be checked. Keep this page open and try Check saved progress again when the connection returns.';
         }
-      } finally { if (current(epoch) && version === formVersion && dialog) { saving = false; freezeDialog(); } }
+      } finally { if (current(epoch, owner) && version === formVersion && dialog) { saving = false; freezeDialog(); } }
     }
     async function save(event) {
       event.preventDefault();
-      var form = event.target, epoch = dialogEpoch, version = formVersion, view = dialogView, existing = dialogRecord;
-      if (!dialog || saving || !draft || draft.uncertain || draft.conflict || !current(epoch) || !allowed(context()) || !views[view]) return;
+      var form = event.target, epoch = dialogEpoch, owner = dialogOwner, version = formVersion, view = dialogView, existing = dialogRecord;
+      if (!dialog || saving || !draft || draft.uncertain || draft.conflict || !current(epoch, owner) || !allowed(context()) || !views[view]) return;
       if (!ready[view]) { form.querySelector('.office-content-error').textContent = 'Refresh these records before saving.'; return; }
       if (form.reportValidity && !form.reportValidity()) return;
       var values = formValues(form), problem = validate(view, values, existing);
@@ -306,27 +309,27 @@
       var attempt = draft, submitted = false;
       saving = true; freezeDialog(); form.querySelector('.office-content-error').textContent = '';
       try {
-        if (!await ensure(epoch) || version !== formVersion || !ready[view]) {
-          if (current(epoch) && version === formVersion) form.querySelector('.office-content-error').textContent = 'The workspace connection needs attention. Refresh the workspace before saving; your draft is still here.';
+        if (!await ensure(epoch, owner) || version !== formVersion || !ready[view]) {
+          if (current(epoch, owner) && version === formVersion) form.querySelector('.office-content-error').textContent = 'The workspace connection needs attention. Refresh the workspace before saving; your draft is still here.';
           return;
         }
         var query = options.db.from(views[view].table);
         submitted = true;
         var result = existing ? await deadline(query.update(attempt.payload).eq('id', attempt.id).eq('version', attempt.version).select('id,version').single()) : await deadline(query.insert(Object.assign({ id: attempt.id }, attempt.payload)).select('id,version').single());
-        if (!current(epoch) || version !== formVersion) return;
+        if (!current(epoch, owner) || version !== formVersion) return;
         if (result.error) throw result.error;
         if (!result.data || result.data.id !== attempt.id || !Number.isInteger(result.data.version) || (existing && result.data.version <= attempt.version)) throw new Error('unconfirmed');
-        await finishSave(epoch);
+        await finishSave(epoch, owner);
       } catch (error) {
-        if (current(epoch) && version === formVersion && dialog) {
+        if (current(epoch, owner) && version === formVersion && dialog) {
           if (denied(error)) { clear(); return; }
           attempt.uncertain = submitted;
           form.querySelector('.office-content-error').textContent = submitted ? 'This save could not be confirmed. Your draft is retained. Use Check saved progress before retrying so a completed save is not duplicated or overwritten.' : 'The connection could not be checked. Your draft is retained; refresh the workspace before saving.';
         }
-      } finally { if (current(epoch) && version === formVersion && dialog) { saving = false; freezeDialog(); } }
+      } finally { if (current(epoch, owner) && version === formVersion && dialog) { saving = false; freezeDialog(); } }
     }
     function clear() {
-      loadId++; closeDialog(false, true); mountedEpoch = null;
+      loadId++; closeDialog(false, true); mountedEpoch = null; mountedOwner = null;
       Object.keys(views).forEach(function (view) { state[view] = []; filters[view] = { search: '', status: 'current' }; ready[view] = false; failed[view] = false; mounted[view] = false; if (roots[view]) roots[view].replaceChildren(); });
     }
     Object.keys(views).forEach(function (view) {
@@ -338,9 +341,9 @@
         var target = event.target.closest('button'); if (!target || !host.contains(target)) return;
         if (target.hasAttribute('data-office-edit')) { var row = state[view].find(function (item) { return item.id === target.dataset.officeEdit; }); if (row) openEditor(view, row, target); }
         if (target.hasAttribute('data-office-upload') && options.uploadDocument) options.uploadDocument();
-        var epoch = context().epoch;
-        if (target.hasAttribute('data-office-document') && options.openDocument) Promise.resolve(options.openDocument(target.dataset.officeDocument)).catch(function () { if (current(epoch)) notice('The attached file could not be opened. Please try again.', true); });
-        if (target.hasAttribute('data-office-refresh')) Promise.resolve(options.refresh()).catch(function () { if (current(epoch)) notice('These records could not load. Please try again.', true); });
+        var epoch = context().epoch, owner = context().userId;
+        if (target.hasAttribute('data-office-document') && options.openDocument) Promise.resolve(options.openDocument(target.dataset.officeDocument)).catch(function () { if (current(epoch, owner)) notice('The attached file could not be opened. Please try again.', true); });
+        if (target.hasAttribute('data-office-refresh')) Promise.resolve(options.refresh()).catch(function () { if (current(epoch, owner)) notice('These records could not load. Please try again.', true); });
       });
     });
     root.addEventListener('beforeunload', function (event) { if (dirty() || saving || (draft && draft.uncertain)) { event.preventDefault(); event.returnValue = ''; } });

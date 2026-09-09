@@ -70,9 +70,9 @@ test('confirmed permission loss clears an open review instead of retaining priva
 });
 
 test('signup reviews preserve drafts on workspace outage and check readiness before writing',async t=>{
- const f=fixture(t);await f.api.load(1);f.api.open(row.id);f.form().elements.contact_id.value='__new';f.form().elements.identity_checked.checked=true;f.form().elements.staff_notes.value='Synthetic review draft';
- f.setContext({epoch:1,userId:'staff',role:'editor',canEdit:false,workspaceReady:false});f.api.render();await f.api.load(1);assert.equal(f.form().elements.staff_notes.value,'Synthetic review draft');assert.equal(f.form().elements.staff_notes.disabled,true);assert.equal(f.host.querySelectorAll('.signup-row').length,0);
- f.setContext({epoch:1,userId:'staff',role:'editor',canEdit:true,workspaceReady:true});await f.api.load(1);assert.equal(f.form().elements.staff_notes.disabled,false);
+ const f=fixture(t);await f.api.load(1);f.api.open(row.id);f.form().elements.contact_id.value='__new';f.form().elements.identity_checked.checked=true;change(f,'staff_notes','Synthetic review draft');
+ f.setContext({epoch:1,userId:'sample-staff',role:'editor',canEdit:false,workspaceReady:false});f.api.render();await f.api.load(1);assert.equal(f.form().elements.staff_notes.value,'Synthetic review draft');assert.equal(f.form().elements.staff_notes.disabled,true);assert.equal(f.host.querySelectorAll('.signup-row').length,0);assert.equal(unloadBlocked(f),true);
+ f.setContext({epoch:1,userId:'sample-staff',role:'editor',canEdit:true,workspaceReady:true});await f.api.load(1);assert.equal(f.form().elements.staff_notes.disabled,false);
  f.control.ensure=()=>false;await f.submit();assert.equal(f.calls.some(c=>c.name),false);assert.ok(f.form());assert.equal(f.form().querySelector('[type=submit]').disabled,true);
 });
 test('pending signup review freezes fields and close, snapshots the request, and requires refresh after uncertainty',async t=>{
@@ -183,4 +183,61 @@ test('signup pagination stops on account clear before requesting a subsequent pa
   const loading=f.api.load(1);await tick();f.setContext({epoch:2,userId:null,role:null,canEdit:false});f.api.clear();
   release({data:[row],count:2});await loading;
   assert.equal(f.calls.length,1);assert.equal(f.host.textContent,'');assert.equal(f.counts.at(-1),null);
+});
+
+test('signup identity replacement clears private reviews before the unavailable-workspace path',async t=>{
+ for(const entry of ['render','load'])for(const replacement of ['owner','epoch','both']){
+  const f=fixture(t);await f.api.load(1);f.api.open(row.id);change(f,'staff_notes','Fictional previous-session review');
+  let questions=0;f.w.confirm=()=>{questions++;return false;};assert.equal(unloadBlocked(f),true);
+  const ctx={epoch:replacement==='owner'?1:2,userId:replacement==='epoch'?'sample-staff':'replacement-staff',role:'editor',canEdit:false,workspaceReady:false};
+  f.setContext(ctx);if(entry==='load')await f.api.load(ctx.epoch);else f.api.render();
+  assert.equal(f.form(),null,entry+' clears '+replacement+' replacement');
+  assert.equal(f.w.document.querySelector('dialog'),null);assert.equal(f.host.querySelectorAll('.signup-row').length,0);
+  assert.doesNotMatch(f.w.document.body.textContent,/Fictional previous-session review/);
+  assert.equal(unloadBlocked(f),false);assert.equal(questions,0);assert.equal(f.counts.at(-1),null);assert.equal(f.calls.length,1,'no reads while replacement workspace is unavailable');
+  f.setContext({...ctx,canEdit:true,workspaceReady:true});await f.api.load(ctx.epoch);f.api.open(row.id);
+  assert.equal(f.form().elements.staff_notes.value,'');assert.equal(unloadBlocked(f),false);
+ }
+});
+
+test('a prior identity read cannot restore old signups over a replacement review',async t=>{
+ const f=fixture(t);await f.api.load(1);f.api.open(row.id);change(f,'staff_notes','Fictional first account draft');
+ let finish;f.control.read=()=>new Promise(resolve=>finish=resolve);const loading=f.api.load(1);await tick();
+ const replacement={epoch:1,userId:'replacement-staff',role:'editor',canEdit:false,workspaceReady:false};f.setContext(replacement);f.api.render();
+ assert.equal(f.form(),null);assert.equal(unloadBlocked(f),false);
+ f.setContext({...replacement,canEdit:true,workspaceReady:true});f.control.read=()=>Promise.resolve({data:[{...row,first_name:'Replacement queue'}],count:1});
+ await f.api.load(1);f.api.open(row.id);change(f,'staff_notes','Fictional replacement draft');const currentForm=f.form();
+ finish({data:[{...row,first_name:'Old queued result',version:2}],count:1});assert.equal(await loading,false);
+ assert.equal(f.form(),currentForm);assert.equal(f.form().elements.staff_notes.value,'Fictional replacement draft');assert.equal(unloadBlocked(f),true);
+ assert.match(f.host.textContent,/Replacement queue/);assert.doesNotMatch(f.host.textContent,/Old queued result/);assert.equal(f.counts.at(-1),1);
+ assert.equal(f.form().querySelector('[type=submit]').disabled,false);assert.equal(f.calls.length,3);
+});
+
+test('captured signup identity blocks delayed readiness and save completion even before the next render',async t=>{
+ for(const stage of ['readiness','save']){
+  const f=fixture(t);await f.api.load(1);f.api.open(row.id);change(f,'contact_id','sample-person');change(f,'identity_checked',true);
+  let finish;if(stage==='readiness')f.control.ensure=()=>new Promise(resolve=>finish=resolve);else f.control.write=()=>new Promise(resolve=>finish=resolve);
+  await f.submit();assert.equal(unloadBlocked(f),true);
+  f.setContext({epoch:1,userId:'replacement-staff',role:'editor',canEdit:true,workspaceReady:true});
+  finish(stage==='readiness'?true:{data:{id:row.id,version:1,contact_id:'sample-person',status:'reviewed'}});await tick();await tick();
+  assert.equal(f.calls.filter(c=>c.name).length,stage==='readiness'?0:1,'readiness cannot authorize a prior owner request');
+  assert.equal(f.refreshes(),0);assert.equal(f.notices.length,0,'an old save cannot report success to the replacement owner');
+  f.api.render();assert.equal(f.form(),null);assert.equal(unloadBlocked(f),false);assert.equal(f.host.querySelectorAll('.signup-row').length,0);
+ }
+});
+
+test('a cleared signup save cannot close or unlock a replacement account review',async t=>{
+ for(const outcome of ['confirmed','rejected']){
+  const f=fixture(t);await f.api.load(1);f.api.open(row.id);change(f,'contact_id','sample-person');change(f,'identity_checked',true);
+  let finish,reject;f.control.write=()=>new Promise((resolve,fail)=>{finish=resolve;reject=fail;});await f.submit();
+  const replacement={epoch:1,userId:'replacement-staff',role:'editor',canEdit:false,workspaceReady:false};f.setContext(replacement);await f.api.load(1);
+  assert.equal(f.form(),null);assert.equal(unloadBlocked(f),false);
+  f.setContext({...replacement,canEdit:true,workspaceReady:true});await f.api.load(1);f.api.open(row.id);change(f,'contact_id','sample-person');change(f,'identity_checked',true);
+  let finishNew;f.control.write=()=>new Promise(resolve=>finishNew=resolve);await f.submit();const replacementForm=f.form();
+  if(outcome==='confirmed')finish({data:{id:row.id,version:1,contact_id:'sample-person',status:'reviewed'}});else reject(new Error('Fictional old transport failure'));
+  await tick();await tick();assert.equal(f.form(),replacementForm);assert.equal(f.form().querySelector('[type=submit]').disabled,true);
+  assert.equal(f.w.document.querySelector('[data-signup-close]').disabled,true);assert.equal(unloadBlocked(f),true);assert.equal(f.refreshes(),0);assert.equal(f.notices.length,0);
+  finishNew({data:{id:row.id,version:1,contact_id:'sample-person',status:'reviewed'}});await tick();await tick();
+  assert.equal(f.form(),null);assert.equal(f.refreshes(),1);assert.equal(f.notices.length,1);assert.equal(unloadBlocked(f),false);
+ }
 });

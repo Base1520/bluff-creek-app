@@ -303,3 +303,22 @@ test('personal paging cannot continue into an owner replacement after the first 
   release({data:[plan],count:2});await loading;
   assert.equal(f.calls.filter(q=>q.table==='leader_followups').length,1);assert.equal(f.root.textContent,'');assert.equal(f.summaries.at(-1).due,null);
 });
+
+
+test('replacement owner or session clears personal drafts before unavailable-workspace preservation',async t=>{
+  for(const entry of ['render','load']){
+    for(const replacement of [{epoch:2,userId:'replacement-owner'},{epoch:1,userId:'replacement-owner'},{epoch:2,userId:'sample-owner'}]){
+      const f=fixture(t,{plans:[plan]});await f.api.load(1);f.click('[data-followups-action="edit"]');f.set('notes','OLD_OWNER_PRIVATE_CANARY',true);
+      assert.equal(unloadCancelled(f),true);
+      f.setContext({...replacement,role:'editor',canEdit:false,workspaceReady:false});
+      if(entry==='render')f.api.render();else assert.equal(await f.api.load(replacement.epoch),false);
+      assert.equal(f.form(),null,entry+' clears the former identity draft before retaining outage state');
+      assert.doesNotMatch(f.w.document.body.textContent,/OLD_OWNER_PRIVATE_CANARY|Sample leader/);
+      assert.equal(f.summaries.at(-1).items.length,0);assert.equal(unloadCancelled(f),false);
+      assert.equal(f.calls.some(q=>q.op!=='select'),false);
+      f.setContext({...replacement,role:'editor',canEdit:true,workspaceReady:true});
+      assert.equal(await f.api.load(replacement.epoch),true);f.api.openNew();
+      assert.ok(f.form());assert.equal(f.form().elements.notes.value,'');
+    }
+  }
+});

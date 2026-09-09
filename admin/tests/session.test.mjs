@@ -297,6 +297,47 @@ test('People hands Care the exact current ID and navigates only when accepted',a
 function change(f,name,value) { const input=field(f,name); input.value=value;input.dispatchEvent(new f.w.Event('input',{bubbles:true})); }
 function acceptPersonMatch(f) { const input=field(f,'person_match_reviewed');assert.ok(input);input.checked=true;input.dispatchEvent(new f.w.Event('change',{bubbles:true})); }
 
+test('format-only first names remain editable and never create an active person',async t=>{
+  const f=fixture(t);await until(()=>f.el('people-list').querySelector('button'),'people ready');await newPerson(f);change(f,'last_name','');
+  for(const value of ['\u200b','\u200c\u200d',' \u2060\u202e\ufeff ']){
+    change(f,'first_name',value);assert.equal(f.el('editor-form').checkValidity(),true);
+    submit(f);await pause();assert.equal(f.calls.some(q=>q.table==='contacts'&&q.op==='insert'),false);
+    assert.equal(f.el('editor').open,true);assert.equal(field(f,'first_name').disabled,false);assert.equal(field(f,'first_name').value,value);
+    assert.match(f.el('editor-error').textContent,/Enter a first name/);
+  }
+});
+
+test('invisible format characters cannot bypass same-name review or rewrite the saved name',async t=>{
+  const f=fixture(t);await until(()=>f.el('people-list').querySelector('button'),'people ready');await newPerson(f);
+  const first='Synthetic\u200b';change(f,'first_name',first);change(f,'last_name','Record a');
+  assert.equal(f.el('person-review').hidden,false);submit(f);await pause();
+  assert.equal(f.calls.some(q=>q.table==='contacts'&&q.op==='insert'),false);assert.match(f.el('editor-error').textContent,/Review the similar records/);
+  acceptPersonMatch(f);submit(f);await until(()=>!f.el('editor').open,'acknowledged save');
+  const insert=f.calls.find(q=>q.table==='contacts'&&q.op==='insert');assert.equal(insert.row.first_name,first);
+  assert.equal(f.rows('a').contacts.length,2,'review never merges the two people');
+});
+
+test('format-tolerant identifier review preserves Unicode joiners and exact record text',async t=>{
+  const f=fixture(t);await until(()=>f.el('people-list').querySelector('button'),'people ready');
+  f.rows('a').contacts[0].membership_number='0012';f.rows('a').contacts[0].legacy_member_id='L-01';await newPerson(f);
+  const expected={first_name:'क्\u200dष',last_name:'Fictional record',membership_number:'00\u200b12',legacy_member_id:'L\u200c-01',birth_date_text:'Summer\u2060 1956; unclear',notes:'Original क्\u200dष wording'};
+  for(const [name,value] of Object.entries(expected))change(f,name,value);
+  assert.equal(f.el('person-review').hidden,false);submit(f);await pause();assert.equal(f.calls.some(q=>q.table==='contacts'&&q.op==='insert'),false);
+  acceptPersonMatch(f);submit(f);await until(()=>!f.el('editor').open,'Unicode record saved');
+  const insert=f.calls.find(q=>q.table==='contacts'&&q.op==='insert');for(const [name,value] of Object.entries(expected))assert.equal(insert.row[name],value,name);
+});
+
+test('format-only event and document titles are rejected before a write',async t=>{
+  for(const kind of ['event','document'])await t.test(kind,async t=>{
+    const f=fixture(t);await until(()=>f.el('people-list').querySelector('button'),'workspace ready');
+    f.el(kind==='event'?'events-list':'documents-list').querySelector(kind==='event'?'[data-edit-event]':'[data-edit-document]').click();
+    change(f,'title','\u200b\u200d');assert.equal(f.el('editor-form').checkValidity(),true);submit(f);await pause();
+    assert.equal(f.calls.some(q=>q.op==='update'||q.op==='insert'||q.op==='upload'),false);assert.equal(f.el('editor').open,true);assert.match(f.el('editor-error').textContent,/Enter a title/);
+    const title='Fictional क्\u200dष title';change(f,'title',title);submit(f);await until(()=>!f.el('editor').open,'valid title saved');
+    assert.equal(f.calls.find(q=>q.op==='update').row.title,title);
+  });
+});
+
 test('a same-name new record requires review and explicit different-person acknowledgement',async t=>{
   const f=fixture(t);await pause();await newPerson(f);
   change(f,'first_name','  SYNTHETIC ');change(f,'last_name','Record   a');
