@@ -68,6 +68,7 @@ export function checkClosure(files, origin) {
     if(!value||value.startsWith('#')||/^(?:data|mailto|tel|blob):/i.test(value))return;
     if(/^(?:javascript|file):/i.test(value))fail('UNSAFE_LINK');
     let url;try {url=new URL(value,new URL(base,origin+'/'));}catch(_){fail('INVALID_STATIC_LINK');}
+    if(from.startsWith('admin/') && url.hostname==='docs.google.com' && /^\/spreadsheets\/(?:u\/\d+\/)?d\//i.test(url.pathname))fail('SPREADSHEET_LINK_IN_STATIC_SOURCE');
     if(url.origin!==origin){external.add(url.origin);return;}
     let name;try{name=decodeURIComponent(url.pathname.slice(1));}catch(_){fail('INVALID_STATIC_LINK');}
     if(!name||name.endsWith('/'))name+='index.html';
@@ -79,6 +80,9 @@ export function checkClosure(files, origin) {
     for(const match of source.matchAll(/@import\s+["']([^"']+)["']/gi))link(from,match[1]);
   }
   for(const [name,bytes] of files) {
+    // Office source spreadsheets are private inputs. This catches literal links
+    // in markup and scripts, not arbitrary personal data or dynamic URL assembly.
+    if(name.startsWith('admin/') && /\.(?:html|js|css)$/.test(name) && /(?:https?:)?\/\/docs\.google\.com\/spreadsheets\/(?:u\/\d+\/)?d\//i.test(decodeAttribute(bytes.toString('utf8'))))fail('SPREADSHEET_LINK_IN_STATIC_SOURCE');
     if(name.endsWith('.html')) {
       const source=bytes.toString('utf8');
       if(/<base\b/i.test(source))fail('UNSUPPORTED_BASE_ELEMENT');

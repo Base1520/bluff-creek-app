@@ -96,6 +96,23 @@ test('source symlinks, unsafe output paths and existing outputs are refused with
   await mkdir(f.out);await writeFile(join(f.out,'keep.txt'),'keep');await assert.rejects(stageRelease({root:f.root,input:input(),output:f.out}));assert.equal(await readFile(join(f.out,'keep.txt'),'utf8'),'keep');
 });
 
+test('private spreadsheet links in public static sources fail before any packet is written',async t=>{
+  const f=await fixture(t);
+  const cases=[
+    ['admin/index.html','<a href="https://docs.google.com/spreadsheets/d/fictional-private-ledger/edit">Review requests</a>'],
+    ['admin/help.html','<a href="//docs.google.com/spreadsheets/u/0/d/fictional-private-ledger/edit">Ledger</a>'],
+    ['admin/index.html','<a href="https&#58;&#47;&#47;docs.google.com/spreadsheets/d/fictional-private-ledger/edit">Ledger</a>'],
+    ['admin/app.js','\nconst privateSource="https://docs.google.com/spreadsheets/d/fictional-private-ledger/edit";']
+  ];
+  for(const [name,injected] of cases){
+    const file=join(f.root,name),original=await readFile(file);
+    await writeFile(file,Buffer.concat([original,Buffer.from(injected)]));
+    await assert.rejects(stageRelease({root:f.root,input:input(),output:f.out}),error=>error.message==='SPREADSHEET_LINK_IN_STATIC_SOURCE' && !error.message.includes('fictional-private-ledger'));
+    assert(!(await readdir(f.temp)).includes('packet'));
+    await writeFile(file,original);
+  }
+});
+
 test('CLI defaults to validate-only and prints neither synthetic key nor config values on error/success',async t=>{
   const f=await fixture(t),inputFile=join(f.temp,'input.json');await writeFile(inputFile,JSON.stringify(input()),{mode:0o600});
   const run=args=>spawnSync(process.execPath,[join(here,'cli.mjs'),...args],{encoding:'utf8',timeout:10000});
