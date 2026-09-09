@@ -14,9 +14,11 @@ The goal is for common mistakes to be prevented, interrupted work to be recovera
 | Staff change fields during an upload/save | A submitted snapshot and paused fields/close actions keep one reviewed set of values through the request. |
 | Photo/file uploads partly complete | Stable path and metadata IDs; check completed stages before resuming. No automatic destructive cleanup after an ambiguous response. |
 | Staff remove a calendar event by mistake | Archive and restore, server-owned archive timestamp, and no authenticated client DELETE grant. Archived entries remain discoverable. |
-| Someone closes an edited form accidentally | Changed-draft close confirmation where applicable, plus pending/uncertain save guards. Signing out or confirmed access loss intentionally clears private drafts. |
+| Someone closes an edited form accidentally | Changed-draft close confirmation where applicable, plus pending/uncertain save guards. Core People/event/document and member-history/photo drafts also request a browser warning before reload or navigation while unsaved or unresolved. Signing out or confirmed access loss intentionally clears private drafts. |
 
 The operator guide is `admin/help.html`, linked from Overview and setup. People status, office-content archive/status controls, and append-only history already preserve earlier records. Document **details** can be edited; this is not file revision history or a collaborative spreadsheet editor. The new protections do not automatically publish content, invite staff, create a live reminder service, or synchronize the historical Google Sheet.
+
+The reload warning is best-effort, not draft recovery. Browsers choose the prompt text and require prior user interaction; mobile termination may skip it entirely. The handlers are removed after save, discard or access clearing, and store no draft/photo data. Focused tests verify cancelable DOM events, not native prompt display or phone recovery. See [MDN beforeunload](https://developer.mozilla.org/en-US/docs/Web/API/Window/beforeunload_event). Finish and confirm each entry before leaving; keep source originals separately.
 
 ## Migration and readiness contract
 

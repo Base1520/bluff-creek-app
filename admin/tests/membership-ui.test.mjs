@@ -168,3 +168,27 @@ test('history spreadsheet shortcut appears after readiness and clears with priva
   f.api.clear();assert.equal(link.hidden,true);assert.equal(link.getAttribute('href'),null);
   f.state.userId=null;const event=new f.w.MouseEvent('click',{cancelable:true});link.dispatchEvent(event);assert.equal(event.defaultPrevented,true);
 });
+
+test('reload cancellation is attached only for changed transcription/photo drafts and removed on discard or auth clear',async t=>{
+  const f=fixture(t),listeners=new Set(),add=f.w.addEventListener.bind(f.w),remove=f.w.removeEventListener.bind(f.w);
+  f.w.addEventListener=(type,handler,...rest)=>{if(type==='beforeunload')listeners.add(handler);return add(type,handler,...rest)};
+  f.w.removeEventListener=(type,handler,...rest)=>{if(type==='beforeunload')listeners.delete(handler);return remove(type,handler,...rest)};
+  const reload=()=>{const event=new f.w.Event('beforeunload',{cancelable:true});f.w.dispatchEvent(event);return event.defaultPrevented};
+  await f.api.load(1);assert.equal(reload(),false);const form=f.open();assert.equal(reload(),false);assert.equal(listeners.size,0);
+  form.elements.details.value='Synthetic unsaved transcription';form.elements.details.dispatchEvent(new f.w.Event('input',{bubbles:true}));
+  assert.equal(reload(),true);assert.equal(listeners.size,1);
+  form.elements.details.value='';form.elements.details.dispatchEvent(new f.w.Event('input',{bubbles:true}));assert.equal(reload(),false);assert.equal(listeners.size,0);
+  f.photo(form);assert.equal(reload(),true);assert.equal(listeners.size,1);
+  f.discard(false);f.w.document.querySelector('[data-close]').click();assert.equal(f.form(),form);assert.equal(reload(),true);
+  f.discard(true);f.w.document.querySelector('[data-close]').click();assert.equal(f.form(),null);assert.equal(reload(),false);assert.equal(listeners.size,0);
+  const next=f.open();f.fill(next);f.photo(next);assert.equal(reload(),true);f.api.clear();assert.equal(reload(),false);assert.equal(listeners.size,0);
+});
+
+test('reload cancellation covers pending and uncertain source uploads then clears after reconciled history save',async t=>{
+  const f=fixture(t);const reload=()=>{const event=new f.w.Event('beforeunload',{cancelable:true});f.w.dispatchEvent(event);return event.defaultPrevented};
+  await f.api.load(1);const form=f.open();f.fill(form);f.photo(form);let finish;
+  f.uploads(()=>new Promise(resolve=>finish=resolve));f.submit(form);await delay();assert.equal(reload(),true);assert.equal(form.querySelector('[type=submit]').disabled,true);
+  finish({error:{message:'Synthetic lost upload response'}});await delay();assert.equal(reload(),true);assert.equal(form.querySelector('[type=submit]').disabled,true);
+  f.uploads(null);form.querySelector('[data-recover]').click();await delay();assert.equal(reload(),true);f.submit(form);await delay();
+  assert.equal(f.rows.length,1);assert.equal(f.documents.length,1);assert.equal(f.form(),null);assert.equal(reload(),false);
+});

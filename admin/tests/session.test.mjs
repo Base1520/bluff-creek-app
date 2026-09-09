@@ -13,6 +13,7 @@ async function until(check, message) {
   assert.ok(check(),message);
 }
 const deferred = () => { let resolve; const promise=new Promise(r=>resolve=r);return {promise,resolve}; };
+function unloadBlocked(f) { const event=new f.w.Event('beforeunload',{cancelable:true}); f.w.dispatchEvent(event); return event.defaultPrevented; }
 function fixture(t,options={}) {
   const dom = new JSDOM(html,{url:options.url||'https://office.example.invalid/admin/',runScripts:'outside-only'}),w=dom.window;
   t.after(()=>w.close());
@@ -454,4 +455,40 @@ test('explicit local office accepts its legacy anon fixture but rejects a privil
   const config={supabaseUrl:'http://127.0.0.1:55321',publishableKey:'x.'+Buffer.from(JSON.stringify({role:'anon'})).toString('base64url')+'.x',localDevelopment:true};
   const f=fixture(t,{config,url:'http://127.0.0.1:8812/admin/'});await until(()=>f.el('people-list').querySelector('button'),'local legacy fixture loaded');assert.equal(f.created(),1);
   const bad=fixture(t,{config:{...config,publishableKey:'x.'+Buffer.from(JSON.stringify({role:'service_role'})).toString('base64url')+'.x'},url:'http://127.0.0.1:8812/admin/'});await pause();assert.equal(bad.created(),0);
+});
+
+test('unsaved core edits warn before reload, while unchanged, discarded and confirmed records do not',async t=>{
+  const f=fixture(t);await until(()=>f.el('people-list').querySelector('button'),'initial people rendered');
+  assert.equal(unloadBlocked(f),false);
+  for(const [selector,name] of [['[data-edit-person]','notes'],['[data-edit-event]','title'],['[data-edit-document]','description']]) {
+    f.w.document.querySelector(selector).click();assert.equal(unloadBlocked(f),false,'opening a record is not an edit');
+    const input=field(f,name),original=input.value;input.value=original+' Synthetic change';input.dispatchEvent(new f.w.Event('input',{bubbles:true}));
+    assert.equal(unloadBlocked(f),true);assert.equal(f.el('editor').open,true);
+    input.value=original;input.dispatchEvent(new f.w.Event('input',{bubbles:true}));assert.equal(unloadBlocked(f),false,'reverting removes the warning');
+    input.value=original+' Synthetic save';input.dispatchEvent(new f.w.Event('change',{bubbles:true}));assert.equal(unloadBlocked(f),true);
+    submit(f);await until(()=>!f.el('editor').open,'confirmed save closes draft');assert.equal(unloadBlocked(f),false);
+    await until(()=>!f.el('workspace-refresh').disabled,'save refresh completed');
+  }
+  f.w.document.querySelector('[data-edit-person]').click();field(f,'notes').value='Synthetic discard';field(f,'notes').dispatchEvent(new f.w.Event('input',{bubbles:true}));
+  f.w.confirm=()=>true;f.w.document.querySelector('[data-close-editor]').click();assert.equal(unloadBlocked(f),false);
+  assert.equal(f.w.localStorage.length,0);assert.equal(f.w.sessionStorage.length,0,'drafts are not persisted');
+});
+
+test('selecting only an upload file warns before reload and account clearing removes the warning',async t=>{
+  const f=fixture(t);await until(()=>f.el('people-list').querySelector('button'),'initial workspace rendered');
+  f.w.location.hash='#documents';await until(()=>f.el('primary-action').textContent==='Upload document','document route ready');f.el('primary-action').click();
+  assert.equal(unloadBlocked(f),false);const input=field(f,'file'),file=new f.w.File(['Synthetic original'],'page.pdf',{type:'application/pdf',lastModified:1});
+  Object.defineProperty(input,'files',{configurable:true,value:[file]});input.dispatchEvent(new f.w.Event('change',{bubbles:true}));
+  assert.equal(unloadBlocked(f),true,'the file matters even before title entry');assert.equal(f.calls.some(q=>q.op==='upload'),false);
+  f.emit(null);assert.equal(unloadBlocked(f),false);assert.equal(f.el('editor').open,false);assert.equal(f.el('editor-fields').textContent,'');
+});
+
+test('pending and uncertain core saves keep the unload warning until confirmation or immediate sign-out clearing',async t=>{
+  const response=deferred(),f=fixture(t,{onQuery:q=>q.op==='update'?response.promise:undefined});
+  await until(()=>f.el('people-list').querySelector('button'),'initial workspace rendered');f.w.document.querySelector('[data-edit-person]').click();
+  // Even a no-change save is an operation that must finish before leaving.
+  submit(f);assert.equal(unloadBlocked(f),true);await until(()=>f.calls.some(q=>q.op==='update'),'mutation started');
+  response.resolve({error:{message:'Synthetic lost response'}});await until(()=>f.el('editor-error').textContent.includes('could not be confirmed'),'uncertain state shown');
+  assert.equal(unloadBlocked(f),true);assert.equal(field(f,'notes').disabled,true);
+  f.emit(null);assert.equal(unloadBlocked(f),false);assert.equal(f.el('editor').open,false);
 });

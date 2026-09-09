@@ -27,6 +27,38 @@ test('attempts do not reset contact cadence; latest explicit date wins and pause
   assert.equal(dueFor(assignment, records, '2026-04-02').due, '2026-04-29', 'a later contact replaces an older explicit date');
 });
 
+test('blank-date attempts preserve the chosen retry date until a replacement date or successful contact establishes a new schedule', () => {
+  const plan = {...assignment,care_role:'deacon',started_on:'2026-09-01',cadence_months:3};
+  const records = [visit('2026-09-01','contacted','2026-09-10'),visit('2026-09-08','attempted'),visit('2026-09-09','attempted')];
+  const kept = dueFor(plan, records, '2026-09-10');
+  assert.equal(kept.due,'2026-09-10'); assert.equal(kept.state,'due'); assert.equal(kept.explicit,true);
+  assert.equal(kept.lastContact,'2026-09-01');
+  records.push(visit('2026-09-10','attempted','2026-09-12'),visit('2026-09-11','attempted'));
+  assert.equal(dueFor(plan,records,'2026-09-12').due,'2026-09-12','a date chosen on an attempt also survives another unsuccessful attempt');
+  records.push(visit('2026-09-12','contacted'),visit('2026-09-13','attempted'));
+  const reset = dueFor(plan, records, '2026-09-14');
+  assert.equal(reset.due,'2026-12-12'); assert.equal(reset.explicit,false); assert.equal(reset.lastContact,'2026-09-12');
+  assert.equal(dueFor(plan,records.slice().reverse(),'2026-09-14').due,'2026-12-12','backfilled arrival order cannot revive a historical override');
+});
+
+test('preserving retry dates still respects person/role isolation, future records and a one-time plan restart', () => {
+  const plan = {...assignment,care_role:'welcome',started_on:'2026-09-04',first_due_on:'2026-09-05',one_time:true};
+  const records = [
+    {...visit('2026-09-03','attempted','2026-09-10'),care_role:'welcome'},
+    {...visit('2026-09-06','attempted'),care_role:'welcome'},
+    {...visit('2026-09-07','attempted','2026-10-01'),care_role:'deacon'},
+    {...visit('2026-09-07','attempted','2026-10-02'),care_role:'welcome',contact_id:'another-synthetic-person'},
+    {...visit('2026-09-15','attempted','2026-10-03'),care_role:'welcome'},
+  ];
+  const restarted = dueFor(plan,records,'2026-09-08');
+  assert.equal(restarted.due,'2026-09-05'); assert.equal(restarted.explicit,false); assert.equal(restarted.state,'overdue');
+  records.push({...visit('2026-09-07','attempted','2026-09-09'),care_role:'welcome'},{...visit('2026-09-08','attempted'),care_role:'welcome'});
+  assert.equal(dueFor(plan,records,'2026-09-09').due,'2026-09-09');
+  records.push({...visit('2026-09-09','contacted'),care_role:'welcome'});
+  const completed = dueFor(plan,records,'2026-09-10');
+  assert.equal(completed.state,'completed'); assert.equal(completed.due,null);
+});
+
 function fixture(t, opts={}) {
   const dom = new JSDOM('<section id="care-view"></section>', {url:'https://office.example.invalid/admin/',runScripts:'outside-only'}), w=dom.window;
   t.after(()=>w.close()); w.confirm=()=>true; w.eval(source);
