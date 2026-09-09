@@ -7,7 +7,7 @@ const tick=()=>new Promise(r=>setTimeout(r,0));
 const row={id:'sample-signup',first_name:'Sample',last_name:'Connection',email:'sample@example.invalid',phone:null,preferred_contact:'email',contact_permission:true,version:1,reviewed_version:0,status:'pending',submitted_at:'2026-09-07T12:00:00Z',updated_at:'2026-09-07T12:00:00Z'};
 function fixture(t,opts={}){
  const dom=new JSDOM('<section id="signups"></section>',{url:'https://example.invalid/admin/',runScripts:'outside-only'}),w=dom.window;t.after(()=>w.close());
- w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};w.eval(code);
+ w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};w.confirm=()=>true;w.eval(code);
  let ctx={epoch:1,userId:'sample-staff',role:opts.role||'editor',canEdit:opts.role!=='viewer'},rows=opts.rows||[{...row}],refreshes=0;
  const calls=[],notices=[],counts=[],control={peopleReady:true};const db={from(table){const q={table};const chain={select(){return chain},order(){return chain},range(a,b){q.range=[a,b];return chain},then(resolve,reject){calls.push(q);return (control.read?control.read():Promise.resolve({data:rows.slice(q.range?.[0]||0,q.range?q.range[1]+1:undefined)})).then(resolve,reject)}};return chain},rpc:async(name,args)=>{calls.push({name,args});if(control.write)return control.write();return{data:{id:row.id,version:row.version,contact_id:'sample-person',status:'reviewed'}}}};
  const host=w.document.getElementById('signups'),people=[{id:'sample-person',first_name:'Sample',last_name:'Person',email:'sample@example.invalid',status:'active'}];let api;
@@ -87,4 +87,53 @@ test('changed signup version during refresh preserves review draft and blocks st
 
 test('a signup RPC timeout unlocks Close but requires refresh before another review request',async t=>{
  const f=fixture(t);await f.api.load(1);f.api.open(row.id);f.form().elements.contact_id.value='__new';f.form().elements.identity_checked.checked=true;let expire,finish;const real=f.w.setTimeout.bind(f.w);f.w.setTimeout=(fn,ms)=>ms===12000?(expire=fn,9999):real(fn,ms);f.control.write=()=>new Promise(r=>finish=r);const saving=f.submit();await tick();expire();await saving;assert.equal(f.form().querySelector('[type=submit]').disabled,true);assert.equal(f.w.document.querySelector('[data-signup-close]').disabled,false);assert.match(f.form().textContent,/could not be confirmed/);finish({data:{id:row.id,version:1,status:'reviewed',contact_id:'sample-person'}});await tick();assert.ok(f.form());assert.equal(f.notices.length,0);
+});
+
+function unloadBlocked(f){const event=new f.w.Event('beforeunload',{cancelable:true});f.w.dispatchEvent(event);return event.defaultPrevented;}
+function change(f,name,value){const input=f.form().elements[name];if(input.type==='checkbox')input.checked=value;else input.value=value;input.dispatchEvent(new f.w.Event('change',{bubbles:true}));}
+
+test('signup draft changes warn before reload or accidental close; pristine, discarded and saved reviews do not',async t=>{
+ const f=fixture(t);await f.api.load(1);assert.equal(unloadBlocked(f),false);f.api.open(row.id);assert.equal(unloadBlocked(f),false);
+ change(f,'person_search','Sample');assert.equal(unloadBlocked(f),false,'filtering alone is not a changed review');
+ change(f,'staff_notes','Synthetic unsaved review');assert.equal(unloadBlocked(f),true);
+ let questions=0;f.w.confirm=()=>{questions++;return false;};const original=f.form();
+ f.w.document.querySelector('[data-signup-close]').click();assert.equal(f.form(),original);
+ f.w.document.querySelector('dialog').dispatchEvent(new f.w.Event('cancel',{cancelable:true}));assert.equal(f.form(),original);
+ f.api.open(row.id);assert.equal(f.form(),original);assert.equal(questions,3,'same review cannot silently replace its draft');
+ change(f,'staff_notes','');assert.equal(unloadBlocked(f),false);f.w.document.querySelector('[data-signup-close]').click();assert.equal(f.form(),null);assert.equal(questions,3);
+ f.api.open(row.id);change(f,'welcome_owner','Synthetic welcome team');f.w.confirm=()=>true;f.w.document.querySelector('[data-signup-close]').click();assert.equal(f.form(),null);assert.equal(unloadBlocked(f),false);
+ f.api.open(row.id);change(f,'contact_id','sample-person');change(f,'identity_checked',true);assert.equal(unloadBlocked(f),true);await f.submit();assert.equal(f.form(),null);assert.equal(unloadBlocked(f),false);
+ assert.equal(f.w.localStorage.length,0);assert.equal(f.w.sessionStorage.length,0);
+});
+
+test('pending or unresolved signup reviews warn until confirmation, explicit discard or immediate access clearing',async t=>{
+ const changed={...row};const f=fixture(t,{rows:[changed]});await f.api.load(1);f.api.open(row.id);change(f,'contact_id','sample-person');change(f,'identity_checked',true);
+ let finish;f.control.write=()=>new Promise(resolve=>finish=resolve);const saving=f.submit();await tick();assert.equal(unloadBlocked(f),true);
+ let questions=0;f.w.confirm=()=>{questions++;return true;};f.api.open(row.id);assert.equal(questions,0,'pending write cannot be discarded');
+ finish({data:null});await saving;assert.equal(unloadBlocked(f),true);
+ changed.status='reviewed';changed.reviewed_version=changed.version;await f.api.load(1);assert.equal(f.form(),null);assert.equal(unloadBlocked(f),false,'saved reconciliation removes warning');
+ f.api.open(row.id);assert.equal(unloadBlocked(f),false,'read-only reviewed details are not a draft');f.w.document.querySelector('[data-signup-close]').click();
+ changed.status='pending';changed.reviewed_version=0;await f.api.load(1);f.api.open(row.id);change(f,'staff_notes','Synthetic retained note');changed.version=2;await f.api.load(1);assert.equal(unloadBlocked(f),true,'version conflict keeps unsaved review protected');
+ f.setContext({epoch:2,userId:null,role:null,canEdit:false});f.api.clear();assert.equal(f.form(),null);assert.equal(unloadBlocked(f),false);assert.equal(questions,0,'access clearing never waits on a discard prompt');
+});
+
+test('accepting a discard cannot recreate a signup dialog after access or readiness changes',async t=>{
+ for(const mode of ['signed-out','offline','people-unavailable']){
+  const f=fixture(t);await f.api.load(1);f.api.open(row.id);change(f,'staff_notes','Synthetic private review');
+  f.w.confirm=()=>{
+   if(mode==='signed-out'){f.setContext({epoch:2,userId:null,role:null,canEdit:false});f.api.clear();}
+   else if(mode==='offline'){f.setContext({epoch:1,userId:'sample-staff',role:'editor',canEdit:false,workspaceReady:false});f.api.render();}
+   else f.control.peopleReady=false;
+   return true;
+  };
+  f.api.open(row.id);assert.equal(f.form(),null);assert.equal(f.w.document.querySelector('dialog'),null);assert.equal(unloadBlocked(f),false);
+  assert.equal(f.calls.some(c=>c.name),false);
+ }
+});
+
+test('an older signup discard decision cannot clear a replacement review',async t=>{
+ const f=fixture(t);await f.api.load(1);f.api.open(row.id);change(f,'staff_notes','Synthetic first draft');let replacement;
+ f.w.confirm=()=>{f.w.confirm=()=>true;f.api.open(row.id);replacement=f.form();change(f,'staff_notes','Synthetic replacement draft');return true;};
+ f.api.open(row.id);assert.equal(f.form(),replacement);assert.equal(f.form().elements.staff_notes.value,'Synthetic replacement draft');assert.equal(unloadBlocked(f),true);
+ f.api.clear();assert.equal(unloadBlocked(f),false);
 });

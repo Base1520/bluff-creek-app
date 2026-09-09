@@ -30,7 +30,7 @@
   function create(options) {
     var host = options.root, doc = host.ownerDocument, rows = [], contacts = [];
     var mounted = false, mountedEpoch = null, mountedOwner = null, ready = false, failed = false, request = 0, formToken = 0;
-    var filter = 'due', role = '', search = '', dialog = null, draft = null, saving = false, returnFocus = null;
+    var filter = 'due', role = '', search = '', dialog = null, draft = null, saving = false, returnFocus = null, unloadListening = false;
     function deadline(request) {
       var timer;
       return Promise.race([Promise.resolve(request),new Promise(function(_resolve,reject){timer=doc.defaultView.setTimeout(function(){reject(new Error('The request timed out.'));},12000);})]).finally(function(){doc.defaultView.clearTimeout(timer);});
@@ -45,11 +45,26 @@
     function owns(row) { return row.owner_id === context().userId; }
     function authError(error) { return error && (['42501','PGRST301','PGRST302'].includes(error.code) || [401,403].includes(error.status)); }
     function notify(message, bad) { if (current(context().epoch)) options.notice(message, !!bad); }
+    function formFingerprint() { return dialog ? JSON.stringify(Array.from(dialog.querySelectorAll('form [name]')).map(function(node){return [node.name,node.type==='checkbox'?node.checked:node.value];})) : ''; }
+    function draftNeedsWarning() { return !!(draft && draft.kind !== 'history' && (saving || draft.requiresRefresh || draft.conflict || (draft.initialForm && formFingerprint() !== draft.initialForm))); }
+    function warnUnload(event) { event.preventDefault(); event.returnValue = true; }
+    function syncUnload() {
+      var needed = draftNeedsWarning();
+      if (needed === unloadListening) return;
+      doc.defaultView[needed ? 'addEventListener' : 'removeEventListener']('beforeunload',warnUnload); unloadListening = needed;
+    }
     function close(focus) {
-      formToken++; saving = false; draft = null;
+      formToken++; saving = false; draft = null; syncUnload();
       if (dialog) { if (dialog.open) dialog.close(); dialog.remove(); dialog = null; }
       if (focus && returnFocus && returnFocus.isConnected) returnFocus.focus();
       returnFocus = null;
+    }
+    function requestClose(focus) {
+      var state = draft, token = formToken;
+      if (saving) return false;
+      if (draftNeedsWarning() && !doc.defaultView.confirm('Discard this unsaved follow-up? If a save was uncertain, refresh and check its saved details before starting again.')) return false;
+      if (saving || draft !== state || formToken !== token) return false;
+      close(focus); return true;
     }
     function summary() {
       if (!options.onSummary) return;
@@ -75,7 +90,7 @@
       var latest = draft.id && rows.find(function(row){return row.id === draft.id && owns(row);});
       if (ready && draft.id && !latest) { close(false); notify('This follow-up is no longer available in your workspace.',true); return; }
       var conflict = ready && draft.id && Number(latest.version) !== draft.version;
-      draft.conflict = !!conflict;
+      draft.conflict = !!conflict; syncUnload();
       var save = dialog.querySelector('[type="submit"]'); if (save) save.disabled = saving || !ready || !!conflict || !!draft.requiresRefresh;
       dialog.querySelectorAll('input,select,textarea').forEach(function(node){node.disabled = saving || !ready || !current(draft.epoch,draft.owner) || !!draft.requiresRefresh;});
       var message = dialog.querySelector('[data-followups-error]');
@@ -141,9 +156,11 @@
     function select(name,label,choices,value) { return '<label>'+safe(label)+'<select name="'+name+'">'+Object.keys(choices).map(function(key){return '<option value="'+key+'"'+(key===value?' selected':'')+'>'+choices[key]+'</option>';}).join('')+'</select></label>'; }
     function notes(value) { return '<label class="followups-wide">Private notes<textarea name="notes" maxlength="2000">'+safe(value || '')+'</textarea></label>'; }
     function open(kind,id,trigger) {
-      var c=context(), row=id && rows.find(function(r){return r.id===id && owns(r);});
+      var c=context(), epoch=c.epoch, owner=c.userId, row=id && rows.find(function(r){return r.id===id && owns(r);});
       if (!current(c.epoch) || !ready || (id && !row) || saving) return;
-      close(false); returnFocus=trigger || q('[data-followups-new]');
+      if (!requestClose(false) || !current(epoch,owner) || !ready) return;
+      c=context();row=id && rows.find(function(r){return r.id===id && owns(r);});if(id && !row)return;
+      returnFocus=trigger || q('[data-followups-new]');
       draft={id:id || null,newId:!id && kind==='edit'?doc.defaultView.crypto.randomUUID():null,requiresRefresh:false,version:row?Number(row.version):null,epoch:c.epoch,owner:c.userId,kind:kind,lastContact:row?row.last_contact_on:null,conflict:false};
       var token=formToken, title=kind==='edit'?(row?'Edit follow-up plan':'Add a leader'):kind==='contact'?'Record a contact':kind==='history'?'Contact history':'Snooze a follow-up';
       dialog=doc.createElement('dialog');dialog.className='followups-dialog';dialog.setAttribute('aria-labelledby','followups-dialog-title');
@@ -158,11 +175,12 @@
         else fields=input('snoozed_until','Snooze until (clear to remove)','date',row.snoozed_until,'min="'+today()+'"')+'<p class="followups-small">Snoozing moves this reminder later. It does not record a contact or change your repeating interval.</p>';
         var form=doc.createElement('form');form.dataset.followupsForm='';form.innerHTML='<div class="followups-grid">'+fields+'</div><p data-followups-error role="alert"></p><button type="button" class="quiet" data-followups-retry>Refresh follow-ups</button><footer><button type="button" class="quiet" data-followups-close>Cancel</button><button type="submit">'+(kind==='contact'?'Save contact':kind==='snooze'?'Save snooze':'Save plan')+'</button></footer>';
         form.onsubmit=function(event){event.preventDefault();save(form,token);};dialog.appendChild(form);
+        draft.initialForm=formFingerprint();form.addEventListener('input',syncUnload,true);form.addEventListener('change',syncUnload,true);
         var unit=form.elements.cadence_unit;if(unit)unit.onchange=function(){form.elements.cadence_value.max=unit.value==='months'?'12':'365';};
         form.querySelector('[data-followups-retry]').onclick=refresh;
       }
-      dialog.querySelectorAll('[data-followups-close]').forEach(function(button){button.onclick=function(){if(!saving)close(true);};});
-      dialog.addEventListener('cancel',function(event){event.preventDefault();if(!saving)close(true);});doc.body.appendChild(dialog);dialog.showModal();
+      dialog.querySelectorAll('[data-followups-close]').forEach(function(button){button.onclick=function(){requestClose(true);};});
+      dialog.addEventListener('cancel',function(event){event.preventDefault();requestClose(true);});doc.body.appendChild(dialog);dialog.showModal();
     }
     async function save(form,token) {
       var state=draft;if(!state || saving || token!==formToken || !current(state.epoch,state.owner))return;
@@ -184,7 +202,7 @@
       }
       if(value('notes').length>2000)message='Keep private notes to 2,000 characters.';
       if(message){error.textContent=message;return;}
-      saving=true;error.textContent='';dialog.querySelectorAll('input,select,textarea,button').forEach(function(node){node.disabled=true;});
+      saving=true;syncUnload();error.textContent='';dialog.querySelectorAll('input,select,textarea,button').forEach(function(node){node.disabled=true;});
       try {
         if(options.ensureReady && !await options.ensureReady(state.epoch))throw new Error('readiness');
         if(!current(state.epoch,state.owner) || token!==formToken)throw new Error('readiness');

@@ -170,3 +170,80 @@ test('personal writes await readiness and preserve frozen drafts when the live c
 test('a personal write timeout preserves its submitted draft and ignores late acknowledgement',async t=>{
  const f=fixture(t,{plans:[plan]});await f.api.load(1);f.click('[data-followups-action="contact"]');f.set('notes','Synthetic timed contact');let finish,expire;const real=f.w.setTimeout.bind(f.w);f.w.setTimeout=(fn,ms)=>ms===12000?(expire=fn,9999):real(fn,ms);f.control.hold=q=>new Promise(r=>finish=r);const saving=f.submit();await tick();expire();await saving;assert.equal(f.form().querySelector('[type=submit]').disabled,true);assert.equal(f.w.document.querySelector('[data-followups-close]').disabled,false);assert.equal(f.form().elements.notes.value,'Synthetic timed contact');finish({data:{id:plan.id,version:2,last_contact_on:today()}});await tick();assert.ok(f.form());assert.equal(f.notices.length,0);
 });
+
+function unloadCancelled(f) {
+  const event=new f.w.Event('beforeunload',{cancelable:true});f.w.dispatchEvent(event);return event.defaultPrevented;
+}
+
+test('reload listener exists only for changed personal forms and is removed on revert or close',async t=>{
+  const f=fixture(t,{plans:[plan]}),listeners=new Set(),add=f.w.addEventListener.bind(f.w),remove=f.w.removeEventListener.bind(f.w);
+  f.w.confirm=()=>true;
+  f.w.addEventListener=(type,fn,...args)=>{if(type==='beforeunload')listeners.add(fn);return add(type,fn,...args);};
+  f.w.removeEventListener=(type,fn,...args)=>{if(type==='beforeunload')listeners.delete(fn);return remove(type,fn,...args);};
+  await f.api.load(1);assert.equal(listeners.size,0);assert.equal(unloadCancelled(f),false);
+  f.api.openNew();assert.equal(listeners.size,0);f.w.document.querySelector('[data-followups-close]').click();assert.equal(listeners.size,0);
+  for(const [kind,name,value] of [['edit','notes','Synthetic unsaved note'],['contact','method','email'],['snooze','snoozed_until',addMonths(today(),1)]]){
+    f.click('[data-followups-action="'+kind+'"]');assert.equal(listeners.size,0);assert.equal(unloadCancelled(f),false);
+    const initial=f.form().elements[name].value;const field=f.set(name,value);field.dispatchEvent(new f.w.Event('input',{bubbles:true}));
+    assert.equal(listeners.size,1);assert.equal(unloadCancelled(f),true,kind+' unsaved work cancels the DOM event');
+    f.set(name,value,true);assert.equal(listeners.size,1,'repeated edits do not register another listener');
+    f.set(name,initial,true);assert.equal(listeners.size,0);assert.equal(unloadCancelled(f),false,'exact reversion removes the listener');
+    f.set(name,value,true);f.w.document.querySelector('[data-followups-close]').click();assert.equal(listeners.size,0);assert.equal(unloadCancelled(f),false);
+  }
+  f.click('[data-followups-action="edit"]');f.set('paused',true,true);assert.equal(unloadCancelled(f),true);f.set('paused',false,true);assert.equal(unloadCancelled(f),false);f.w.document.querySelector('[data-followups-close]').click();
+  f.click('[data-followups-action="history"]');f.rows.leader_followups[0].version++;await f.api.load(1);assert.equal(listeners.size,0);assert.equal(unloadCancelled(f),false,'read-only history never registers a draft warning');
+});
+
+test('unchanged contact submissions warn while pending and confirmed save or account clearing removes the warning',async t=>{
+  const f=fixture(t,{plans:[plan]});await f.api.load(1);f.click('[data-followups-action="contact"]');assert.equal(unloadCancelled(f),false);
+  let verify;f.control.ensure=()=>new Promise(resolve=>verify=resolve);const saving=f.submit();await tick();
+  assert.equal(unloadCancelled(f),true,'submitting default contact fields is pending work even without prior edits');assert.equal(f.calls.some(q=>q.op==='rpc'),false);
+  verify(true);await saving;await tick();assert.equal(f.form(),null);assert.equal(unloadCancelled(f),false);assert.match(f.notices.at(-1).text,/Contact saved/);
+  const g=fixture(t,{plans:[plan]});await g.api.load(1);g.click('[data-followups-action="contact"]');let finish;g.control.hold=()=>new Promise(resolve=>finish=resolve);const pending=g.submit();await tick();assert.equal(unloadCancelled(g),true);
+  g.setContext({epoch:2,userId:'replacement-owner',role:'editor',canEdit:true});g.api.clear();assert.equal(unloadCancelled(g),false);assert.equal(g.form(),null);
+  finish({data:{id:plan.id,version:2,last_contact_on:today()},error:null});await pending;await tick();assert.equal(unloadCancelled(g),false);assert.equal(g.notices.length,0);assert.equal(g.refreshes(),0);
+});
+
+test('uncertain pristine contact saves and stale plan conflicts warn until reconciliation or dismissal',async t=>{
+  const f=fixture(t,{plans:[plan]});f.w.confirm=()=>true;await f.api.load(1);f.click('[data-followups-action="contact"]');f.control.noRows=true;await f.submit();
+  assert.equal(unloadCancelled(f),true,'an unconfirmed result still needs attention when form values were unchanged');assert.match(f.form().textContent,/could not be confirmed/);
+  f.control.error={message:'Synthetic unavailable'};await f.api.load(1);assert.equal(unloadCancelled(f),true);
+  f.control.error=null;f.control.noRows=false;await f.api.load(1);assert.equal(unloadCancelled(f),false,'refresh found no changed version and the form is pristine');f.w.document.querySelector('[data-followups-close]').click();
+  f.click('[data-followups-action="edit"]');f.rows.leader_followups[0].version++;await f.api.load(1);assert.equal(unloadCancelled(f),true);assert.match(f.form().textContent,/plan changed/);
+  f.w.document.querySelector('[data-followups-close]').click();assert.equal(unloadCancelled(f),false);
+  f.click('[data-followups-action="edit"]');f.set('notes','Synthetic draft',true);f.rows.leader_followups=[];await f.api.load(1);assert.equal(f.form(),null);assert.equal(unloadCancelled(f),false,'a removed row closes its private draft');
+});
+
+test('dirty follow-up save, uncertain create reconciliation, and auth failure all release their draft warning',async t=>{
+  const f=fixture(t,{plans:[plan]});await f.api.load(1);f.click('[data-followups-action="edit"]');f.set('notes','Synthetic saved note',true);assert.equal(unloadCancelled(f),true);await f.submit();assert.equal(f.form(),null);assert.equal(unloadCancelled(f),false);
+  f.api.openNew();f.set('display_name','Sample new leader',true);f.control.returnOverride=()=>null;await f.submit();assert.ok(f.form());assert.equal(unloadCancelled(f),true);
+  f.control.returnOverride=null;await f.api.load(1);assert.equal(f.form(),null);assert.equal(unloadCancelled(f),false);assert.equal(f.calls.filter(q=>q.op==='insert').length,1);
+  f.click('[data-followups-action="edit"]');f.set('notes','Synthetic private draft',true);assert.equal(unloadCancelled(f),true);
+  f.control.error={code:'42501'};await f.api.load(1);assert.equal(f.form(),null);assert.equal(unloadCancelled(f),false);assert.equal(f.root.textContent,'');
+});
+
+test('personal Close, Escape and replacement preserve changed drafts unless discard is accepted',async t=>{
+  const f=fixture(t,{plans:[plan]});let confirmations=0,accept=false;f.w.confirm=()=>{confirmations++;return accept;};await f.api.load(1);
+  f.click('[data-followups-action="edit"]');f.w.document.querySelector('[data-followups-close]').click();assert.equal(confirmations,0);assert.equal(f.form(),null);
+  f.click('[data-followups-action="edit"]');f.set('notes','Synthetic retained draft',true);const form=f.form(),dialog=f.w.document.querySelector('dialog');
+  f.w.document.querySelector('[data-followups-close]').click();assert.equal(f.form(),form);assert.equal(confirmations,1);
+  const escape=new f.w.Event('cancel',{cancelable:true});dialog.dispatchEvent(escape);assert.equal(escape.defaultPrevented,true);assert.equal(f.form(),form);assert.equal(confirmations,2);
+  f.click('[data-followups-action="contact"]');assert.equal(f.form(),form);assert.equal(confirmations,3);assert.equal(f.form().elements.notes.value,'Synthetic retained draft');assert.equal(unloadCancelled(f),true);
+  accept=true;f.click('[data-followups-action="contact"]');assert.notEqual(f.form(),form);assert.equal(f.form().elements.notes.value,'');assert.equal(unloadCancelled(f),false);assert.equal(confirmations,4);
+  f.set('notes','Synthetic contact draft',true);f.w.document.querySelector('dialog').dispatchEvent(new f.w.Event('cancel',{cancelable:true}));assert.equal(f.form(),null);assert.equal(unloadCancelled(f),false);assert.equal(confirmations,5);
+  f.click('[data-followups-action="edit"]');f.set('notes','Synthetic clear draft',true);accept=false;f.api.clear();assert.equal(confirmations,5);assert.equal(f.form(),null);assert.equal(unloadCancelled(f),false,'auth clearing does not wait for a discard confirmation');
+});
+
+test('replacement after discard confirmation refuses changed owner, epoch, readiness or a cleared workspace',async t=>{
+  for(const mode of ['owner','epoch','readiness','cleared']){
+    const f=fixture(t,{plans:[plan]});await f.api.load(1);f.click('[data-followups-action="contact"]');f.set('notes','Synthetic replacement draft',true);
+    f.w.confirm=()=>{
+      if(mode==='owner')f.setContext({epoch:1,userId:'replacement-owner',role:'editor',canEdit:true});
+      if(mode==='epoch')f.setContext({epoch:2,userId:'sample-owner',role:'editor',canEdit:true});
+      if(mode==='readiness')f.setContext({epoch:1,userId:'sample-owner',role:'editor',canEdit:false,workspaceReady:false});
+      if(mode==='cleared')f.api.clear();
+      return true;
+    };
+    f.click('[data-followups-action="edit"]');assert.equal(f.form(),null,mode+' change must not reopen a private form');assert.equal(unloadCancelled(f),false);assert.equal(f.calls.some(q=>q.op!=='select'),false);
+  }
+});

@@ -7,6 +7,7 @@ const require = createRequire(import.meta.url);
 const { dueFor, today, addMonths, coverageFor } = require('../care.js');
 const source = await readFile(new URL('../care.js', import.meta.url), 'utf8');
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
+function unloadBlocked(f) { const event=new f.w.Event('beforeunload',{cancelable:true}); f.w.dispatchEvent(event); return event.defaultPrevented; }
 const assignment = { version:1, id:'plan-synthetic', contact_id:'person-synthetic', started_on:'2026-03-01', cadence_days:28, paused:false };
 const visit = (day, outcome='contacted', next=null) => ({ id:'visit-'+day, contact_id:assignment.contact_id, contacted_on:day, outcome, next_contact_on:next, created_at:day+'T12:00:00Z', visitor_name:'Test team', method:'call' });
 
@@ -458,10 +459,12 @@ test('an uncertain committed visit is confirmed by its stable UUID without a dup
   f.controller.respond=(q,execute)=>{if(q.op==='insert'){execute();return{error:{message:'Network interrupted'}};}return execute();};
   f.submit();await tick();
   assert.equal(f.rows.care_visits.length,1);assert.match(f.rows.care_visits[0].id,/^[0-9a-f-]{36}$/);
+  assert.equal(unloadBlocked(f),true,'an uncertain append still needs reconciliation');
   f.click('[data-care-action="cancel"]');assert.ok(f.host.querySelector('[data-care-form]'));
   f.submit();await tick();assert.equal(f.calls.filter(q=>q.op==='insert').length,1);
   f.controller.respond=null;await f.module.load(1);
   assert.equal(f.host.querySelector('[data-care-form]'),null);assert.match(f.notices.at(-1).text,/confirmed after refresh/);
+  assert.equal(unloadBlocked(f),false,'authoritative confirmation removes the warning');
   assert.equal(f.rows.care_visits.length,1);
 });
 
@@ -476,18 +479,21 @@ test('uncommitted care creates retain a stable retry ID and never use upsert', a
 test('readiness loss preserves same-user drafts while access revocation clears them', async t => {
   const f=fixture(t);await f.module.load(1);f.click('[data-care-action="guest"]');f.set('contact_id','person-synthetic');f.set('notes','Retained draft');
   f.ctx.workspaceReady=false;f.ctx.canEdit=false;f.module.render();
+  assert.equal(unloadBlocked(f),true,'same-owner connection loss retains the unsaved draft warning');
   assert.equal(f.host.querySelector('[name="notes"]').value,'Retained draft');assert.equal(f.host.querySelector('[type="submit"]').disabled,true);
   f.submit();await tick();assert.equal(f.calls.some(q=>q.op!=='select'),false);
   f.ctx.workspaceReady=true;f.ctx.canEdit=true;f.controller.ready=false;f.module.render();f.submit();await tick();
   assert.equal(f.checks.length,1);assert.equal(f.calls.some(q=>q.op!=='select'),false);
   assert.equal(f.host.querySelector('[name="notes"]').value,'Retained draft');
   f.ctx.role='viewer';f.ctx.workspaceReady=false;f.ctx.canEdit=false;f.module.render();assert.equal(f.host.textContent,'');
+  assert.equal(unloadBlocked(f),false,'role loss clears the listener without a discard prompt');
 });
 
 test('confirmed permission errors clear private care drafts instead of offering a write retry', async t => {
   const f=fixture(t);await f.module.load(1);f.click('[data-care-action="guest"]');f.set('contact_id','person-synthetic');f.set('notes','Private draft');
   f.controller.error={code:'42501',message:'PRIVATE_CANARY'};f.submit();await tick();
   assert.equal(f.host.textContent,'');assert.doesNotMatch(JSON.stringify(f.notices),/PRIVATE_CANARY/);
+  assert.equal(unloadBlocked(f),false);
 });
 
 test('discard confirmation protects changed care drafts; forced clear bypasses prompts', async t => {
@@ -498,10 +504,62 @@ test('discard confirmation protects changed care drafts; forced clear bypasses p
   f.click('[data-care-action="guest"]');f.set('notes','Another draft');f.module.clear();assert.equal(prompts,2);assert.equal(f.host.textContent,'');
 });
 
+test('care reload warnings follow dirty/reverted fields and accepted or rejected draft disposal', async t => {
+  const f=fixture(t,{role:'admin'});await f.module.load(1);
+  assert.equal(unloadBlocked(f),false);
+  for(const [kind,name] of [['assignment','notes'],['guest','notes'],['visit','notes'],['guidelines','body']]) {
+    f.click('[data-care-action="'+kind+'"]');assert.equal(unloadBlocked(f),false,'pristine care forms do not warn');
+    const input=f.host.querySelector('[name="'+name+'"]'),original=input.value;
+    input.value='Synthetic unsaved care draft';input.dispatchEvent(new f.w.Event('input',{bubbles:true}));
+    assert.equal(unloadBlocked(f),true,'typed care content must request the best-effort warning');
+    input.value=original;input.dispatchEvent(new f.w.Event('input',{bubbles:true}));assert.equal(unloadBlocked(f),false);
+    f.click('[data-care-action="cancel"]');assert.equal(unloadBlocked(f),false);
+  }
+  f.click('[data-care-action="guest"]');f.set('notes','Synthetic retained draft').dispatchEvent(new f.w.Event('change',{bubbles:true}));
+  f.w.confirm=()=>false;f.click('[data-care-action="cancel"]');assert.equal(unloadBlocked(f),true);
+  f.w.confirm=()=>true;f.click('[data-care-action="cancel"]');assert.equal(unloadBlocked(f),false);
+  assert.equal(f.w.localStorage.length,0);assert.equal(f.w.sessionStorage.length,0);
+});
+
+test('care reload warnings protect even unchanged pending writes and cannot return after account clearing', async t => {
+  const f=fixture(t,{assignments:[assignment]});await f.module.load(1);
+  f.click('[data-care-action="assignment"][data-contact]');assert.equal(unloadBlocked(f),false);
+  let release,query;
+  f.controller.hold=q=>{query=q;return new Promise(resolve=>{release=resolve;});};
+  f.submit();assert.equal(unloadBlocked(f),true,'readiness and write processing need a warning even without a changed field');
+  await tick();assert.equal(query.op,'update');assert.equal(f.host.querySelector('[data-care-action="cancel"]').disabled,true);
+  f.controller.hold=null;release(f.execute(query));await tick();await tick();
+  assert.equal(f.host.querySelector('[data-care-form]'),null);assert.equal(unloadBlocked(f),false,'confirmed save removes the listener');
+
+  f.click('[data-care-action="assignment"][data-contact]');
+  f.controller.hold=q=>{query=q;return new Promise(resolve=>{release=resolve;});};f.submit();await tick();
+  assert.equal(unloadBlocked(f),true);
+  f.setContext({epoch:2,userId:null,role:null,canEdit:false});f.module.clear();
+  assert.equal(unloadBlocked(f),false);assert.equal(f.host.textContent,'');
+  release({data:{...query.data,id:query.filters.id,version:query.filters.version+1},error:null});await tick();await tick();
+  assert.equal(unloadBlocked(f),false);assert.equal(f.host.textContent,'');
+});
+
+test('care reload warnings track pristine conflicts and unresolved saves through authoritative refresh', async t => {
+  const f=fixture(t,{assignments:[assignment]});await f.module.load(1);
+  f.click('[data-care-action="assignment"][data-contact]');assert.equal(unloadBlocked(f),false);
+  f.rows.care_assignments[0].version++;await f.module.load(1);
+  assert.equal(unloadBlocked(f),true,'a conflicted unchanged form still needs explicit review');
+  f.click('[data-care-action="cancel"]');assert.equal(unloadBlocked(f),false);
+  f.click('[data-care-action="assignment"][data-contact]');
+  f.controller.emptySave=true;f.submit();await tick();assert.equal(unloadBlocked(f),true);
+  f.controller.emptySave=false;await f.module.load(1);
+  assert.equal(unloadBlocked(f),false,'a refresh confirming no change releases an unchanged draft');
+  assert.ok(f.host.querySelector('[data-care-form]'));
+  f.click('[data-care-action="cancel"]');assert.equal(unloadBlocked(f),false);
+});
+
 test('bounded care writes stop waiting and require refresh before retrying an uncertain outcome', async t => {
   const f=fixture(t,{requestTimeoutMs:5});await f.module.load(1);f.click('[data-care-action="guest"]');f.set('contact_id','person-synthetic');
   f.controller.hold=()=>new Promise(()=>{});f.submit();await new Promise(resolve=>setTimeout(resolve,20));
   assert.match(f.host.querySelector('.care-form-error').textContent,/Refresh care/);
   assert.equal(f.host.querySelector('[type="submit"]').disabled,true);
   assert.equal(f.host.querySelector('[data-care-action="retry"]').disabled,false);
+  assert.equal(unloadBlocked(f),true);
+  f.module.clear();assert.equal(unloadBlocked(f),false);
 });
