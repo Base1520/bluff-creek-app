@@ -8,6 +8,8 @@ A passing result is `local_bundle_integrity_verified`. The report always keeps `
 
 `tools/office-restore/` contains a successful historical **local six-migration** cold-volume recovery rehearsal. It copied a stopped PostgreSQL data volume and original Storage payloads, restored them into a separate local target, compared database state, and proved an authorized original download. Its deliberately missing-original phase demonstrated why database metadata alone is insufficient. That runner is pinned to its historical migration inventory, volumes, ports, and synthetic fixtures. Do not repoint it at the seven-migration hosted baseline or the preserved demos.
 
+The separate [current seven-migration recovery](../office-current-restore/README.md) also passed a fictional cold database-plus-originals drill on September 9, including a deliberate missing-file failure and a reviewed continuation after a root-permission assumption was corrected. Its source bytes and all earlier project inventories were preserved. Neither local drill is a hosted logical export or off-device backup acceptance.
+
 `tools/office-local-stack/` prepares a new unlinked local seven-migration workspace. It does not export hosted data or copy originals. Office spreadsheet exports and individual document downloads do not capture database schema, roles, privileges, Auth state, and all original files.
 
 No hosted export, original-file capture, or hosted restore has been performed by this tool. There is currently no general hosted backup engine in this repository.
