@@ -67,3 +67,10 @@ After those decisions, prepare an import preview and exception report with all r
 ## Read-only source preflight prepared September 7
 
 `tools/membership-import/preflight.py` now checks a privately selected CSV against the observed A:P header/width contract and reports sanitized row-number exceptions. It preserves source text in memory and never changes or copies raw source records into the repository. Column 6, identity and active/inactive status remain unresolved. It was verified with 15 fictional tests only; no actual source export was processed. See [usage and limits](../tools/membership-import/README.md). A structural pass is not approval to import. The reviewed crosswalk, durable import-batch/source-event identities and future writer still need to be built after the source walkthrough.
+
+
+## September 9 source-change review preparation
+
+An offline two-snapshot comparison is prepared in `tools/membership-import/compare_snapshots.py`. It validates both observed layouts, compares exact original row text as a multiset and reports only whole-file fingerprints, counts and CSV record locators. Every row is accounted for, including blanks and unnamed content. Sorting does not create new observations; changed values and changed duplicate counts stay visible without inferred person matches or deletion instructions. All A:P values remain in the unchanged source files, including unknown G.
+
+The tool has no writer, backend connection, automatic identity map or import approval. It was developed on fictional snapshots only; neither church source export has been selected or processed. Records staff must still approve the source, definitions, crosswalk, statuses and private provenance destination. Before cutover, compare the approved snapshot with the final export and reconcile each unmatched observation privately. This provides a review aid for that step, not durable batch identity or a repeat-safe import pipeline. See the [comparison instructions](../tools/membership-import/README.md#compare-two-source-snapshots-before-cutover).

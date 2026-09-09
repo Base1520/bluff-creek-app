@@ -42,3 +42,22 @@ PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tools/membership-impor
 ```
 
 Tests use temporary files and fictional records. No source data or credentials are needed. Before a future writer is built, approve the full source field map, identity crosswalk, active/inactive/visitor rules, private provenance destination and durable batch/event identifiers, then rehearse idempotent imports on fictional data. Current per-form save protection is not a bulk-import pipeline.
+
+## Compare two source snapshots before cutover
+
+`compare_snapshots.py` compares two explicitly selected CSV exports in memory. It helps a records reviewer find observations that changed while the old ledger was still in use. It writes no files and has no import, apply, delete, network or database operation.
+
+```sh
+python3 tools/membership-import/compare_snapshots.py /approved/private/earlier.csv /approved/private/later.csv
+python3 tools/membership-import/compare_snapshots.py /approved/private/earlier.csv /approved/private/later.csv --json
+```
+
+Keep the originals and any captured report in the approved private migration folder. Use immutable exports in a trusted private folder. Both inputs must be local regular files with the validated A:P layout and no symbolic link in either path; on macOS use the physical folder path rather than a symlink such as /tmp. Unknown or malformed layouts stop the comparison. The output excludes filenames, cell values and individual-row fingerprints; whole-file fingerprints identify the exact exports. A successful comparison is never approval to import.
+
+The comparison uses all original cell text, including Column 6, uncertain dates, leading zeros, spelling and whitespace. It groups identical rows and preserves how often each occurs. Sorting the sheet therefore does not manufacture new observations. Every CSV record is accounted for, including unnamed records and blank lines; a blank line and a row containing sixteen empty cells remain different parsed records. Header whitespace and CSV quoting/line-ending changes can change the file fingerprint without changing the observed row values.
+
+JSON lists every group with its earlier and later CSV row locators and occurrence counts. The default summary lists groups with unmatched observations, displaying up to twenty locators per side with an explicit omitted count; use --json for the complete locator lists. If two identical rows become one, the report records one unmatched earlier occurrence and retains all associated locators; it cannot know which identical row remains. It does not pair particular duplicate occurrences, deduplicate people or treat row position, membership number or a name as identity. A changed cell appears as one unmatched earlier observation and one unmatched later observation. That does not establish an edit to the same person, a new member or permission to delete anything.
+
+Review unmatched observations against the privately preserved exports and the approved identity crosswalk. Account for source changes after the snapshot before cutover. A comparison with no unmatched observations does not establish that the workbook's formulas, validation, other tabs or handwritten archive are unchanged. Column 6, historical status rules and all identity decisions remain open. Durable batch/source-event identity, an import preview tied to approved mappings and the repeat-safe database writer are still separate work.
+
+Status `0` means the comparison completed; status `2` means invalid arguments, unreadable/unsupported inputs or an invalid source structure. JSON mode returns a fixed diagnostic on failure. Native file permissions and the private handling of any redirected output remain the operator's responsibility. Tests use fictional temporary CSV files only.
