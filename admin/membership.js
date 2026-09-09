@@ -1,5 +1,8 @@
 (function(root){
   'use strict';
+  // Required text needs content beyond whitespace and Unicode Format (Cf).
+  // Validate without removing joiners/direction marks from the saved source text.
+  function hasTextContent(value){return String(value||'').replace(/[\s\p{Cf}]/gu,'').length>0}
   function sheetLink(value){try{var u=new URL(value);return u.protocol==='https:' && u.hostname==='docs.google.com' && !u.username && !u.password && /^\/spreadsheets\/d\/[A-Za-z0-9_-]+\/(?:edit)?$/.test(u.pathname)?u.origin+u.pathname:null}catch(_){return null}}
   function create(options){
     var host=options.root,doc=host.ownerDocument,rows=[],loadId=0,selected='',previewURL=null,dialog=null,requestId=0,failed=false,ready=false,draft=null,loadedOwner=null,unloadListening=false;
@@ -79,7 +82,7 @@
         if(!form.reportValidity())return false;
         var personId=correction?correction.contact_id:select.value,eventType=form.elements.event_type.value.trim(),source=form.elements.source_label.value.trim(),file=form.elements.page.files[0];
         if(!options.people().some(function(p){return p.id===personId}))throw new Error('Choose a current person record.');
-        if(!eventType||!source||!form.elements.reviewed.checked)throw new Error('Enter an event type and source, then confirm your source review.');
+        if(!hasTextContent(eventType)||!hasTextContent(source)||!form.elements.reviewed.checked)throw new Error('Enter an event type and source, then confirm your source review.');
         if(file&&(!['image/jpeg','image/png','image/webp'].includes(file.type)||!file.size||file.size>15728640))throw new Error('Choose a JPEG, PNG or WebP image up to 15 MB.');
         d.file=file||null;
         d.snapshot={id:d.id,contact_id:personId,event_type:eventType,event_date:form.elements.event_date.value||null,date_text:form.elements.date_text.value.trim()||null,details:form.elements.details.value.trim()||null,source_label:source,source_document_id:form.elements.existing_source.value||null,corrects_id:correction?correction.id:null};
