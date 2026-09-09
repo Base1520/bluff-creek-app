@@ -17,13 +17,21 @@
     try { var url = new URL(value); return url.protocol === 'https:' && !url.username && !url.password ? url.href : null; } catch (_) { return null; }
   }
   function bookSearchText(value) { return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/['’‘]/g,'').replace(/[^a-z0-9]+/g,' ').trim(); }
+  function dottedAcronyms(value) {
+    var aliases = [];
+    String(value || '').replace(/(?:^|[^\p{L}\p{N}.])((?:[a-z]\.){2,}[a-z]?)(?=$|[^\p{L}\p{N}.])/giu, function (match, acronym) {
+      aliases.push(acronym.replace(/\./g, '')); return match;
+    });
+    return aliases.join(' ');
+  }
   function approvedBooks(value, query) {
     var words=bookSearchText(query).split(' ').filter(Boolean);
     return (Array.isArray(value)?value:[]).filter(function(book){
       if(!book || book.approved!==true || typeof book.title!=='string' || !book.title.trim() || typeof book.author!=='string' || !book.author.trim())return false;
       // Keep spaced initials searchable while accepting compact author spellings such as CS Lewis.
       var authorAlias=bookSearchText(book.author).replace(/\b(?:[a-z] ){1,}[a-z]\b/g,function(initials){return initials.replace(/ /g,'')});
-      var text=bookSearchText([book.title,book.subtitle,book.author,authorAlias,book.category,book.note,book.reader].join(' '));
+      // Title acronyms keep their printed wording and gain only a compact dotted-letter alias.
+      var text=bookSearchText([book.title,book.subtitle,dottedAcronyms(book.title),dottedAcronyms(book.subtitle),book.author,authorAlias,book.category,book.note,book.reader].join(' '));
       return words.every(function(word){return text.indexOf(word)!==-1});
     });
   }

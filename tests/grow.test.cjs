@@ -85,3 +85,33 @@ test('invalid or future most-recent passages are not represented as preached ser
   const now=new Date('2026-09-07T18:00:00Z');
   for(const currentPassage of [{reference:'Future',date:'2026-09-20'},{reference:'Impossible',date:'2026-02-30'},{reference:' ',date:'2026-09-06'},null])assert.equal(displayedPassage({currentPassage},now),null);
 });
+
+
+test('dotted title and subtitle acronyms match compact spelling without changing printed wording', () => {
+  const books = [
+    {approved:true,title:'A Fictional Study Guide',subtitle:'The C.O.V.E.N.A.N.T. Method',author:'Sample Author'},
+    {approved:true,title:'A.B.C. for Fictional Readers',author:'Another Author'},
+    {approved:true,title:'An Imagined Handbook',subtitle:'The X.Y.Z Method',author:'Third Author'}
+  ];
+  for(const query of ['covenant','COVENANT method','sample covenant','C.O.V.E.N.A.N.T.'])assert.deepEqual(approvedBooks(books,query),[books[0]],query);
+  assert.deepEqual(approvedBooks(books,'abc readers'),[books[1]]);
+  assert.deepEqual(approvedBooks(books,'xyz handbook'),[books[2]]);
+  assert.deepEqual(approvedBooks(books,'covenant absent'),[],'all query words still need a match in the same book');
+  assert.deepEqual(approvedBooks(books,'covenant another'),[],'aliases do not combine different books');
+  assert.equal(books[0].subtitle,'The C.O.V.E.N.A.N.T. Method','search does not rewrite display text');
+});
+
+test('dotted acronym aliases stay limited to complete approved title and subtitle letter sequences', () => {
+  const hidden={approved:false,title:'The C.O.V.E.N.A.N.T. Handbook',author:'Sample Author'};
+  const books=[hidden,{...hidden,approved:'true'},{approved:true,title:'C.O.V.E.N.A.N.T. without an author'},
+    {approved:true,title:'Fictional Separate Words',subtitle:'C O V E N A N T',author:'Sample Author'},
+    {approved:true,title:'Fictional Hyphenated Words',subtitle:'C-O-V-E-N-A-N-T',author:'Sample Author'},
+    {approved:true,title:'Fictional Other Fields',author:'Sample Author',note:'C.O.V.E.N.A.N.T.',category:'C.O.V.E.N.A.N.T.',reader:'C.O.V.E.N.A.N.T.'},
+    {approved:true,title:'Fictional Ordinary Punctuation',subtitle:'first.second.third',author:'Sample Author'},
+    {approved:true,title:'Fictional Partial Sequence',subtitle:'A.B.C.Dream',author:'Sample Author'}];
+  assert.deepEqual(approvedBooks(books,'covenant'),[]);
+  assert.deepEqual(approvedBooks(books,'firstsecondthird'),[],'ordinary dotted words are not compacted');
+  assert.deepEqual(approvedBooks(books,'abc'),[],'an acronym is not extracted from a longer dotted word');
+  const split={approved:true,title:'Fictional C.O.',subtitle:'V.E.N.A.N.T. Guide',author:'Sample Author'};
+  assert.deepEqual(approvedBooks([split],'covenant'),[],'separate title and subtitle acronyms never join');
+});
