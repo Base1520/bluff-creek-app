@@ -1,0 +1,38 @@
+# Personal leadership follow-ups
+
+My follow-ups gives each approved admin/editor their own recurring list for deacons, Sunday school teachers, committee chairs, church council and other leaders. The Overview puts due contacts above the general office metrics, and a sidebar badge keeps the count visible. New plans start at one calendar month; this is an adjustable suggestion, not an adopted church policy. No real leaders have been entered.
+
+## Daily use
+
+1. Open **My follow-ups → Add a leader**. Enter a name, role, optional team/class and your first due date. Choose a monthly or day interval and add a short reminder of what to ask.
+2. Review overdue, due-today and upcoming contacts. Plan a conversation about the leader's own well-being, family, ministry needs and support. These personal check-ins do not complete their assignments to contact church members.
+3. Record the date, method, connected/attempted outcome and optional notes. A successful conversation advances that leader's interval. An attempt remains in history without resetting the due date.
+4. Snooze deliberately when you need another date; it changes when the reminder appears, without recording contact. Pause a plan when the responsibility ends or a check-in is no longer appropriate. The history stays available.
+
+The first due date applies until the first recorded successful contact. Thereafter, due dates use the latest successful date plus the interval. Calendar-month arithmetic clamps at month end. The effective date is the later of the regular date and a snooze. Due states use America/Chicago. Paused plans do not count as due. A successful contact dated today clears a snooze; a backdated contact preserves it. Future-dated contacts are rejected. There is no automatic completion, mass message or contact with a leader.
+
+The personal module refreshes every minute while the office is visible and when the tab becomes visible again. A transient refresh failure retains open drafts and blocks saves. A missing edited record or confirmed access loss clears its dialog. Sign-out/account changes clear the module, dashboard names/counts and open dialogs. Drafts do not use browser storage.
+
+## A reminder outside the office
+
+**Weekly calendar reminder** prepares a downloadable `.ics` event: a 15-minute weekly check-in, with a display alert requested 10 minutes before. The default is the next Monday at 9 a.m.; the first date and local time are editable. Its weekday follows the selected date. No calendar account is changed and no reminder is activated just by preparing/downloading the file.
+
+Open the downloaded file in a personal calendar, confirm the recurring event's time and alert, and enable that calendar's notifications. Calendar software controls import and notification behavior. The file uses floating local time, not a fixed UTC offset. Verify the displayed time after import, especially if using a calendar with a different time-zone setting. [Apple's import instructions](https://support.apple.com/guide/calendar/import-or-export-calendars-icl1023/mac) describe importing `.ics` events into Calendar on Mac; the format follows [RFC 5545](https://www.rfc-editor.org/rfc/rfc5545).
+
+The export contains only a generic title and a prompt to open My follow-ups. It contains no names, contact details, private notes, record identifiers or account credentials. It is a recurring review appointment, not a subscription to changing due dates. Change/remove the recurring event in the calendar after importing, and check for an existing copy before importing again. No actual calendar import or notification delivery was performed during development. Email/text/push reminders from Creek Office remain unconnected.
+
+## Prepared schema and privacy
+
+In a fresh setup, `supabase/migrations/20260908220658_leader_followups.sql` follows the base schema, membership/care, office-content and app-connections/care-roles migrations, in the explicit order in [Creek Office setup](../admin/README.md). Current filenames match the recorded hosted migration versions; all seven approved SQL byte hashes and the readiness revision remain unchanged. The [migration guide](office-migrations.md) preserves both preparation and hosted-history mappings. Compare existing history before applying any further migration; do not replay the renamed baseline.
+
+`leader_followups` stores the owner, name/role/team, cadence, first due date, latest successful date, snooze, pause state, private notes and version. `leader_followup_contacts` stores append-only date/method/outcome/notes history. Each owner must also have a current admin/editor role. Other staff, including other office admins, cannot read or modify those personal rows through the client API. Database administrators retain infrastructure-level access; this is not end-to-end encryption. Public app users, viewers and anonymous requests have no access. No personal names, notes or event identifiers are copied into the shared office Activity table.
+
+Explicit table/column grants and RLS enforce ownership. The owner, version, timestamps and latest successful contact are server-owned. New-plan drafts use a stable random UUID so retrying an uncertain insert cannot create a second plan; an existing plan’s identity is immutable. Refresh reconciles a committed draft before any retry. Editable-row updates include the displayed version; a zero-row/stale update is a failure. `record_leader_contact` checks ownership and current staff access, locks the row, checks its version, inserts a log and advances the plan in one transaction. A retry with the old version fails instead of duplicating history. An uncertain save keeps the dialog for review and refresh; it must not claim success.
+
+This is separate from People, committee contacts and member care plans. There is no automatic roster import or inference of real leadership positions. Creating a personal reminder does not create a login or change another person's access.
+
+## Activation and verification
+
+The church backend remains unconfigured. The local preview uses fictional records that reset on reload. Local UI/session and in-memory PostgreSQL tests cover owner isolation, role revocation, immutable metadata, append-only logs, stale versions, atomic contact updates, due calculations and sign-out clearing. Calendar tests cover valid recurrence/alarm formatting, invalid input, explicit preparation and cleanup. These do not prove hosted Auth, backup recovery or device notification delivery.
+
+Before live use, activate the approved church backend, apply the documented migrations, run hosted database/security advisors and rehearse two staff accounts to verify personal isolation. Rehearse a revoked role, failed/stale save and successful contact with approved test data. Verify the generic weekly calendar import and alert on the actual device before depending on it. Follow the existing staff-access and recovery procedures.

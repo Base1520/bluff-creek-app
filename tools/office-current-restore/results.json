@@ -1,0 +1,199 @@
+{
+  "recorded_local": "2026-09-09 04:13 CDT",
+  "status": "passed_current_local_restore_only",
+  "source_fixture": {
+    "kind": "current-seven-recovery-source-fixture",
+    "project": "bcbc-office-recovery-source-v1",
+    "checks": [
+      {
+        "check": "fixed virgin seven-migration source and closed-signup email provider",
+        "status": "passed"
+      },
+      {
+        "check": "one confirmed fictional identity with actual password sign-in and editor readiness",
+        "status": "passed"
+      },
+      {
+        "check": "authenticated contact, source metadata and preserved history link",
+        "status": "passed"
+      },
+      {
+        "check": "exact authorized original bytes and two anonymous denial controls",
+        "status": "passed"
+      },
+      {
+        "check": "final single linked fixture with zero roles, sessions and intake",
+        "status": "passed"
+      }
+    ],
+    "cleanup": {
+      "api_logout": "confirmed",
+      "role_and_session_cleanup": "confirmed",
+      "auth_ban": "confirmed"
+    },
+    "hosted_calls": false,
+    "restore_performed": false,
+    "browser_or_device_acceptance": false,
+    "limits": [
+      "Fictional local source only; this does not prove a restored target or off-device recovery.",
+      "Keys, identities, record bodies and object names are omitted from output.",
+      "A failed or interrupted run must be reviewed; never automatically repeat on a nonvirgin source."
+    ],
+    "final_counts": {
+      "auth_users": 1,
+      "banned_auth_users": 1,
+      "staff_roles": 0,
+      "sessions": 0,
+      "contacts": 1,
+      "documents": 1,
+      "history_entries": 1,
+      "objects": 1,
+      "app_connections": 0,
+      "guest_intakes": 0
+    },
+    "passed": 5,
+    "failed": 0,
+    "status": "prepared_source_contained"
+  },
+  "initial_restore_attempt": {
+    "checks": [
+      {
+        "check": "source_synthetic_inventory_links_and_private_bytes",
+        "status": "passed"
+      },
+      {
+        "check": "postgres_control_file_confirms_clean_shutdown",
+        "status": "passed"
+      }
+    ],
+    "cleanup_unconfirmed": false,
+    "error": "PGDATA_ROOT_OWNERSHIP_REFUSED",
+    "failed_stage": "source-quiesce-and-cold-capture",
+    "format_version": 1,
+    "hosted_changes": false,
+    "kind": "current_seven_local_cold_restore",
+    "limits": [
+      "Local physical recovery only; no hosted backup, email, browser or phone acceptance.",
+      "No off-device retrieval, operator acceptance or production recovery-time guarantee.",
+      "Private archives contain retained Auth state; preserve them outside Git and shared outputs."
+    ],
+    "migration_count": 7,
+    "optional_account_guard_applied": false,
+    "passed": 2,
+    "public_intake_reopened": false,
+    "source_stopped": true,
+    "stage": "source-quiesce-and-cold-capture",
+    "status": "failed",
+    "target_started": false,
+    "predecessor_inventory_unchanged": true,
+    "predecessor_projects_preserved": 4,
+    "predecessor_data_volumes_preserved": 8
+  },
+  "reviewed_continuation": {
+    "format_version": 1,
+    "kind": "current_seven_local_cold_restore",
+    "status": "passed_local_restore_only",
+    "stage": "complete",
+    "checks": [
+      {
+        "check": "source_synthetic_inventory_links_and_private_bytes",
+        "status": "passed"
+      },
+      {
+        "check": "postgres_control_file_confirms_clean_shutdown",
+        "status": "passed"
+      },
+      {
+        "check": "complete_cold_volume_archives_validated",
+        "status": "passed"
+      },
+      {
+        "check": "target_prestart_database_bytes_and_incomplete_storage_match",
+        "status": "passed"
+      },
+      {
+        "check": "running_target_detected_missing_private_object",
+        "status": "passed"
+      },
+      {
+        "check": "corrected_target_logical_data_policy_links_and_private_bytes",
+        "status": "passed"
+      },
+      {
+        "check": "source_volume_bytes_unchanged_and_both_stacks_stopped",
+        "status": "passed"
+      }
+    ],
+    "cleanup_unconfirmed": false,
+    "migration_count": 7,
+    "hosted_changes": false,
+    "optional_account_guard_applied": false,
+    "public_intake_reopened": false,
+    "limits": [
+      "Local physical recovery only; no hosted backup, email, browser or phone acceptance.",
+      "No off-device retrieval, operator acceptance or production recovery-time guarantee.",
+      "Private archives contain retained Auth state; preserve them outside Git and shared outputs."
+    ],
+    "source_stopped": true,
+    "target_started": false,
+    "restored_object_count": 1,
+    "restored_object_bytes": 68,
+    "restore_elapsed_seconds": 63.523,
+    "missing_file_phase": {
+      "database_matched": true,
+      "byte_verifier_rejected": true,
+      "status": "expected_failure_proven"
+    },
+    "missing_file_response": {
+      "http_status": 500,
+      "storage_error_code": "InternalError",
+      "exact_missing_payload_enoent": true
+    },
+    "passed": 7,
+    "reviewed_continuation": true,
+    "initial_stop_reason": "PGDATA_ROOT_OWNERSHIP_REFUSED",
+    "source_pgdata_mode_preserved": "0750",
+    "continuation_elapsed_seconds": 73.973,
+    "timing_scope": "Continuation only; not a full-run or production recovery-time benchmark.",
+    "predecessor_inventory_unchanged": true,
+    "predecessor_projects_preserved": 4,
+    "predecessor_data_volumes_preserved": 8
+  },
+  "pure_tests": {
+    "passed": 44,
+    "preparation": 7,
+    "source_fixture": 9,
+    "restore_guards": 28
+  },
+  "verified_catalog": {
+    "active_migrations": 7,
+    "public_rls_tables": 17,
+    "relevant_policies": 54,
+    "foreign_keys": 36,
+    "fingerprinted_tables": 23
+  },
+  "preservation": {
+    "old_projects": 4,
+    "old_volume_metadata": 8,
+    "new_volume_pairs_retained": 2,
+    "source_physical_manifests_unchanged": true,
+    "historical_runner_unchanged": true
+  },
+  "runtime": {
+    "staff_source": "0a1f591fb66b47513a4f51a0fb715f8bca78d3d5",
+    "staff_tests_previously_passed": 283,
+    "public_tests_previously_passed": 69,
+    "runtime_changed_this_pass": false,
+    "full_runtime_suites_rerun": false
+  },
+  "hosted_calls": false,
+  "main_push_merge_or_deploy": false,
+  "real_data_processed": false,
+  "phone_qr_ready": false,
+  "remaining": [
+    "Hosted staff login/email and optional account-guard acceptance.",
+    "Authorized hosted capture and compatible database-plus-originals restore.",
+    "Encrypted off-device destination, retention, monitoring, recovery keys and operator-led acceptance.",
+    "Actual published HTTPS and phone journeys before a phone-test QR."
+  ]
+}

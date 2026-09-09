@@ -1,0 +1,125 @@
+{
+  "format_version": 1,
+  "date": "2026-09-09",
+  "kind": "current_seven_migration_local_service_rehearsal",
+  "status": "passed_local_http_only",
+  "pure_tests": {
+    "preparer_passed": 13,
+    "service_guards_passed": 18,
+    "total_passed": 31,
+    "failed": 0
+  },
+  "first_attempt": {
+    "status": "failed_first_attempt_preserved_and_stopped",
+    "failed_http_status": 422,
+    "cause": "email_provider_disabled",
+    "partial_checks_passed": 2,
+    "checks_failed": 1,
+    "accounts_created": 1,
+    "accounts_confirmed": 1,
+    "accounts_banned": 1,
+    "cleanup_unconfirmed": 0,
+    "sessions_remaining": 0,
+    "staff_roles_remaining": 0,
+    "contacts_created": 0,
+    "objects_created": 0,
+    "profiles_submitted": 0,
+    "services_stopped": true,
+    "data_volumes_retained": 2,
+    "private_configuration_and_failure_evidence_preserved": true,
+    "correction": "A fresh v2 project keeps the email/password provider enabled while global public signup stays disabled."
+  },
+  "v2": {
+    "startup": {
+      "services_started": 6,
+      "published_bindings_loopback_only": true,
+      "migration_count": 7,
+      "public_rls_table_count": 17,
+      "relevant_policy_count": 54,
+      "predecessor_inventory_unchanged": true
+    },
+    "http": {
+      "passed": 10,
+      "failed": 0,
+      "milestones": [
+        {
+          "check": "exact new local topology, virgin seven-migration catalog and closed-signup email provider",
+          "status": "passed"
+        },
+        {
+          "check": "four confirmed fictional Auth users and actual password sessions",
+          "status": "passed"
+        },
+        {
+          "check": "staff readiness positive controls and anonymous/nonstaff permission denials",
+          "status": "passed"
+        },
+        {
+          "check": "admin contact creation and staff/nonstaff visibility controls",
+          "status": "passed"
+        },
+        {
+          "check": "editor optimistic update and server version advancement",
+          "status": "passed"
+        },
+        {
+          "check": "viewer and stale-version updates cannot overwrite saved contact",
+          "status": "passed"
+        },
+        {
+          "check": "authenticated self-promotion and user-editable admin metadata grant no staff role",
+          "status": "passed"
+        },
+        {
+          "check": "public and private intake entrypoints remain paused with zero submitted profiles",
+          "status": "passed"
+        },
+        {
+          "check": "role revocation removes access using the existing session",
+          "status": "passed"
+        },
+        {
+          "check": "final paused-intake catalog and zero fixture staff roles",
+          "status": "passed"
+        }
+      ]
+    },
+    "fixture_containment": {
+      "registered_accounts": 4,
+      "accounts_confirmed": 4,
+      "accounts_banned": 4,
+      "role_revocations_confirmed": 4,
+      "session_logouts_confirmed": 4,
+      "cleanup_unconfirmed": 0
+    },
+    "final_inventory": {
+      "banned_synthetic_auth_accounts": 4,
+      "sessions": 0,
+      "staff_roles": 0,
+      "synthetic_contacts": 1,
+      "storage_objects": 0,
+      "app_connections": 0
+    },
+    "stop": {
+      "status": "passed_rehearsal_preserved_and_stopped",
+      "services_stopped": true,
+      "data_volumes_retained": 2,
+      "all_three_predecessor_inventories_unchanged": true,
+      "failed_first_attempt_preserved": true
+    }
+  },
+  "boundaries": {
+    "hosted_changes": false,
+    "reset_or_deletion": false,
+    "optional_account_guard_applied": false,
+    "public_intake_reopened": false,
+    "raw_credentials_or_personal_identifiers_in_report": false
+  },
+  "limits": [
+    "This proves the bounded local Auth/PostgREST checks only; it is not hosted staff or SMTP acceptance.",
+    "No uploaded-file operation, current-version backup/restore, off-device recovery, browser or installed-phone acceptance was performed.",
+    "Synthetic contact and audit history, banned Auth fixtures, private failed-attempt evidence and all preserved volume pairs remain retained.",
+    "Role removal was tested using the same session; logout and banning do not establish a general immediate-expiry guarantee for every issued JWT.",
+    "The preserved nonvirgin projects must not be reset or reused for a blind repeat."
+  ]
+}

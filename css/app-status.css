@@ -1,0 +1,5 @@
+.app-status{background:var(--pine-tint);border:1px solid #c9d8cc;border-left:4px solid var(--pine);border-radius:12px;padding:12px 14px;margin-bottom:16px;color:var(--pine-deep);font-size:13px;line-height:1.55;overflow-wrap:anywhere}
+.app-status p{margin:0}
+.app-status p+p:not([hidden]){margin-top:8px}
+.app-status p[hidden]+p{margin-top:0}
+.watch-note{font-size:12px;line-height:1.5;margin:10px 2px 0}

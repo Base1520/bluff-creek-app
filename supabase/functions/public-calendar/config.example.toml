@@ -1,0 +1,5 @@
+# Activation example only. This file does not change any project setting.
+# After approval, copy this section to the church project's supabase/config.toml.
+[functions.public-calendar]
+verify_jwt = false
+entrypoint = "./functions/public-calendar/index.ts"

@@ -1,0 +1,63 @@
+{
+  "format_version": 1,
+  "purpose": "Local filename alignment to the versions recorded by the authorized hosted application; no remote history repair",
+  "recorded_versions_source": "Actual hosted migration history read and verified by Codex on 2026-09-08",
+  "remote_statement_byte_verification": "All seven recorded statement SHA-256 hashes match approved SQL bytes; each history entry contains one statement. See docs/office-hosted-verification-2026-09-08.md.",
+  "schema_revision": "20260907174301",
+  "sql_bytes_unchanged": true,
+  "local_sha256_verified": true,
+  "migration_order_unchanged": true,
+  "remote_history_changed_by_this_alignment": false,
+  "prior_baseline_mapping": "tools/office-preflight/migration-history-map.json",
+  "files": [
+    {
+      "old_approved_path": "supabase/migrations/20260907231507_office_base.sql",
+      "path": "supabase/migrations/20260908220558_office_base.sql",
+      "recorded_version": "20260908220558",
+      "name": "office_base",
+      "expected_sql_sha256": "8c8a971885d4d2ec60a3f57c4a416ecc2bb6282c4b9065bc67ed87280bc2a28b"
+    },
+    {
+      "old_approved_path": "supabase/migrations/20260907231527_membership_care.sql",
+      "path": "supabase/migrations/20260908220613_membership_care.sql",
+      "recorded_version": "20260908220613",
+      "name": "membership_care",
+      "expected_sql_sha256": "3c2fa9df159b4b7d6c6c84a9d883cac6d4dde411aa01f26df802d9665cee5b53"
+    },
+    {
+      "old_approved_path": "supabase/migrations/20260907231528_office_content.sql",
+      "path": "supabase/migrations/20260908220623_office_content.sql",
+      "recorded_version": "20260908220623",
+      "name": "office_content",
+      "expected_sql_sha256": "e4d287bfcfc8f8c6f68b7a217fe2abe87e7f7c337a548bb991dc6bbe441783a7"
+    },
+    {
+      "old_approved_path": "supabase/migrations/20260907231530_app_connections_care_roles.sql",
+      "path": "supabase/migrations/20260908220645_app_connections_care_roles.sql",
+      "recorded_version": "20260908220645",
+      "name": "app_connections_care_roles",
+      "expected_sql_sha256": "41fed80650afca46abb763569173e4a4656610634b60bbd6dd223c7ec103875d"
+    },
+    {
+      "old_approved_path": "supabase/migrations/20260907231531_leader_followups.sql",
+      "path": "supabase/migrations/20260908220658_leader_followups.sql",
+      "recorded_version": "20260908220658",
+      "name": "leader_followups",
+      "expected_sql_sha256": "63c1d7400f99bdb1ffff9d616b93affc7321004bff6cac459ba31b4b59cbfc34"
+    },
+    {
+      "old_approved_path": "supabase/migrations/20260907231533_office_record_recovery.sql",
+      "path": "supabase/migrations/20260908220707_office_record_recovery.sql",
+      "recorded_version": "20260908220707",
+      "name": "office_record_recovery",
+      "expected_sql_sha256": "c8d53cb0b4025d4d36b03169a50ff30f7d1eb8956357e0b1130e2bfbbbeb8b7b"
+    },
+    {
+      "old_approved_path": "supabase/migrations/20260908193401_pause_public_app_intake.sql",
+      "path": "supabase/migrations/20260908220718_pause_public_app_intake.sql",
+      "recorded_version": "20260908220718",
+      "name": "pause_public_app_intake",
+      "expected_sql_sha256": "8eba1837cffba0ca00934faccc4308239b4b49f534a4ba1a968a71bd7eeb00e3"
+    }
+  ]
+}

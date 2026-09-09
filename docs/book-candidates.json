@@ -1,0 +1,892 @@
+{
+  "version": "2026-09-07-v1",
+  "checked_on": "2026-09-07",
+  "status": "approved_for_app",
+  "note": "Pastor Cole explicitly approved all 21 titles in list 2026-09-07-v1 for the app on September 7, 2026. Approval applies to these individual books; it does not authorize deployment or approve every work by their authors. Descriptions summarize public publisher or ministry information, and reader and difficulty labels are editorial judgments. The source checks confirm metadata and stated subject matter, not a full theological review.",
+  "books": [
+    {
+      "id": "lewis-mere-christianity",
+      "title": "Mere Christianity",
+      "subtitle": null,
+      "author": "C. S. Lewis",
+      "category": "Faith foundations",
+      "description": "Builds a reasoned case for Christian belief, then explores Christian character and what it means to live a transformed life.",
+      "reader": "Adults exploring Christianity or strengthening their understanding of its central claims",
+      "difficulty": "Moderate",
+      "context_note": "Apologetics drawn from wartime radio talks; broad Christian common ground rather than a Baptist doctrinal handbook.",
+      "source_label": "ChurchSource / HarperCollins",
+      "url": "https://churchsource.com/products/mere-christianity",
+      "sources": [
+        {
+          "title": "ChurchSource / HarperCollins book page",
+          "url": "https://churchsource.com/products/mere-christianity"
+        },
+        {
+          "title": "C. S. Lewis official book description",
+          "url": "https://www.cslewis.com/uk/books/hardcover/mere-christianity/9780060652883/"
+        }
+      ],
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
+      "edition": null,
+      "amazon": {
+        "url": "https://www.amazon.com/dp/0060652926",
+        "kind": "product",
+        "asin": "0060652926",
+        "format": "Paperback",
+        "edition_note": "HarperOne trade paperback; the main book, not a study guide.",
+        "verification_note": "Amazon product title, C. S. Lewis author byline, and Paperback format were read directly; matches the publisher paperback record.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://www.amazon.com/dp/0060652926"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "HarperOne trade paperback; the main book, not a study guide."
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
+    },
+    {
+      "id": "lewis-screwtape-letters",
+      "title": "The Screwtape Letters",
+      "subtitle": null,
+      "author": "C. S. Lewis",
+      "category": "Christian imagination",
+      "description": "Fictional correspondence between two tempters exposes ordinary spiritual distractions, self-deception, and habits that quietly pull people away from God.",
+      "reader": "Adults comfortable with irony and reflective discussion",
+      "difficulty": "Moderate",
+      "context_note": "Satirical fiction told through a devil's unreliable perspective; readers must recognize the deliberate reversal of good and evil.",
+      "source_label": "ChurchSource / HarperCollins",
+      "url": "https://churchsource.com/products/the-screwtape-letters-1",
+      "sources": [
+        {
+          "title": "ChurchSource / HarperCollins book page",
+          "url": "https://churchsource.com/products/the-screwtape-letters-1"
+        }
+      ],
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
+      "edition": null,
+      "amazon": {
+        "url": "https://www.amazon.com/dp/0060652934",
+        "kind": "product",
+        "asin": "0060652934",
+        "format": "Paperback",
+        "edition_note": "HarperOne paperback; the primary work, not a workbook or dramatization.",
+        "verification_note": "Amazon product title, C. S. Lewis author byline, and Paperback format were read directly.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://www.amazon.com/dp/0060652934"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "HarperOne paperback; the primary work, not a workbook or dramatization."
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
+    },
+    {
+      "id": "lewis-great-divorce",
+      "title": "The Great Divorce",
+      "subtitle": null,
+      "author": "C. S. Lewis",
+      "category": "Christian imagination",
+      "description": "An imagined journey between hell and heaven explores the stubborn attachments, evasions, and choices that keep people from receiving grace.",
+      "reader": "Adults interested in allegory and guided theological conversation",
+      "difficulty": "Moderate",
+      "context_note": "Fable and allegory about judgment and grace; present its imagined afterlife as fiction, not a literal account of heaven and hell.",
+      "source_label": "ChurchSource / HarperCollins",
+      "url": "https://churchsource.com/products/the-great-divorce",
+      "sources": [
+        {
+          "title": "ChurchSource / HarperCollins book page",
+          "url": "https://churchsource.com/products/the-great-divorce"
+        }
+      ],
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
+      "edition": null,
+      "amazon": {
+        "url": "https://www.amazon.com/dp/0060652950",
+        "kind": "product",
+        "asin": "0060652950",
+        "format": "Paperback",
+        "edition_note": "HarperOne trade paperback; the main book.",
+        "verification_note": "Amazon product title, C. S. Lewis author byline, and Paperback format were read directly; matches the publisher paperback record.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://www.amazon.com/dp/0060652950"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "HarperOne trade paperback; the main book."
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
+    },
+    {
+      "id": "tozer-knowledge-holy",
+      "title": "The Knowledge of the Holy",
+      "subtitle": null,
+      "author": "A. W. Tozer",
+      "category": "Knowing God",
+      "description": "Reflects on God's character and majesty, connecting what Christians believe about him with reverence, prayer, worship, and daily life.",
+      "reader": "Adults seeking thoughtful devotional reading about God's attributes",
+      "difficulty": "Moderate",
+      "context_note": "Devotional theology focused on God's attributes; a short book suited to slow reflection rather than hurried reading.",
+      "source_label": "ChurchSource / HarperCollins",
+      "url": "https://churchsource.com/products/the-knowledge-of-the-holy",
+      "sources": [
+        {
+          "title": "ChurchSource / HarperCollins book page",
+          "url": "https://churchsource.com/products/the-knowledge-of-the-holy"
+        },
+        {
+          "title": "Lutterworth Press edition description",
+          "url": "https://boydellandbrewer.com/book/the-knowledge-of-the-holy-9780718895310/"
+        }
+      ],
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
+      "edition": null,
+      "amazon": {
+        "url": "https://www.amazon.com/dp/0060684127",
+        "kind": "product",
+        "asin": "0060684127",
+        "format": "Paperback",
+        "edition_note": "Paperback listed as The Knowledge of the Holy: The Attributes of God: Their Meaning in the Christian Life.",
+        "verification_note": "Amazon product title, A. W. Tozer author byline, and Paperback format were read directly. The descriptive product URL loaded even though the short URL initially had a web-cache miss.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://www.amazon.com/Knowledge-Holy-Attributes-Meaning-Christian/dp/0060684127"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "Paperback listed as The Knowledge of the Holy: The Attributes of God: Their Meaning in the Christian Life."
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
+    },
+    {
+      "id": "tozer-pursuit-god",
+      "title": "The Pursuit of God",
+      "subtitle": null,
+      "author": "A. W. Tozer",
+      "category": "Prayer and spiritual growth",
+      "description": "Calls readers to seek God wholeheartedly, surrender competing attachments, and cultivate humility, attentive prayer, and awareness of his presence.",
+      "reader": "Adults seeking renewed devotion; useful for mentoring conversations",
+      "difficulty": "Moderate",
+      "context_note": "Devotional exhortation with contemplative language; review its treatment of hearing God's voice when planning church discussion.",
+      "source_label": "Moody Publishers",
+      "url": "https://www.moodypublishers.com/the-pursuit-of-god",
+      "sources": [
+        {
+          "title": "Moody Publishers book page and contents",
+          "url": "https://www.moodypublishers.com/the-pursuit-of-god"
+        }
+      ],
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
+      "edition": null,
+      "amazon": {
+        "url": "https://www.amazon.com/dp/1600660037",
+        "kind": "product",
+        "asin": "1600660037",
+        "format": "Paperback",
+        "edition_note": "Moody paperback listed as The Pursuit of God: The Human Thirst for the Divine; matches the publisher edition identifier.",
+        "verification_note": "Amazon product title, A W Tozer author byline, and Paperback format were read directly; checked against Moody’s main-book listing.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://www.amazon.com/dp/1600660037"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "Moody paperback listed as The Pursuit of God: The Human Thirst for the Divine; matches the publisher edition identifier."
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
+    },
+    {
+      "id": "packer-knowing-god",
+      "title": "Knowing God",
+      "subtitle": null,
+      "author": "J. I. Packer",
+      "category": "Knowing God",
+      "description": "Connects careful study of God's character with personal trust, worship, adoption in Christ, and confidence in his faithfulness through trials.",
+      "reader": "Adults ready for sustained theological reading or a guided study group",
+      "difficulty": "Moderate to demanding",
+      "context_note": "Substantial devotional theology; current publisher edition is the 50th Anniversary Edition, distinct from its companion study guide and devotional journal.",
+      "source_label": "InterVarsity Press",
+      "url": "https://ivpress.com/knowing-god",
+      "sources": [
+        {
+          "title": "InterVarsity Press book page and contents",
+          "url": "https://ivpress.com/knowing-god"
+        }
+      ],
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
+      "edition": null,
+      "amazon": {
+        "url": "https://www.amazon.com/dp/1514007762",
+        "kind": "product",
+        "asin": "1514007762",
+        "format": "Paperback",
+        "edition_note": "IVP revised 50th Anniversary Edition, 2023 paperback; Kevin J. Vanhoozer provides the foreword.",
+        "verification_note": "Amazon title, J. I. Packer author byline, foreword contributor, Paperback format, publication date, and revised 50th Anniversary edition were read directly and match IVP.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://www.amazon.com/dp/1514007762"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "IVP revised 50th Anniversary Edition, 2023 paperback; Kevin J. Vanhoozer provides the foreword."
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
+    },
+    {
+      "id": "packer-evangelism-sovereignty",
+      "title": "Evangelism and the Sovereignty of God",
+      "subtitle": null,
+      "author": "J. I. Packer",
+      "category": "Discipleship and mission",
+      "description": "Explains how confidence in God's sovereignty supports evangelism, holding together human responsibility, faithful gospel witness, and dependence on God's work.",
+      "reader": "Deacons, teachers, ministry leaders, and adults asking how sovereignty relates to sharing the gospel",
+      "difficulty": "Moderate",
+      "context_note": "Focused theological argument on divine sovereignty and human responsibility; a discussion candidate rather than a step-by-step outreach workbook.",
+      "source_label": "InterVarsity Press",
+      "url": "https://www.ivpress.com/evangelism-and-the-sovereignty-of-god",
+      "sources": [
+        {
+          "title": "InterVarsity Press book page and contents",
+          "url": "https://www.ivpress.com/evangelism-and-the-sovereignty-of-god"
+        }
+      ],
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
+      "edition": null,
+      "amazon": {
+        "url": "https://www.amazon.com/dp/083083799X",
+        "kind": "product",
+        "asin": "083083799X",
+        "format": "Paperback",
+        "edition_note": "IVP revised edition, 2012 paperback; Mark Dever provides the foreword.",
+        "verification_note": "Amazon title, J. I. Packer byline, and Paperback format were read directly. IVP identifies Mark Dever as foreword contributor; Amazon merges Author/Foreword labels for both contributors.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://www.amazon.com/Evangelism-Sovereignty-God-J-Packer/dp/083083799X"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "IVP revised edition, 2012 paperback; Mark Dever provides the foreword."
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
+    },
+    {
+      "id": "sproul-holiness-god",
+      "title": "The Holiness of God",
+      "subtitle": null,
+      "author": "R. C. Sproul",
+      "category": "Knowing God",
+      "description": "Explores God's holiness and the human response to it, inviting deeper reverence, renewed worship, and a life shaped by his character.",
+      "reader": "Adults beginning doctrinal study or seeking a deeper understanding of holiness",
+      "difficulty": "Moderate",
+      "context_note": "Theology for general readers using biblical encounters with God's holiness; choose the book, not the separate teaching series with the same title.",
+      "source_label": "Ligonier Ministries",
+      "url": "https://store.ligonier.org/the-holiness-of-god-paperback",
+      "sources": [
+        {
+          "title": "Ligonier Ministries book page",
+          "url": "https://store.ligonier.org/the-holiness-of-god-paperback"
+        }
+      ],
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
+      "edition": null,
+      "amazon": {
+        "url": "https://www.amazon.com/dp/0842339655",
+        "kind": "product",
+        "asin": "0842339655",
+        "format": "Paperback",
+        "edition_note": "Tyndale revised paperback, not the separate study guide or newer 40th-anniversary edition.",
+        "verification_note": "Amazon title, R. C. Sproul author byline, Paperback format, and Revised edition were read directly; edition identifier matches Ligonier’s paperback. Ligonier and Amazon display different publication dates, so no edition-year claim is made.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://www.amazon.com/dp/0842339655"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "Tyndale revised paperback, not the separate study guide or newer 40th-anniversary edition."
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
+    },
+    {
+      "id": "sproul-essential-truths",
+      "title": "Essential Truths of the Christian Faith",
+      "subtitle": null,
+      "author": "R. C. Sproul",
+      "category": "Faith foundations",
+      "description": "Introduces more than one hundred Christian doctrines through concise explanations and familiar illustrations, providing a reference for growing theological understanding.",
+      "reader": "Adults and teachers wanting a topical doctrine reference",
+      "difficulty": "Approachable reference",
+      "context_note": "A topical theological reference rather than a continuous narrative; review individual doctrinal entries for fit with Bluff Creek's teaching.",
+      "source_label": "Tyndale",
+      "url": "https://www.tyndale.com/p/essential-truths-of-the-christian-faith/9780842320016",
+      "sources": [
+        {
+          "title": "Tyndale book page",
+          "url": "https://www.tyndale.com/p/essential-truths-of-the-christian-faith/9780842320016"
+        }
+      ],
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
+      "edition": null,
+      "amazon": {
+        "url": "https://www.amazon.com/dp/0842320016",
+        "kind": "product",
+        "asin": "0842320016",
+        "format": "Paperback",
+        "edition_note": "Tyndale paperback book, not the similarly named multi-speaker teaching series.",
+        "verification_note": "Amazon product title, R. C. Sproul author byline, and Paperback format were read directly; matches Tyndale’s book edition identifier.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://www.amazon.com/Essential-Truths-Christian-Faith-Sproul/dp/0842320016"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "Tyndale paperback book, not the similarly named multi-speaker teaching series."
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
+    },
+    {
+      "id": "platt-radical",
+      "title": "Radical",
+      "subtitle": "Taking Back Your Faith from the American Dream",
+      "author": "David Platt",
+      "category": "Discipleship and mission",
+      "description": "Challenges comfortable Christianity through Jesus’ call to costly discipleship, connecting everyday choices with generosity, mission, and obedience.",
+      "reader": "Adults and older teens considering discipleship and mission",
+      "difficulty": "Accessible; searching application",
+      "context_note": "An exhortation to examine priorities, including a yearlong practical response; useful for a discussion group.",
+      "source_label": "Publisher: Penguin Random House / Multnomah",
+      "url": "https://penguinrandomhouselibrary.com/book/?isbn=9781601422217",
+      "sources": [
+        {
+          "title": "Publisher: Penguin Random House / Multnomah",
+          "url": "https://penguinrandomhouselibrary.com/book/?isbn=9781601422217"
+        }
+      ],
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
+      "edition": "2010 paperback",
+      "amazon": {
+        "url": "https://www.amazon.com/dp/1601422210",
+        "kind": "product",
+        "asin": "1601422210",
+        "format": "Paperback",
+        "edition_note": "2010 Multnomah paperback",
+        "verification_note": "Exact Amazon product destination observed in the author ministry’s outbound link and matched against official publisher title/edition metadata. Amazon page content could not be fetched; current price and availability are not asserted.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://radical.net/book/radical/"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "2010 Multnomah paperback"
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
+    },
+    {
+      "id": "platt-follow-me",
+      "title": "Follow Me",
+      "subtitle": "A Call to Die. A Call to Live.",
+      "author": "David Platt",
+      "category": "Discipleship and mission",
+      "description": "Examines Jesus’ invitation to follow him, emphasizing transformed allegiance, obedience, evangelism, and the difference between cultural identity and discipleship.",
+      "reader": "Adults exploring what Christian discipleship means",
+      "difficulty": "Accessible; searching application",
+      "context_note": "A direct challenge about conversion and discipleship; the publisher provides a discussion guide.",
+      "source_label": "Publisher: Tyndale",
+      "url": "https://www.tyndale.com/p/follow-me/9781414373287",
+      "sources": [
+        {
+          "title": "Publisher: Tyndale",
+          "url": "https://www.tyndale.com/p/follow-me/9781414373287"
+        }
+      ],
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
+      "edition": "2013 softcover",
+      "amazon": {
+        "url": "https://www.amazon.com/dp/1414373287",
+        "kind": "product",
+        "asin": "1414373287",
+        "format": "Paperback",
+        "edition_note": "2013 Tyndale softcover",
+        "verification_note": "Exact Amazon product destination observed in the author ministry’s outbound link and matched against official publisher title/edition metadata. Amazon page content could not be fetched; current price and availability are not asserted.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://radical.net/book/follow-me/"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "2013 Tyndale softcover"
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
+    },
+    {
+      "id": "piper-desiring-god",
+      "title": "Desiring God",
+      "subtitle": "Meditations of a Christian Hedonist",
+      "author": "John Piper",
+      "category": "Knowing God and spiritual growth",
+      "description": "Develops Piper’s argument that delight in God and glorifying God belong together, applying that conviction to the Christian life.",
+      "reader": "Readers wanting sustained theological reflection",
+      "difficulty": "Intermediate; sustained argument",
+      "context_note": "Introduces Piper’s particular framework of Christian Hedonism; a longer theological treatment than his shorter devotional works.",
+      "source_label": "Author’s ministry: Desiring God",
+      "url": "https://www.desiringgod.org/books/desiring-god",
+      "sources": [
+        {
+          "title": "Author’s ministry: Desiring God",
+          "url": "https://www.desiringgod.org/books/desiring-god"
+        },
+        {
+          "title": "Publisher: Crossway 2025 catalog",
+          "url": "https://uploads.crossway.org/extra/sf25-new-books.pdf"
+        }
+      ],
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
+      "edition": "Revised edition, 2025 hardcover",
+      "amazon": {
+        "url": "https://www.amazon.com/s?i=stripbooks&k=Desiring+God+Meditations+of+a+Christian+Hedonist+John+Piper+1433595974",
+        "kind": "search",
+        "asin": null,
+        "format": "Search; choose the full book and desired format",
+        "edition_note": "Revised edition, 2025 hardcover",
+        "verification_note": "Crossway’s Amazon button targets an ISBN search (1433595974). No direct Amazon product page was verified.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://www.crossway.org/books/desiring-god-hcj/"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "Search by title and author; confirm the edition before buying."
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
+    },
+    {
+      "id": "piper-dont-waste",
+      "title": "Don’t Waste Your Life",
+      "subtitle": null,
+      "author": "John Piper",
+      "category": "Purpose and Christian living",
+      "description": "Urges readers to place Christ’s glory above comfort and achievement, pursuing a purposeful life of sacrificial love and eternal significance.",
+      "reader": "Older teens, young adults, and adults rethinking priorities",
+      "difficulty": "Accessible; challenging application",
+      "context_note": "Written with the next generation especially in view; treats vocation, risk, and sacrifice through Piper’s joy-in-God emphasis.",
+      "source_label": "Author’s ministry: Desiring God",
+      "url": "https://www.desiringgod.org/books/dont-waste-your-life",
+      "sources": [
+        {
+          "title": "Author’s ministry: Desiring God",
+          "url": "https://www.desiringgod.org/books/dont-waste-your-life"
+        }
+      ],
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
+      "edition": "2010 edition listed by the author’s ministry",
+      "amazon": {
+        "url": "https://www.amazon.com/s?i=stripbooks&k=Don%E2%80%99t+Waste+Your+Life+John+Piper",
+        "kind": "search",
+        "asin": null,
+        "format": "Search; choose the full book and desired format",
+        "edition_note": "Full trade book; select desired current print edition",
+        "verification_note": "Crossway’s older paperback page links to an ISBN search and marks that edition out of print. Use title/author search; no current product ASIN verified.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://www.crossway.org/books/dont-waste-your-life-tpb/"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "Search by title and author; confirm the edition before buying."
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
+    },
+    {
+      "id": "piper-seeing-savoring",
+      "title": "Seeing and Savoring Jesus Christ",
+      "subtitle": null,
+      "author": "John Piper",
+      "category": "Jesus and devotional reading",
+      "description": "Invites readers to contemplate the biblical portrait of Jesus, seeking deeper understanding of his character and greater delight in him.",
+      "reader": "Newer readers and believers seeking Christ-focused reflection",
+      "difficulty": "Accessible",
+      "context_note": "A shorter introduction to Piper centered on the person of Christ, rather than a systematic theology.",
+      "source_label": "Author’s ministry: Desiring God",
+      "url": "https://www.desiringgod.org/books/seeing-and-savoring-jesus-christ",
+      "sources": [
+        {
+          "title": "Author’s ministry: Desiring God",
+          "url": "https://www.desiringgod.org/books/seeing-and-savoring-jesus-christ"
+        },
+        {
+          "title": "Publisher: Crossway",
+          "url": "https://www.crossway.org/books/seeing-and-savoring-jesus-christ-tpb/"
+        }
+      ],
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
+      "edition": "Revised edition, 2004 paperback",
+      "amazon": {
+        "url": "https://www.amazon.com/s?i=stripbooks&k=Seeing+and+Savoring+Jesus+Christ+John+Piper+1581346239",
+        "kind": "search",
+        "asin": null,
+        "format": "Search; choose the full book and desired format",
+        "edition_note": "Revised edition, 2004 paperback",
+        "verification_note": "Crossway’s Amazon button targets an ISBN search (1581346239). No direct Amazon product page was verified.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://www.crossway.org/books/seeing-and-savoring-jesus-christ-tpb/"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "Search by title and author; confirm the edition before buying."
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
+    },
+    {
+      "id": "permenter-spiritual-operators-manual",
+      "title": "The Spiritual Operator’s Manual",
+      "subtitle": "The C.O.V.E.N.A.N.T. Method for Text-Driven, Christ-Exalting, Mission-Ready Preaching",
+      "author": "Cole Permenter",
+      "category": "Bible study and teaching",
+      "description": "Teaches a repeatable process for interpreting Scripture faithfully and shaping Christ-centered lessons, preaching, and everyday application.",
+      "reader": "Bible teachers, small-group leaders, pastors, and serious Bible readers",
+      "difficulty": "Study / leaders",
+      "context_note": "A method guide for studying and teaching Scripture. The linked author page offers the digital edition; check formats there.",
+      "source_label": "BASE 1520 · author/publisher",
+      "url": "https://www.base1520.com/spiritual-operators-manual/",
+      "sources": [
+        {
+          "title": "BASE 1520 · author/publisher",
+          "url": "https://www.base1520.com/spiritual-operators-manual/"
+        }
+      ],
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
+      "edition": "Digital edition; author page checked September 7, 2026",
+      "amazon": {
+        "url": "https://www.amazon.com/s?i=stripbooks&k=The+Spiritual+Operator%E2%80%99s+Manual+Cole+Permenter",
+        "kind": "search",
+        "asin": null,
+        "format": "Search; listing not verified",
+        "edition_note": "Retain the verified author page for the digital book; no Amazon edition verified.",
+        "verification_note": "Exact-title/author Amazon searches did not establish a product listing. This is a labeled search, not a verified sale page.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://www.base1520.com/spiritual-operators-manual/"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "Listing not verified. Author’s digital edition is linked above."
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
+    },
+    {
+      "id": "gallaty-growing-up",
+      "title": "Growing Up",
+      "subtitle": "How to Be a Disciple Who Makes Disciples",
+      "author": "Robby Gallaty",
+      "category": "Discipleship and group leadership",
+      "description": "Offers a practical approach to spiritual growth through discipleship groups, helping believers develop habits and guide others toward maturity.",
+      "reader": "New disciples, mentors, and small-group leaders",
+      "difficulty": "Accessible and practical",
+      "context_note": "Uses Gallaty’s D-Group model; select the revised and updated edition when linking a purchase.",
+      "source_label": "Publisher: B&H",
+      "url": "https://www.bhpublishinggroup.com/product/growing-up-revised-and-updated-2/",
+      "sources": [
+        {
+          "title": "Publisher: B&H",
+          "url": "https://www.bhpublishinggroup.com/product/growing-up-revised-and-updated-2/"
+        }
+      ],
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
+      "edition": "Revised and Updated, 2022",
+      "amazon": {
+        "url": "https://www.amazon.com/s?i=stripbooks&k=Growing+Up+How+to+Be+a+Disciple+Who+Makes+Disciples+Robby+Gallaty+1087768225",
+        "kind": "search",
+        "asin": null,
+        "format": "Search; choose the full book and desired format",
+        "edition_note": "Revised and Updated, 2022 paperback",
+        "verification_note": "2022 title and edition verified at B&H. Replicate’s direct Amazon link points to the older 2013 edition, so this search targets the requested revised edition instead.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://www.bhpublishinggroup.com/product/growing-up-revised-and-updated-2/"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "Search by title and author; confirm the edition before buying."
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
+    },
+    {
+      "id": "gallaty-rediscovering",
+      "title": "Rediscovering Discipleship",
+      "subtitle": "Making Jesus’ Final Words Our First Work",
+      "author": "Robby Gallaty",
+      "category": "Discipleship and group leadership",
+      "description": "Combines historical examples with practical guidance for overcoming obstacles to disciple making and building relationships that help others grow.",
+      "reader": "Deacons, teachers, ministry leaders, and prospective mentors",
+      "difficulty": "Accessible to intermediate",
+      "context_note": "Offers ministry history and a step-by-step model for multiplying disciples; useful for leader preparation.",
+      "source_label": "Publisher: Zondervan Academic",
+      "url": "https://zondervanacademic.com/products/rediscovering-discipleship",
+      "sources": [
+        {
+          "title": "Publisher: Zondervan Academic",
+          "url": "https://zondervanacademic.com/products/rediscovering-discipleship"
+        }
+      ],
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
+      "edition": "2015 softcover",
+      "amazon": {
+        "url": "https://www.amazon.com/dp/0310521289",
+        "kind": "product",
+        "asin": "0310521289",
+        "format": "Paperback",
+        "edition_note": "2015 Zondervan softcover",
+        "verification_note": "Exact Amazon product destination observed in the author ministry’s outbound link and matched against official publisher title/edition metadata. Amazon page content could not be fetched; current price and availability are not asserted.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://replicate.org/books"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "2015 Zondervan softcover"
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
+    },
+    {
+      "id": "merida-love-your-church",
+      "title": "Love Your Church",
+      "subtitle": "8 Great Things About Being a Church Member",
+      "author": "Tony Merida",
+      "category": "Church life",
+      "description": "Explores belonging, hospitality, service, care, and mission as practical ways ordinary members can participate in the life of their church.",
+      "reader": "New members, church members, and small groups",
+      "difficulty": "Accessible",
+      "context_note": "Includes a discussion guide and publisher-provided group resources. Ray Ortlund wrote the foreword; he is not a coauthor.",
+      "source_label": "The Good Book Company",
+      "url": "https://www.thegoodbook.com/ministry/love-your-church",
+      "sources": [
+        {
+          "title": "The Good Book Company",
+          "url": "https://www.thegoodbook.com/ministry/love-your-church"
+        }
+      ],
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
+      "edition": "2021 paperback",
+      "amazon": {
+        "url": "https://www.amazon.com/s?i=stripbooks&k=Love+Your+Church+8+Great+Things+About+Being+a+Church+Member+Tony+Merida+9781784986087",
+        "kind": "search",
+        "asin": null,
+        "format": "Search; choose the full book and desired format",
+        "edition_note": "2021 paperback",
+        "verification_note": "Publisher confirms the book, author, subtitle, and edition; no direct Amazon product page verified.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://www.thegoodbook.com/love-your-church"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "Search by title and author; confirm the edition before buying."
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
+    },
+    {
+      "id": "merida-ordinary",
+      "title": "Ordinary",
+      "subtitle": "How to Turn the World Upside Down",
+      "author": "Tony Merida",
+      "category": "Christian living and service",
+      "description": "Connects everyday Christian faithfulness with hospitality, care for vulnerable neighbors, humble service, and sharing the gospel in ordinary relationships.",
+      "reader": "Church members and ministry volunteers",
+      "difficulty": "Accessible",
+      "context_note": "Select the trade book with this subtitle. Lifeway also sells a distinct Ordinary Bible Study Book with different content and ISBN.",
+      "source_label": "Lifeway / B&H",
+      "url": "https://www.lifeway.com/en/product/ebook-ordinary-P005665762",
+      "sources": [
+        {
+          "title": "Lifeway / B&H",
+          "url": "https://www.lifeway.com/en/product/ebook-ordinary-P005665762"
+        }
+      ],
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
+      "edition": "2015 eBook listing; trade book, not the separate Bible study workbook",
+      "amazon": {
+        "url": "https://www.amazon.com/s?i=stripbooks&k=Ordinary+How+to+Turn+the+World+Upside+Down+Tony+Merida",
+        "kind": "search",
+        "asin": null,
+        "format": "Search; choose the full book and desired format",
+        "edition_note": "Full trade book, not Ordinary Bible Study Book",
+        "verification_note": "Publisher-linked source confirms the trade book’s subtitle and author. No direct Amazon product page verified; check title/subtitle to avoid the distinct Bible study workbook.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://www.lifeway.com/en/product/ebook-ordinary-P005665762"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "Search by title and author; confirm the edition before buying."
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
+    },
+    {
+      "id": "fee-stuart-all-its-worth",
+      "title": "How to Read the Bible for All Its Worth",
+      "subtitle": null,
+      "author": "Gordon D. Fee and Douglas Stuart",
+      "category": "Bible study tools",
+      "description": "Introduces interpretation through biblical genres, helping readers consider original context before applying passages to Christian life today.",
+      "reader": "Growing Bible readers, teachers, and study leaders",
+      "difficulty": "Intermediate",
+      "context_note": "A guide to reading genres and interpreting Scripture, not a devotional. The fourth-edition publisher listing has no separate subtitle.",
+      "source_label": "Zondervan Academic",
+      "url": "https://zondervanacademic.com/products/how-to-read-the-bible-for-all-its-worth-4th",
+      "sources": [
+        {
+          "title": "Zondervan Academic",
+          "url": "https://zondervanacademic.com/products/how-to-read-the-bible-for-all-its-worth-4th"
+        }
+      ],
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
+      "edition": "Fourth Edition (2014)",
+      "amazon": {
+        "url": "https://www.amazon.com/s?i=stripbooks&k=How+to+Read+the+Bible+for+All+Its+Worth+Gordon+D.+Fee+and+Douglas+Stuart+9780310517825",
+        "kind": "search",
+        "asin": null,
+        "format": "Search; choose the full book and desired format",
+        "edition_note": "Fourth Edition, 2014 paperback",
+        "verification_note": "Publisher confirms the book and fourth edition. No direct Amazon product page verified.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://zondervanacademic.com/products/how-to-read-the-bible-for-all-its-worth-4th"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "Search by title and author; confirm the edition before buying."
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
+    },
+    {
+      "id": "fee-stuart-book-by-book",
+      "title": "How to Read the Bible Book by Book",
+      "subtitle": "A Guided Tour",
+      "author": "Gordon D. Fee and Douglas Stuart",
+      "category": "Bible background and overview",
+      "description": "Provides background, structure, and reading guidance for each biblical book, helping readers follow its message within Scripture’s larger story.",
+      "reader": "Bible readers wanting context and Sunday school teachers",
+      "difficulty": "Accessible reference",
+      "context_note": "A reading companion covering all 66 books, including Habakkuk. It supplies book context rather than a full verse-by-verse commentary. Audiobook narrator Trevor Thompson is not a print-book coauthor.",
+      "source_label": "Zondervan Academic",
+      "url": "https://zondervanacademic.com/products/how-to-read-the-bible-book-by-book",
+      "sources": [
+        {
+          "title": "Zondervan Academic",
+          "url": "https://zondervanacademic.com/products/how-to-read-the-bible-book-by-book"
+        }
+      ],
+      "approved": true,
+      "approval_note": "Approved by Pastor Cole with the full 21-title list for the app; deployment is not authorized.",
+      "edition": "2014 softcover publisher listing",
+      "amazon": {
+        "url": "https://www.amazon.com/s?i=stripbooks&k=How+to+Read+the+Bible+Book+by+Book+A+Guided+Tour+Gordon+D.+Fee+and+Douglas+Stuart+9780310518082",
+        "kind": "search",
+        "asin": null,
+        "format": "Search; choose the full book and desired format",
+        "edition_note": "2014 softcover; A Guided Tour",
+        "verification_note": "Publisher confirms the book and authors. No direct Amazon product page verified; Trevor Thompson is an audiobook narrator, not an additional print author.",
+        "sources": [
+          {
+            "title": "Amazon destination / edition evidence",
+            "url": "https://zondervanacademic.com/products/how-to-read-the-bible-book-by-book"
+          }
+        ],
+        "checked_on": "2026-09-07",
+        "display_note": "Search by title and author; confirm the edition before buying."
+      },
+      "approved_on": "2026-09-07",
+      "approval_method": "explicit_user_confirmation_in_chat",
+      "approval_version": "2026-09-07-v1"
+    }
+  ],
+  "approval": {
+    "approved_on": "2026-09-07",
+    "method": "explicit_user_confirmation_in_chat",
+    "catalog_version": "2026-09-07-v1",
+    "scope": "All 21 listed titles approved for inclusion in the app; deployment is not authorized.",
+    "deployment_authorized": false
+  }
+}

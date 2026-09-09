@@ -1,0 +1,2 @@
+# Preserve RFC 5545 line endings in the generated calendar download.
+/calendar.ics -text whitespace=cr-at-eol

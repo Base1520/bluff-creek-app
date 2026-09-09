@@ -1,0 +1,14 @@
+{
+  "format_version": 1,
+  "state": "prepared_not_applied",
+  "baseline_manifest_sha256": "089264fcadda508ff4f971148a1c0a89af59ab8fcf12df680ffebdd49c6fa107",
+  "migration": {
+    "path": "tools/office-account-guard/migrations/20260909024020_require_eligible_staff_auth_account.sql",
+    "sha256": "7530eb7cd955ec1522943a179aebc03088a3ebc8126a4f4300e08eb5695bdc7b"
+  },
+  "changes": [
+    "private.current_staff_role definition only"
+  ],
+  "active_migration_manifest_changed": false,
+  "hosted_applied": false
+}

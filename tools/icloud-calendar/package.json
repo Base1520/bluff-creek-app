@@ -1,0 +1,10 @@
+{
+  "name": "creek-icloud-calendar-importer",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Local-only allowlisted church calendar import",
+  "engines": { "node": ">=20" },
+  "scripts": { "test": "node --test test/*.test.mjs" },
+  "dependencies": { "ical.js": "2.2.1" }
+}

@@ -1,0 +1,119 @@
+{
+  "verified_at_utc": "2026-09-09T11:03:10.640595+00:00",
+  "status": "passed_local_guard_http_only",
+  "pure_tests": {
+    "preparation": 11,
+    "service_guards": 21,
+    "total": 32
+  },
+  "preparation": {
+    "migrations": 8,
+    "config_sha256": "1cd09cbbe5787004dca031329c71e8de5242b54c89c586cf904623b5b2521a73",
+    "optional_sql_sha256": "7530eb7cd955ec1522943a179aebc03088a3ebc8126a4f4300e08eb5695bdc7b",
+    "active_manifest_unchanged": true,
+    "active_migration_count": 7
+  },
+  "http": {
+    "kind": "optional-account-guard-local-http",
+    "project": "bcbc-office-account-guard-v1",
+    "checks": [
+      {
+        "check": "virgin exact-eight local stack and current account guard verified",
+        "status": "passed"
+      },
+      {
+        "check": "four confirmed fictional password sessions and staff role controls",
+        "status": "passed"
+      },
+      {
+        "check": "real private original and editor write controls with viewer and nonstaff denial",
+        "status": "passed"
+      },
+      {
+        "check": "ban denies existing-token office operations while earlier signed bearer link remains usable",
+        "status": "passed"
+      },
+      {
+        "check": "unban restores existing-token readiness reads and new signing",
+        "status": "passed"
+      },
+      {
+        "check": "same-token role removal denies protected record and Storage operations",
+        "status": "passed"
+      },
+      {
+        "check": "public intake remains paused and denied attempts leave retained content unchanged",
+        "status": "passed"
+      },
+      {
+        "check": "all four fixtures contained with zero roles sessions and intake",
+        "status": "passed"
+      }
+    ],
+    "cleanup": [
+      {
+        "fixture_role": "admin",
+        "api_logout": "confirmed",
+        "role_and_session_cleanup": "confirmed",
+        "auth_ban": "confirmed"
+      },
+      {
+        "fixture_role": "editor",
+        "api_logout": "confirmed",
+        "role_and_session_cleanup": "confirmed",
+        "auth_ban": "confirmed"
+      },
+      {
+        "fixture_role": "viewer",
+        "api_logout": "confirmed",
+        "role_and_session_cleanup": "confirmed",
+        "auth_ban": "confirmed"
+      },
+      {
+        "fixture_role": "nonstaff",
+        "api_logout": "confirmed",
+        "role_and_session_cleanup": "confirmed",
+        "auth_ban": "confirmed"
+      }
+    ],
+    "hosted_calls": false,
+    "guard_applied_by_checker": false,
+    "guard_preinstalled_in_new_local_stack": true,
+    "actual_http_pre_guard_reproduction": false,
+    "signed_url_revocation_claimed": false,
+    "limits": [
+      "Local real-service eligibility checks only; not hosted, email, browser, phone or recovery acceptance.",
+      "The optional guard was present from startup; historical pre-guard reproduction is PGlite only.",
+      "Previously issued signed URLs remain bearer links until expiry; this is not global JWT/session revocation.",
+      "Confirmed fictional accounts and records remain; a failed or interrupted run must never be blindly repeated."
+    ],
+    "final_counts": {
+      "auth_users": 4,
+      "banned_users": 4,
+      "staff_roles": 0,
+      "sessions": 0,
+      "refresh_tokens": 0,
+      "contacts": 1,
+      "documents": 1,
+      "objects": 1,
+      "audit_rows": 3,
+      "app_connections": 0
+    },
+    "passed": 8,
+    "failed": 0,
+    "cleanup_unconfirmed": false,
+    "status": "passed_local_guard_http_only"
+  },
+  "preservation": {
+    "status": "stopped_new_local_guard_stack",
+    "prior_projects_preserved": 6,
+    "prior_volumes_preserved": 12,
+    "new_volumes_retained": 2,
+    "hosted_calls": false,
+    "existing_demos_unchanged": true
+  },
+  "hosted_guard_applied": false,
+  "public_intake_activated": false,
+  "release_published": false,
+  "qr_ready": false
+}
