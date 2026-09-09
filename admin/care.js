@@ -179,6 +179,12 @@
     }
     function formRows(kind) { return kind === 'assignment' ? state.assignments : kind === 'guest' ? state.guests : kind === 'visit' ? state.visits : state.guidelines ? [state.guidelines] : []; }
     function payloadMatches(record, payload) { return !!record && !!payload && Object.keys(payload).every(function (key) { return record[key] === payload[key]; }); }
+    function needsUnloadWarning() {
+      var form = q('[data-care-form]');
+      return !!draft && (saving || draft.requiresRefresh || draft.conflict || !!form && JSON.stringify(values(form)) !== JSON.stringify(draft.initial || {}));
+    }
+    function warnUnload(event) { if (needsUnloadWarning()) { event.preventDefault(); event.returnValue = true; } }
+    function syncUnloadWarning() { doc.defaultView[needsUnloadWarning() ? 'addEventListener' : 'removeEventListener']('beforeunload', warnUnload); }
     function syncDraft() {
       var form = q('[data-care-form]');
       if (!form || !draft) return;
@@ -195,6 +201,7 @@
       if (draft.conflict) message.textContent = 'This record changed after you opened it. Your draft is retained. Close and reopen the record to review the saved version before editing.';
       else if (draft.requiresRefresh) message.textContent = 'This record could not be saved with confirmation. Your entries are retained. Refresh care to check whether it was saved before trying again.';
       else if (!ready || !writable()) message.textContent = 'The workspace connection could not be confirmed. Your draft is retained. Refresh care before saving.';
+      syncUnloadWarning();
     }
     function reconcileDraft() {
       if (!draft || !draft.requiresRefresh) return;
@@ -278,6 +285,7 @@
     function area(name, label, value, max) { return '<label class="care-wide">' + safe(label) + '<textarea name="' + name + '" maxlength="' + (max || 4000) + '">' + safe(value || '') + '</textarea></label>'; }
     function closeEditor(focus) {
       formVersion++; activeForm = null; formEpoch = null; saving = false; draft = null;
+      syncUnloadWarning();
       if (mounted) { q('.care-editor').replaceChildren(); q('.care-editor').hidden = true; }
       if (focus && returnFocus && returnFocus.isConnected) returnFocus.focus();
       else if (focus && mounted) q('[data-care-view="' + view + '"]').focus();
@@ -410,6 +418,7 @@
 
     function clear() {
       request++; formVersion++; activeForm = null; formEpoch = null; saving = false; draft = null; returnFocus = null;
+      syncUnloadWarning();
       state = { assignments: [], visits: [], guests: [], guidelines: null };
       view = 'followup'; search = ''; deacon = ''; careRole = ''; selectedPerson = ''; planStatus = ''; ready = false; loading = false; failed = false; dataEpoch = null; mountedEpoch = null; mountedOwner = null; mounted = false;
       host.replaceChildren(); publishSummary();
@@ -426,7 +435,7 @@
       if (target.dataset.careAction === 'retry') { if (!saving) options.refresh().catch(function () { tell('Care records could not load. Please try again.', true); }); return; }
       if (target.dataset.careAction) openEditor(target.dataset.careAction, target.dataset.contact || selectedPerson, target, target.dataset.careRole);
     });
-    host.addEventListener('input', function (event) { if (!allowed(context())) return; if (event.target.matches('[data-care-search]')) { search = event.target.value; renderLists(); } });
+    host.addEventListener('input', function (event) { if (!allowed(context())) return; if (event.target.matches('[data-care-search]')) { search = event.target.value; renderLists(); } if (event.target.closest('[data-care-form]')) syncUnloadWarning(); });
     host.addEventListener('change', function (event) {
       if (!allowed(context()) || saving || draft && draft.requiresRefresh) return;
       if (event.target.matches('[data-care-deacon]')) { deacon = event.target.value; renderLists(); }
@@ -438,6 +447,7 @@
         var rows = activeForm === 'assignment' ? state.assignments : state.guests;
         if (event.target.name === 'care_role' || rows.some(function (item) { return item.contact_id === id && (activeForm !== 'assignment' || roleOf(item) === role); })) openEditor(activeForm, id, returnFocus, role, true);
       }
+      syncUnloadWarning();
     });
     host.addEventListener('submit', save);
     return { load: load, render: render, clear: clear, selectPerson: selectPerson, openQueue: openQueue };

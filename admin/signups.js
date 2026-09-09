@@ -18,7 +18,17 @@
     function peopleAvailable() { return !options.peopleReady || options.peopleReady(); }
     function refreshRecords() { return options.refresh ? options.refresh() : load(context().epoch); }
     function pending(row) { return row.status === 'pending' || Number(row.version) > Number(row.reviewed_version || 0); }
-    function close(force) { if(review && review.busy && force!==true)return; review=null; formVersion++; if (dialog) { if (dialog.open) dialog.close(); dialog.remove(); dialog = null; } }
+    function reviewFingerprint() { return dialog ? JSON.stringify(Array.from(dialog.querySelectorAll('form [name]')).filter(function(node){return node.name!=='person_search';}).map(function(node){return [node.name,node.type==='checkbox'?node.checked:node.value];})) : ''; }
+    function reviewNeedsWarning() { return !!(review && dialog && dialog.querySelector('form') && (review.busy || review.requiresRefresh || review.conflict || (review.initialForm !== undefined && reviewFingerprint() !== review.initialForm))); }
+    function warnUnload(event) { if(reviewNeedsWarning()){event.preventDefault();event.returnValue=true;} }
+    function syncUnload() { doc.defaultView[reviewNeedsWarning()?'addEventListener':'removeEventListener']('beforeunload',warnUnload); }
+    function close(force) {
+      var state=review,token=formVersion;
+      if(review && review.busy && force!==true)return false;
+      if(force!==true && reviewNeedsWarning() && !doc.defaultView.confirm('Discard this unsaved signup review? If a save was uncertain, refresh and check the saved review before starting again.'))return false;
+      if(force!==true && (review!==state || formVersion!==token || review && review.busy))return false;
+      review=null;syncUnload();formVersion++;if(dialog){if(dialog.open)dialog.close();dialog.remove();dialog=null;}return true;
+    }
     function clear() { request++; close(true); rows = []; ready = false; failed = false; mounted = false; filter = 'pending'; term = ''; host.replaceChildren(); if (options.onCount) options.onCount(null); }
     function mount() {
       if (mounted) return;
@@ -59,6 +69,7 @@
       }
     }
     function syncReview() {
+      syncUnload();
       if(!dialog || !review)return;
       var blocked=review.busy || review.requiresRefresh || review.conflict || !ready || !current(review.epoch) || !peopleAvailable();
       dialog.querySelectorAll('input,select,textarea').forEach(function(node){node.disabled=blocked || (review.linked && ['contact_id','person_search'].includes(node.name));});
@@ -94,7 +105,10 @@
     function open(id) {
       var epoch = context().epoch, row = rows.find(function (r) { return r.id === id; });
       if (!current(epoch) || !ready || !peopleAvailable() || !row) return;
-      if(review && review.busy)return; close(true); var version = formVersion;
+      if(!close())return;
+      row=rows.find(function(r){return r.id===id;});
+      if(!current(epoch) || !ready || !peopleAvailable() || !row)return;
+      var version = formVersion;
       review={epoch:epoch,version:row.version,linked:!!row.contact_id,busy:false,requiresRefresh:false,conflict:false};
       dialog = doc.createElement('dialog'); dialog.dataset.signupId = row.id; dialog.className = 'signup-dialog'; dialog.setAttribute('aria-labelledby','signup-review-title');
       var isPending = pending(row), people = options.people();
@@ -116,6 +130,7 @@
         if (row.contact_id) { select.disabled = true; form.elements.person_search.disabled = true; }
         form.elements.person_search.oninput = function (e) { populate(e.target.value); };
         form.elements.staff_notes.value = row.staff_notes || '';
+        form.addEventListener('input',syncUnload);form.addEventListener('change',syncUnload);
         form.querySelector('[data-signup-retry]').onclick = function () { refreshRecords(); };
         form.onsubmit = async function (event) {
           event.preventDefault(); var save = form.querySelector('[type=submit]'), error = form.querySelector('[data-signup-error]');
@@ -140,7 +155,7 @@
       }
       dialog.querySelectorAll('[data-signup-close]').forEach(function (b) { b.onclick = close; });
       dialog.addEventListener('cancel',function(e){e.preventDefault();close();});
-      doc.body.appendChild(dialog); dialog.showModal();
+      review.initialForm=reviewFingerprint();doc.body.appendChild(dialog);dialog.showModal();syncUnload();
     }
     return {load:load,render:render,clear:clear,open:open};
   }
