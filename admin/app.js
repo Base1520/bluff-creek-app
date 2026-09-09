@@ -23,6 +23,24 @@
     var timer;
     return Promise.race([Promise.resolve(request), new Promise(function (_resolve, reject) { timer = window.setTimeout(function () { reject(new Error("The request timed out.")); }, 12000); })]).finally(function () { window.clearTimeout(timer); });
   }
+  function draftWrite(item, epoch, request, phase) {
+    var deadlineFinished = false;
+    item.unresolvedWrites = (item.unresolvedWrites || 0) + 1; item.writeRevision = (item.writeRevision || 0) + 1;
+    function settled() {
+      if (!current(epoch) || draft !== item) return;
+      item.unresolvedWrites--; item.writeRevision++;
+      // A deadline ends our wait, not the underlying request. A late settlement
+      // only asks for a fresh read; it never continues the abandoned save pipeline.
+      if (deadlineFinished) {
+        item.requiresRefresh = true; item.settlementNeedsRead = true;
+        if (phase === "upload" && !item.uploadVerified) item.uploadUncertain = true;
+        el("editor-error").textContent = "A previous save request settled. Refresh workspace again to check the saved record before continuing.";
+        syncEditor();
+      }
+    }
+    var tracked = Promise.resolve(request).then(function (value) { settled(); return value; }, function (error) { settled(); throw error; });
+    return deadline(tracked).finally(function () { deadlineFinished = true; });
+  }
   function hidden(node, value) { if (node) { node.hidden = value; node.classList.toggle("hidden", value); } }
   function loopback(address) { return ["http:", "https:"].includes(address.protocol) && ["127.0.0.1", "[::1]", "localhost"].includes(address.hostname) && !!address.port && !address.username && !address.password; }
   function documentUrl(value) {
@@ -48,12 +66,14 @@
   function current(epoch) { return epoch === authEpoch && !!session && !!role; }
   function requireCurrent(epoch) { if (!current(epoch)) throw new Error("Your session changed. Sign in again before saving."); }
   function editorSnapshot() { return Array.from(el("editor-fields").querySelectorAll("input,select,textarea")).map(function (node) { return [node.name, node.type === "file" ? Array.from(node.files || []).map(function (file) { return [file.name, file.type, file.size, file.lastModified]; }) : node.type === "checkbox" ? node.checked : node.value]; }).map(function (value) { return JSON.stringify(value); }).join("|"); }
-  function editorNeedsWarning() { return !!draft && (draft.busy || draft.requiresRefresh || draft.conflict || editorSnapshot() !== draft.initial); }
+  function editorNeedsWarning() { return !!draft && (draft.busy || draft.unresolvedWrites || draft.settlementNeedsRead || draft.requiresRefresh || draft.conflict || editorSnapshot() !== draft.initial); }
   function warnEditorUnload(event) { if (editorNeedsWarning()) { event.preventDefault(); event.returnValue = true; } }
   function syncEditorUnload() { window[editorNeedsWarning() ? "addEventListener" : "removeEventListener"]("beforeunload", warnEditorUnload); }
   function clearEditor(force) {
-    if (draft && draft.busy && force !== true) return false;
+    var closing = draft, version = editorEpoch;
+    if (draft && (draft.busy || draft.unresolvedWrites || draft.settlementNeedsRead) && force !== true) return false;
     if (draft && force !== true && (draft.requiresRefresh || draft.conflict || editorSnapshot() !== draft.initial) && !window.confirm("Close this draft and discard unsaved changes? If a save was uncertain, refresh and check the saved records before adding it again.")) return false;
+    if (force !== true && (draft !== closing || editorEpoch !== version || (draft && (draft.busy || draft.unresolvedWrites || draft.settlementNeedsRead)))) return false;
     draft = null; editorEpoch++; syncEditorUnload();
     if (el("editor").open) el("editor").close();
     el("editor-fields").replaceChildren(); el("editor-form").reset();
@@ -221,11 +241,11 @@
     syncEditorUnload();
     renderPersonReview();
     var frozen = draft.busy || draft.requiresRefresh || draft.conflict || !canEdit();
-    el("editor-fields").querySelectorAll("input,select,textarea").forEach(function (node) { node.disabled = frozen || (node.type === "file" && !!draft.file); });
-    el("editor-fields").querySelectorAll("[data-review-person]").forEach(function (node) { node.disabled = frozen; });
+    el("editor-fields").querySelectorAll("input,select,textarea").forEach(function (node) { node.disabled = frozen || !!draft.unresolvedWrites || (node.type === "file" && !!draft.file); });
+    el("editor-fields").querySelectorAll("[data-review-person]").forEach(function (node) { node.disabled = frozen || !!draft.unresolvedWrites; });
     el("save").disabled = frozen;
-    document.querySelectorAll("[data-close-editor]").forEach(function (node) { node.disabled = draft.busy; });
-    if (el("event-delete")) { hidden(el("event-delete"), draft.kind !== "event" || draft.isNew); el("event-delete").textContent = draft.archived ? "Restore event" : "Archive event"; el("event-delete").disabled = frozen; }
+    document.querySelectorAll("[data-close-editor]").forEach(function (node) { node.disabled = draft.busy || !!draft.unresolvedWrites || !!draft.settlementNeedsRead; });
+    if (el("event-delete")) { hidden(el("event-delete"), draft.kind !== "event" || draft.isNew); el("event-delete").textContent = draft.archived ? "Restore event" : "Archive event"; el("event-delete").disabled = frozen || !!draft.unresolvedWrites || !!draft.settlementNeedsRead; }
     if (el("editor-refresh")) { hidden(el("editor-refresh"), !(draft.requiresRefresh || draft.conflict || !workspaceReady)); el("editor-refresh").disabled = refreshing || draft.busy; }
   }
   function blockWorkspace(message, setup) {
@@ -301,6 +321,7 @@
     try {
       if (!await verifyReadiness(epoch)) return;
       request = loadEpoch;
+      var readDraft = { item: draft, revision: draft ? draft.writeRevision || 0 : 0 };
       var results = await Promise.all([
         fetchRecords("events", "starts_at", true), fetchRecords("contacts", "last_name", true),
         fetchRecords("documents", "updated_at", false), deadline(db.from("audit_log").select("*").order("created_at", { ascending: false }).limit(100))
@@ -312,7 +333,7 @@
       if (invalid) throw { code: "OFFICE_SETUP" };
       ["events", "people", "documents", "activity"].forEach(function (name, index) { state[name] = results[index].data; });
       workspaceReady = true; peopleReady = true; el("workspace").dataset.connection = "ready";
-      await reconcileDraft(epoch);
+      await reconcileDraft(epoch, readDraft);
       if (!current(epoch) || request !== loadEpoch) return;
       freezeOtherDialogs(false);
       if (canEdit()) await Promise.all([membership ? membership.load(epoch) : null, care ? care.load(epoch) : null, officeContent ? officeContent.load(epoch) : null, signups ? signups.load(epoch) : null, followups ? followups.load(epoch) : null]);
@@ -525,7 +546,7 @@
     event.preventDefault();
     if (!session || !canEdit() || !draft || draft.busy || draft.requiresRefresh || draft.conflict) return;
     try {
-      var payload = payloadFor(new FormData(event.currentTarget), draft);
+      var payload = draft.unresolvedWrites ? draft.submitted : payloadFor(new FormData(event.currentTarget), draft);
       if (draft.kind === "person" && draft.isNew) {
         renderPersonReview();
         var review = personReview(payload);
@@ -548,7 +569,7 @@
       requireCurrent(epoch);
       if (item.kind === "document" && item.isNew && !item.uploadVerified) {
         item.attempted = true; item.uploadUncertain = true;
-        var uploaded = await deadline(db.storage.from("church-documents").upload(item.path, item.file, { contentType: item.file.type || "application/octet-stream", upsert: false }));
+        var uploaded = await draftWrite(item, epoch, db.storage.from("church-documents").upload(item.path, item.file, { contentType: item.file.type || "application/octet-stream", upsert: false }), "upload");
         requireCurrent(epoch); if (draft !== item) return;
         if (uploaded.error) throw uploaded.error;
         item.uploadVerified = true; item.uploadUncertain = false;
@@ -567,7 +588,7 @@
       }
       item.attempted = true;
       var query = item.isNew ? db.from(tableFor(item.kind)).insert(Object.assign({ id: item.id }, payload)) : db.from(tableFor(item.kind)).update(payload).eq("id", item.id).eq("version", item.version);
-      var result = await deadline(query.select("*").single());
+      var result = await draftWrite(item, epoch, query.select("*").single());
       if (!current(epoch) || draft !== item) return;
       if (result.error) throw result.error;
       if (!result.data || result.data.id !== item.id || result.data.version !== (item.isNew ? 1 : item.version + 1)) throw new Error("The saved record could not be confirmed.");
@@ -582,15 +603,22 @@
       el("editor-error").textContent = item.attempted ? "The save could not be confirmed. Your submitted draft is locked temporarily. Refresh workspace to check whether it saved before trying again." : "The workspace could not be verified. Your draft is preserved. Refresh before trying again.";
     } finally { if (draft === item) { item.busy = false; syncEditor(); if (el("workspace-refresh")) el("workspace-refresh").disabled = refreshing; } }
   }
-  async function reconcileDraft(epoch) {
+  async function reconcileDraft(epoch, readDraft) {
     var item = draft;
-    if (!item || item.busy) return;
+    if (!item || item.busy || !readDraft || readDraft.item !== item) return;
+    function freshRead() {
+      if ((item.writeRevision || 0) === readDraft.revision) return true;
+      item.requiresRefresh = true; item.settlementNeedsRead = true;
+      el("editor-error").textContent = "A save request started or settled during this refresh. Refresh workspace again to check its current result.";
+      return false;
+    }
+    if (!freshRead()) return;
     var rows = state[item.kind === "event" ? "events" : item.kind === "person" ? "people" : "documents"], saved = rows.find(function (row) { return row.id === item.id; });
     if (item.requiresRefresh && item.attempted && saved && saved.version === (item.isNew ? 1 : item.version + 1) && valuesMatch(saved, item.submitted)) {
       clearEditor(true); notice("The previous save was confirmed during refresh. Review the saved record before making more changes."); return;
     }
     if ((!item.isNew && (!saved || saved.version !== item.version)) || (item.isNew && saved)) {
-      item.requiresRefresh = false; item.conflict = true;
+      item.requiresRefresh = false; item.settlementNeedsRead = false; item.conflict = true;
       el("editor-error").textContent = "This record changed or is no longer available. Your draft is preserved. Review or copy your changes, then close and reopen the current record; this older draft cannot overwrite it.";
       return;
     }
@@ -599,19 +627,20 @@
       var result = await deadline(db.storage.from("church-documents").list(item.path.slice(0, split), { search: name, limit: 100 }));
       if (!current(epoch) || draft !== item) return;
       if (result.error || !Array.isArray(result.data)) throw result.error || new Error("The uploaded file could not be checked.");
+      if (!freshRead()) return;
       var stored = result.data.find(function (file) { return file.name === name; });
       if (stored && (!stored.metadata || Number(stored.metadata.size) !== item.file.size)) {
-        item.conflict = true; el("editor-error").textContent = "An upload exists at this draft's reserved path but its details could not be verified. Keep this draft and ask the office administrator to review it."; return;
+        item.settlementNeedsRead = false; item.conflict = true; el("editor-error").textContent = "An upload exists at this draft's reserved path but its details could not be verified. Keep this draft and ask the office administrator to review it."; return;
       }
       item.uploadVerified = !!stored; item.uploadUncertain = false;
     }
     if (item.requiresRefresh) {
-      item.requiresRefresh = false;
-      el("editor-error").textContent = "The previous save was not found. Your draft is preserved and can be retried using the same record ID.";
+      item.requiresRefresh = false; item.settlementNeedsRead = false;
+      el("editor-error").textContent = item.unresolvedWrites ? "The save was not found, but an earlier request is still unresolved. Keep this draft open; you may retry the same submitted record using its existing ID." : "The previous save was not found. Your draft is preserved and can be retried using the same record ID.";
     }
   }
   async function archiveEvent() {
-    if (!draft || draft.kind !== "event" || draft.isNew || draft.busy || draft.requiresRefresh || draft.conflict || !canEdit()) return;
+    if (!draft || draft.kind !== "event" || draft.isNew || draft.busy || draft.unresolvedWrites || draft.settlementNeedsRead || draft.requiresRefresh || draft.conflict || !canEdit()) return;
     if (editorSnapshot() !== draft.initial) { el("editor-error").textContent = "Save your other event changes before archiving or restoring it, or close and discard those changes first."; return; }
     if (!draft.archived && !window.confirm("Archive this staff calendar event? It will leave the active list and can be restored from Archived events.")) return;
     await persistDraft({ is_archived: !draft.archived });

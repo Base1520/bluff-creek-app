@@ -165,8 +165,10 @@
       return '<label>' + safe(label) + '<select name="' + name + '">' + choices.map(function (value) { return '<option value="' + value + '"' + (selected === value ? ' selected' : '') + '>' + capitalize(value) + '</option>'; }).join('') + '</select></label>';
     }
     function closeDialog(restore, force) {
+      var closing = dialog, attempt = draft, version = formVersion;
       if (!force && (saving || (draft && draft.uncertain))) return false;
       if (!force && dirty() && !root.confirm('Discard the unsaved changes in this draft?')) return false;
+      if (!force && (dialog !== closing || draft !== attempt || formVersion !== version || saving || (draft && draft.uncertain))) return false;
       formVersion++; saving = false; draft = null; dialogEpoch = null; dialogView = null; dialogRecord = null;
       if (dialog) { var old = dialog; dialog = null; if (old.open) old.close(); old.remove(); }
       if (restore && returnFocus && returnFocus.isConnected) returnFocus.focus();
@@ -186,7 +188,11 @@
       var ctx = context(), config = views[view];
       if (!config || !roots[view] || !allowed(ctx) || saving || (draft && draft.uncertain)) return;
       if (!ready[view]) { notice('Wait for these records to load, or refresh the workspace before editing.', true); return; }
-      if (!closeDialog(false)) return; dialogView = view; dialogEpoch = ctx.epoch; dialogRecord = record ? Object.assign({}, record) : null; draft = { id: record ? record.id : root.crypto.randomUUID(), version: record ? record.version : null, uncertain: false, conflict: false, payload: null }; returnFocus = trigger || doc.activeElement;
+      var epoch = ctx.epoch, owner = ctx.userId, recordId = record && record.id;
+      if (!closeDialog(false) || !current(epoch) || context().userId !== owner || !allowed(context()) || !ready[view]) return;
+      ctx = context();
+      if (recordId) { record = state[view].find(function (item) { return item.id === recordId; }); if (!record) return; }
+      dialogView = view; dialogEpoch = ctx.epoch; dialogRecord = record ? Object.assign({}, record) : null; draft = { id: record ? record.id : root.crypto.randomUUID(), version: record ? record.version : null, uncertain: false, conflict: false, payload: null }; returnFocus = trigger || doc.activeElement;
       var row = record || {}, fields = '';
       if (view === 'announcements') fields = input('title', 'Title', row.title, 'text', true, 160, true) + textarea('body', 'Announcement text', row.body, true, 10000) + input('starts_on', 'Starts on (optional)', row.starts_on, 'date') + input('ends_on', 'Ends on (optional)', row.ends_on, 'date');
       if (view === 'committees') fields = input('committee_name', 'Committee', row.committee_name, 'text', true, 160) + input('contact_name', 'Contact name', row.contact_name, 'text', true, 160) + input('role_label', 'Role (optional)', row.role_label) + input('email', 'Email (optional)', row.email, 'email') + input('phone', 'Phone (optional)', row.phone, 'tel') + '<div></div>' + input('term_start', 'Term starts (optional)', row.term_start, 'date') + input('term_end', 'Term ends (optional)', row.term_end, 'date') + textarea('notes', 'Committee notes', row.notes);
