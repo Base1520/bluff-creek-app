@@ -1,38 +1,65 @@
-/* Bluff Creek app — service worker: cache the shell so the app opens instantly and offline. */
-const CACHE = 'creek-v3';
+/* Review proposal based on app main 3d001e53145cd04d0d2f249bd2f88f78570edbbd. */
+/* Bluff Creek app — public shell only; staff/backend traffic stays on the network. */
+const CACHE = 'creek-v4-office-safe';
+const RETIRED = ['creek-v1', 'creek-v2', 'creek-v3'];
 const SHELL = [
   './', './index.html', './events.json', './manifest.webmanifest',
   './assets/logo.png', './assets/creek.png', './assets/la63.svg',
   './assets/icon-192.png', './assets/icon-512.png', './assets/apple-touch-icon.png', './assets/favicon-32.png'
 ];
+function home(url) {
+  return url.origin === self.location.origin && !url.search && ['/', '/index.html'].includes(url.pathname);
+}
+async function put(cache, request, response) {
+  // A cache/storage failure must not replace a successful network response.
+  try { await cache.put(request, response.clone()); } catch (_) {}
+}
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // Worker-owned network requests: never copy a controlled page or an older cache.
+  // Reload bypasses HTTP cache; redirect:error rejects an unexpected route change.
+  const requests = SHELL.map(path => new Request(new URL(path, self.location.href), {
+    cache: 'reload', redirect: 'error', credentials: 'omit'
+  }));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(requests)).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => RETIRED.includes(k)).map(k => caches.delete(k))))
+    .then(() => self.clients.claim()));
 });
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
-  // network-first for the page (so updates land), cache-first for assets/fonts
-  if (req.mode === 'navigate') {
-    e.respondWith(fetch(req).then(r => { const copy = r.clone(); caches.open(CACHE).then(c => c.put('./index.html', copy)); return r; })
-      .catch(() => caches.match('./index.html')));
-    return;
-  }
-  // The events feed must never be served stale: it is how the calendar reaches
-  // phones that already installed the app. Network first, cache only as a fallback.
-  if (req.url.includes('events.json')) {
-    e.respondWith(fetch(req).then(r => {
-      if (r.ok) { const copy = r.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
-      return r;
-    }).catch(() => caches.match(req).then(hit => hit || caches.match('./events.json'))));
-    return;
-  }
-  e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(r => {
-    if (r.ok && (req.url.includes('/assets/') || req.url.includes('fonts.gstatic.com') || req.url.includes('fonts.googleapis.com'))) {
-      const copy = r.clone(); caches.open(CACHE).then(c => c.put(req, copy));
+  const url = new URL(req.url);
+  let path;
+  try { path = decodeURIComponent(url.pathname); } catch (_) { return; }
+  if (url.origin !== self.location.origin || path === '/admin' || path.startsWith('/admin/')) return;
+  // Other pages and query-bearing navigation are never the public home fallback.
+  if (req.mode === 'navigate' && !home(url)) return;
+  e.respondWith(caches.open(CACHE).then(async cache => {
+    if (req.mode === 'navigate') {
+      try {
+        const response = await fetch(req);
+        if (response.ok && !response.redirected && home(new URL(response.url))
+            && (response.headers.get('content-type') || '').toLowerCase().includes('text/html')) {
+          await put(cache, './index.html', response);
+        }
+        return response;
+      } catch (_) { return await cache.match('./index.html') || Response.error(); }
     }
-    return r;
-  }).catch(() => hit)));
+    // Preserve the current public calendar's network-first behavior.
+    if (url.pathname === '/events.json') {
+      try {
+        const response = await fetch(req);
+        if (response.ok && !response.redirected) await put(cache, req, response);
+        return response;
+      } catch (_) { return await cache.match(req) || await cache.match('./events.json') || Response.error(); }
+    }
+    const hit = await cache.match(req);
+    if (hit) return hit;
+    try {
+      const response = await fetch(req);
+      if (response.ok && !response.redirected && url.pathname.startsWith('/assets/')) await put(cache, req, response);
+      return response;
+    } catch (_) { return Response.error(); }
+  }).catch(() => fetch(req)));
 });
