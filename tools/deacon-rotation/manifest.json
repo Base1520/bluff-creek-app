@@ -1,0 +1,52 @@
+{
+  "format_version": 1,
+  "status": "prepared_not_applied",
+  "feature": "deacon_guest_rotation",
+  "baseline": {
+    "manifest_path": "tools/office-preflight/manifest.json",
+    "manifest_sha256": "0734cdc37022af4c946b2e4a8d93ad1b199093834f28373b1bf8c0c9497276ae",
+    "recorded_migration_count": 10,
+    "last_applied_version": "20260910152030"
+  },
+  "migration": {
+    "path": "tools/deacon-rotation/migrations/20260910213024_deacon_guest_rotation.sql",
+    "sha256": "679530d6e25194c61a3b5e0fa165ce7c47d91db58e67f99d5f2f5453eca94f1a",
+    "version": "20260910213024",
+    "name": "deacon_guest_rotation",
+    "created_with": "supabase migration new deacon_guest_rotation",
+    "cli_version": "2.117.0"
+  },
+  "verification": {
+    "pglite_tests": 25,
+    "intake_ui_tests": 28,
+    "related_signups_and_preflight_tests": 71,
+    "combined_tests": 124,
+    "real_postgres_milestones": 11,
+    "real_postgres_observed_lock_waits": 5,
+    "real_postgres_version": "17.6",
+    "real_postgres_synthetic_database_removed": true,
+    "hosted_schema_applied": false,
+    "real_deacon_email_sent": false
+  },
+  "contract": {
+    "slots": 5,
+    "cycle": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      1
+    ],
+    "missing_recipient": "eligible_office_admins",
+    "recipient_source": "existing_approved_eligible_staff",
+    "slot_admin_only": true,
+    "name_optional": true,
+    "existing_tasks_backfilled": false,
+    "roster_destination_changes": "open_tasks_only",
+    "name_only_changes": "no_notice_replay",
+    "mail_templates_unchanged": true,
+    "auth_staff_roles_unchanged": true,
+    "privacy": "no_guest_prayer_or_household_details_in_notice"
+  }
+}
