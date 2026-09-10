@@ -1,6 +1,6 @@
 /* Cache only the public Creek app. Private and unrelated routes use the network. */
 const CACHE_PREFIX = 'creek-';
-const CACHE = 'creek-v14';
+const CACHE = 'creek-v16';
 const SCOPE = new URL(self.registration.scope);
 importScripts(new URL('./js/calendar-feed.js', SCOPE).href);
 importScripts(new URL('./js/calendar-config.js', SCOPE).href);
@@ -11,7 +11,7 @@ const PUBLIC_CALENDAR_URL = CreekCalendar.CSV_URL;
 const ICLOUD_ENDPOINT = CREEK_PUBLIC_CALENDAR.endpoint || '';
 const SHELL = [
   './index.html', './manifest.webmanifest',
-  './js/calendar-feed.js', './js/calendar-config.js', './js/app-forms.js', './css/fonts.css',
+  './js/calendar-feed.js', './js/calendar-config.js', './css/fonts.css', './css/connection.css',
   './js/grow-content.js', './js/grow.js', './css/grow.css',
   './js/app-status.js', './css/app-status.css',
   './assets/fonts/bitter-latin-normal-v42.woff2',
@@ -102,6 +102,7 @@ async function networkFirst(request, cacheURL, validate) {
   let failure;
   try {
     response = await fetch(request, { cache: 'no-cache' });
+    if (response.headers.get('cache-control')?.match(/(?:private|no-store)/i)) return response;
     if (await validate(response)) {
       // respondWith waits for this promise, including the cache write.
       await remember(cacheURL, response);
@@ -120,14 +121,15 @@ async function shellAsset(request) {
   const hit = await cached(request.url);
   if (hit) return hit;
   const response = await fetch(request);
-  if (response.ok) await remember(request.url, response);
+  if (response.ok && !response.headers.get('cache-control')?.match(/(?:private|no-store)/i)) await remember(request.url, response);
   return response;
 }
 
 self.addEventListener('fetch', event => {
   const request = event.request;
-  if (request.method !== 'GET') return;
+  if (request.method !== 'GET' || (request.headers && (request.headers.has('authorization') || request.headers.has('apikey')))) return;
   const url = new URL(request.url);
+  if (['access_token','refresh_token','token_hash','code'].some(key => url.searchParams.has(key))) return;
   if (ICLOUD_ENDPOINT && url.href === ICLOUD_ENDPOINT && request.mode !== 'navigate') {
     event.respondWith(networkFirst(request, ICLOUD_ENDPOINT, async response => {
       if (!response.ok) return false;
