@@ -1,0 +1,151 @@
+{
+  "format_version": 1,
+  "status": "sql_applied_source_aligned_runtime_acceptance_separate",
+  "feature": "direct_app_intake",
+  "baseline": {
+    "manifest_path": "tools/office-preflight/history/manifest-eight-2026-09-09.json",
+    "manifest_sha256": "572c8a631c293c1c2d322670b8f295de95e3baeb2fa59a82f2ae641e28812c68",
+    "sql_file_count": 8,
+    "last_applied_version": "20260909124122",
+    "staff_helper_unchanged": true,
+    "existing_intake_grants_remain_paused": true
+  },
+  "migration": {
+    "path": "tools/direct-intake/migrations/20260909212646_direct_app_intake.sql",
+    "sha256": "2d4a268bb6bb2c0d87ae7f4d2b238ee79180e862ea5ba026a9f625498955b405",
+    "version": "20260909212646",
+    "name": "direct_app_intake",
+    "created_with": "supabase migration new direct_app_intake",
+    "cli_version": "2.117.0",
+    "filename_origin": "CLI-generated in isolated scratch directory; copied without renaming"
+  },
+  "contract": {
+    "public_auth_email": "self_reported_confirmation_not_required",
+    "anonymous_intake": false,
+    "guest_hourly_limit": 10,
+    "prayer_hourly_limit": 10,
+    "prayer_rolling_24h_limit": 50,
+    "welcome_lease_seconds": 120,
+    "welcome_retry_window_hours": 23,
+    "welcome_backoff_seconds": {
+      "minimum": 60,
+      "maximum": 3600
+    },
+    "welcome_template_version": "creek-welcome-v1",
+    "welcome_recipient_dedup": "case_insensitive_email",
+    "welcome_receipt_sent_means": "provider_accepted_not_delivered",
+    "legacy_registrations": "attention_no_retroactive_email_or_task",
+    "active_migration_files_changed": false,
+    "shared_first_attempts_per_utc_day": 80,
+    "staff_notice_template_version": "creek-office-notice-v1",
+    "staff_notice_recipient_dedup": "task_and_case_insensitive_email",
+    "staff_notice_recipients": "current_eligible_assignee_or_eligible_office_admins",
+    "staff_notice_scope": "submitting_account_not_recipient",
+    "task_kinds": [
+      "guest_followup",
+      "prayer_care"
+    ],
+    "task_defaults": "new_guest_Central_date_plus2_and_new_prayer_Central_date",
+    "route_changes": "future_submissions_only",
+    "task_version": "independent_optimistic_integer",
+    "task_notification_status": "current_targets_provider_acceptance_only",
+    "optional_self_reported_profile": {
+      "fields": [
+        "birth_date",
+        "membership_status",
+        "address_line1",
+        "address_line2",
+        "city",
+        "state_region",
+        "postal_code",
+        "family_members"
+      ],
+      "omitted_updates": "preserve_existing",
+      "membership_status": [
+        "member",
+        "regular_attender",
+        "guest",
+        "exploring",
+        "unsure"
+      ],
+      "family_limit": 20,
+      "future_birth_dates": false,
+      "email_payload_inclusion": false,
+      "automatic_membership_merge": false
+    }
+  },
+  "verification": {
+    "pglite_tests_passed": 34,
+    "applies_all_eight_current_migrations": true,
+    "baseline_policies_preserved": 54,
+    "actual_postgrest_auth_storage_or_email_tested": false,
+    "concurrent_multi_connection_lock_acceptance": "bounded_real_PostgreSQL_17_local_database",
+    "total_policies_with_two_new_task_policies": 56,
+    "new_public_tables": 1,
+    "new_private_rls_tables": 6,
+    "real_postgres_concurrency": {
+      "milestones_passed": 7,
+      "draft_sha256": "2d4a268bb6bb2c0d87ae7f4d2b238ee79180e862ea5ba026a9f625498955b405",
+      "genuinely_overlapping_second_session_lock_waits": 5,
+      "fictional_database_dropped": true,
+      "preexisting_database_inventory_preserved": 4,
+      "cluster_role_metadata_preserved": true,
+      "service_http_auth_email_not_exercised": true,
+      "evidence_path": "work/direct-intake-real-postgres/result.json",
+      "evidence_sha256": "7c64e06c6a56dd33cf372c9a57396b59ee1768920e7509b49d36bd32339f5321",
+      "evidence_path_scope": "local_task_workspace_not_release_packet"
+    }
+  },
+  "hosted_applied": true,
+  "accounts_changed": false,
+  "messages_sent": false,
+  "infrastructure_migration": {
+    "path": "tools/direct-intake/migrations/20260909215330_direct_intake_dispatch_extensions.sql",
+    "sha256": "bfbd4b7e1410a2e80508866e0fbd2029130dce435e5cb7f9ca0c1d9ad0bce6d0",
+    "version": "20260909215330",
+    "name": "direct_intake_dispatch_extensions",
+    "created_with": "supabase migration new direct_intake_dispatch_extensions",
+    "cli_version": "2.117.0",
+    "filename_origin": "CLI-generated in isolated scratch directory; copied without renaming",
+    "extension_schemas": {
+      "pg_cron": "pg_catalog",
+      "pg_net": "extensions"
+    },
+    "creates_schedule": false,
+    "pglite_executed": false,
+    "hosted_applied": true
+  },
+  "activation": {
+    "verified_at_utc": "2026-09-10T15:22:29Z",
+    "recorded_migration_count": 10,
+    "mapping": [
+      {
+        "reviewed_path": "tools/direct-intake/migrations/20260909212646_direct_app_intake.sql",
+        "reviewed_version": "20260909212646",
+        "actual_version": "20260910152017",
+        "name": "direct_app_intake",
+        "sha256": "2d4a268bb6bb2c0d87ae7f4d2b238ee79180e862ea5ba026a9f625498955b405",
+        "recommended_active_path": "supabase/migrations/20260910152017_direct_app_intake.sql",
+        "copy_exact_bytes": true,
+        "source_copy_performed": true
+      },
+      {
+        "reviewed_path": "tools/direct-intake/migrations/20260909215330_direct_intake_dispatch_extensions.sql",
+        "reviewed_version": "20260909215330",
+        "actual_version": "20260910152030",
+        "name": "direct_intake_dispatch_extensions",
+        "sha256": "bfbd4b7e1410a2e80508866e0fbd2029130dce435e5cb7f9ca0c1d9ad0bce6d0",
+        "recommended_active_path": "supabase/migrations/20260910152030_direct_intake_dispatch_extensions.sql",
+        "copy_exact_bytes": true,
+        "source_copy_performed": true
+      }
+    ],
+    "schema_checks_passed": 18,
+    "source_alignment_only_no_new_hosted_calls": true,
+    "security_advisors": {
+      "error_count": 0,
+      "warning_count": 1,
+      "expected_private_table_info_count": 6
+    }
+  }
+}

@@ -4,7 +4,7 @@
   var els = {};
   var db = null;
   var localDevelopment = false, backendOrigin = null;
-  var membership = null, care = null, officeContent = null, signups = null, followups = null, reminderCalendar = null;
+  var membership = null, care = null, officeContent = null, signups = null, intakeTasks = null, followups = null, reminderCalendar = null;
   var session = null;
   var role = null;
   var authEpoch = 0, loadEpoch = 0, documentEpoch = 0, editorEpoch = 0;
@@ -15,9 +15,9 @@
   var draft = null, readinessEpoch = 0;
   var REQUIRED_REVISION = "20260907174301";
   var state = { events: [], people: [], documents: [], activity: [] };
-  var titles = { dashboard: "Overview", followups: "My follow-ups", calendar: "Staff calendar", announcements: "Announcements", committees: "Committee contacts", slides: "Sunday slides", prayers: "Prayer requests", people: "People & membership", history: "Member history", care: "Guests & care", signups: "App signups", documents: "Documents", activity: "Activity" };
+  var titles = { dashboard: "Overview", followups: "My follow-ups", calendar: "Staff calendar", announcements: "Announcements", committees: "Committee contacts", slides: "Sunday slides", prayers: "Prayer requests", people: "People & membership", history: "Member history", care: "Guests & care", signups: "Guest register", intake: "Intake actions", documents: "Documents", activity: "Activity" };
   var contentViews = ["announcements", "committees", "slides", "prayers"];
-  var privateViews = ["history", "care", "signups", "followups"].concat(contentViews);
+  var privateViews = ["history", "care", "signups", "intake", "followups"].concat(contentViews);
 
   function deadline(request) {
     var timer;
@@ -84,12 +84,12 @@
   function clearPrivate() {
     window.clearTimeout(documentExpiryTimer);
     if (membership) membership.clear(); if (care) care.clear();
-    if (officeContent) officeContent.clear(); if (signups) signups.clear();
+    if (officeContent) officeContent.clear(); if (signups) signups.clear(); if (intakeTasks) intakeTasks.clear();
     if (followups) followups.clear(); if (reminderCalendar) reminderCalendar.clear();
     el("dashboard-followup-list").replaceChildren(); el("dashboard-followup-status").textContent = ""; el("followup-badge").textContent = ""; el("followup-badge").removeAttribute("aria-label");
     loadEpoch++; documentEpoch++; peopleReady = false; state = { events: [], people: [], documents: [], activity: [] };
     workspaceReady = false; readinessOK = false; refreshing = false; readinessEpoch++;
-    syncMembershipSheet(); renderCareSummary(null);
+    syncMembershipSheet(); renderCareSummary(null); renderIntakeSummary(null);
     clearEditor(true); if (el("document-dialog").open) el("document-dialog").close(); el("document-result").replaceChildren();
     ["dashboard-events", "events-list", "people-list", "documents-list", "activity-list", "user-label", "role-label"].forEach(function (id) { el(id).replaceChildren(); });
     ["event-count", "people-count", "document-count", "signup-count"].forEach(function (id) { el(id).textContent = "—"; });
@@ -144,8 +144,20 @@
       uploadDocument: function () { location.hash = "documents"; openUpload("ministry"); }
     }));
     if (window.CreekSignups && el("signups-view")) signups = window.CreekSignups.create(Object.assign({}, moduleOptions, {
-      root: el("signups-view"), onCount: function (count) { el("signup-count").textContent = count === null ? "—" : String(count); }
+      root: el("signups-view"), onCount: function (count) { el("signup-count").textContent = count === null ? "—" : String(count); },
+      intakeTask: function(id) { return intakeTasks ? intakeTasks.taskForSource("guest_followup",id) : null; },
+      openIntakeTask: function(id) { if(!canEdit()||!intakeTasks)return;var task=intakeTasks.taskForSource("guest_followup",id);if(!task)return;location.hash="intake";route();intakeTasks.openTask(task.id); }
     }));
+    if (window.CreekIntakeTasks && el("intake-view")) intakeTasks = window.CreekIntakeTasks.create(Object.assign({}, moduleOptions, {
+      root: el("intake-view"), onSummary: renderIntakeSummary,
+      sourceLabel: function(kind,id) { return kind === "guest_followup" && signups ? signups.labelFor(id) : kind === "prayer_care" && officeContent ? officeContent.labelFor("prayers",id) : ""; },
+      openSource: function(kind,id) {
+        if (!canEdit()) return;
+        if (kind === "guest_followup" && signups) { location.hash="signups"; route(); signups.open(id); }
+        if (kind === "prayer_care" && officeContent) { location.hash="prayers"; route(); officeContent.openRecord("prayers",id); }
+      }
+    }));
+    document.querySelectorAll("button[data-intake-filter]").forEach(function(button){button.onclick=function(){if(!canEdit() || button.disabled || !intakeTasks)return;location.hash="intake";route();intakeTasks.showFilter(button.dataset.intakeFilter);};});
     if (window.CreekFollowups) followups = window.CreekFollowups.create(Object.assign({}, moduleOptions, { root: el("followups-module"), onSummary: renderFollowupSummary }));
     if (window.CreekReminderCalendar) reminderCalendar = window.CreekReminderCalendar.create({ button: el("weekly-reminder"), allowed: function () { return !!session && canEdit(); } });
     // Refresh these queues without replacing unsaved editors elsewhere.
@@ -257,7 +269,7 @@
     el("followup-badge").textContent = ""; el("followup-badge").removeAttribute("aria-label"); el("dashboard-followup-status").textContent = "Follow-ups are unavailable until the workspace refreshes.";
     el("primary-action").disabled = true;
     privateViews.forEach(function (name) { var view = el(name + "-view"); if (view) view.classList.add("hidden"); });
-    syncMembershipSheet(); renderCareSummary(null); freezeOtherDialogs(true); syncEditor(); health(message, setup);
+    syncMembershipSheet(); renderCareSummary(null); renderIntakeSummary(null); freezeOtherDialogs(true); syncEditor(); health(message, setup);
   }
   function authFailure(error) { return error && (error.status === 401 || ["PGRST301", "PGRST302", "PGRST303"].includes(error.code)); }
   async function verifyReadiness(epoch) {
@@ -349,7 +361,7 @@
       await reconcileDraft(epoch, readDraft);
       if (!current(epoch) || request !== loadEpoch) return;
       freezeOtherDialogs(false);
-      if (canEdit()) await Promise.all([membership ? membership.load(epoch) : null, care ? care.load(epoch) : null, officeContent ? officeContent.load(epoch) : null, signups ? signups.load(epoch) : null, followups ? followups.load(epoch) : null]);
+      if (canEdit()) await Promise.all([membership ? membership.load(epoch) : null, care ? care.load(epoch) : null, officeContent ? officeContent.load(epoch) : null, signups ? signups.load(epoch) : null, intakeTasks ? intakeTasks.load(epoch) : null, followups ? followups.load(epoch) : null]);
       if (!current(epoch) || request !== loadEpoch) return;
       health("", false); route(); syncEditor();
     } catch (error) {
@@ -393,7 +405,7 @@
     el("activity-list").innerHTML = state.activity.map(activityRow).join("");
     bindRowActions();
     if (membership) membership.render(); if (care) care.render();
-    if (officeContent) officeContent.render(); if (signups) signups.render(); if (followups) followups.render();
+    if (officeContent) officeContent.render(); if (signups) signups.render(); if (intakeTasks) intakeTasks.render(); if (followups) followups.render();
   }
 
   function renderCareSummary(summary) {
@@ -403,6 +415,14 @@
     [["care-due-count", "duePlans"], ["care-unassigned-count", "unassignedPlans"], ["care-gaps-count", "coverageGaps"]].forEach(function (item) { el(item[0]).textContent = valid ? String(summary[item[1]]) : "—"; });
     document.querySelectorAll("[data-care-queue]").forEach(function (button) { button.disabled = !valid || !care || typeof care.openQueue !== "function"; });
     status.textContent = !session || !canEdit() ? "" : !valid ? "Care counts are unavailable. Open Guests & care to refresh." : "Based on loaded office records · " + summary.overduePlans + " overdue. Deacon and Sunday school plans count separately.";
+  }
+
+  function renderIntakeSummary(summary) {
+    var status=el("dashboard-intake-status");if(!status)return;
+    var valid=!!session && canEdit() && summary && ["new","due","open"].every(function(k){return Number.isSafeInteger(summary[k]) && summary[k]>=0;}) && summary.new<=summary.open && summary.due<=summary.open;
+    el("intake-new-count").textContent=valid?String(summary.new):"—";el("intake-due-count").textContent=valid?String(summary.due):"—";
+    document.querySelectorAll("button[data-intake-filter]").forEach(function(button){button.disabled=!valid || !intakeTasks;});
+    status.textContent=!session || !canEdit()?"":valid?summary.open+" open actions in the loaded records. Assignment and email status are shown separately.":"Intake actions are unavailable until their reviewed service is ready. Other Office tools remain separate.";
   }
 
   function renderFollowupSummary(summary) {

@@ -13,6 +13,8 @@ const cli = fileURLToPath(new URL('./cli.mjs', import.meta.url));
 const manifestPath = 'tools/office-preflight/manifest.json';
 const template = JSON.parse(await readFile(join(repository, manifestPath), 'utf8'));
 const guardFixture = await readFile(join(repository, template.staff_account_guard_sql_file), 'utf8');
+const directFixture = await readFile(join(repository, template.direct_intake_sql_file), 'utf8');
+const extensionsFixture = await readFile(join(repository, template.dispatch_extensions_sql_file), 'utf8');
 const pauseFixture = 'begin; revoke execute on function public.save_app_connection(text,text,text,text,boolean,text), private.save_app_connection(text,text,text,text,boolean,text) from public,anon,authenticated; commit;';
 const blankConfig = 'window.CREEK_OFFICE_CONFIG = {supabaseUrl: "", publishableKey: "", membershipSheetUrl: ""};';
 const digest = source => createHash('sha256').update(source).digest('hex');
@@ -32,7 +34,7 @@ async function fixture(t) {
   await put('admin/index.html', '<script src="https://assets.invalid/sdk.js"></script>');
   await put('admin/app.js', `const REQUIRED_REVISION = "${manifest.schema_revision}";\ndb.rpc("office_readiness");\nconst modules = ${JSON.stringify(manifest.readiness_modules)};`);
   for (const [index, row] of manifest.sql_files.entries()) {
-    const source = row.path === manifest.staff_account_guard_sql_file ? guardFixture : row.path === manifest.intake_pause_sql_file ? pauseFixture : row.path !== manifest.readiness_sql_file ? '-- synthetic ordered SQL fixture ' + index + '\n'
+    const source = row.path === manifest.direct_intake_sql_file ? directFixture : row.path === manifest.dispatch_extensions_sql_file ? extensionsFixture : row.path === manifest.staff_account_guard_sql_file ? guardFixture : row.path === manifest.intake_pause_sql_file ? pauseFixture : row.path !== manifest.readiness_sql_file ? '-- synthetic ordered SQL fixture ' + index + '\n'
       : `do $$ begin foreach v_table in array array[${manifest.prerequisite_tables.map(name => "'" + name + "'").join(',')}] loop\nif to_regclass('public.' || v_table) is null then raise exception 'missing dependency'; end if;\nend loop; end $$;\ncreate function public.office_readiness() returns jsonb language plpgsql stable security invoker as $$ begin return jsonb_build_object('schema_revision', '${manifest.schema_revision}', 'supported_modules', array[${manifest.readiness_modules.map(name => "'" + name + "'").join(',')}]); end $$;`;
     row.sha256 = digest(source);
     await put(row.path, source);
@@ -54,7 +56,7 @@ test('the real local checkout matches the reviewed setup manifest without claimi
   const report = await runPreflight(repository);
   assert.equal(report.status, 'passed', textReport(report));
   assert.equal(report.schema_revision, '20260907174301');
-  assert.equal(report.sql_apply_order.length, 8);
+  assert.equal(report.sql_apply_order.length, 10);
   assert.equal(check(report, 'eligible_staff_account_guard_declared'), true);
   assert.equal(check(report, 'staff_first_intake_pause_declared'), true);
   assert.ok(['not_configured', 'supplied_unverified'].includes(report.configuration.status));
@@ -300,7 +302,7 @@ test('both submission signatures and every browser grant must be revoked without
 test('fresh setup cannot omit the applied account guard or declare the older format', async t => {
   const f = await fixture(t);
   await rm(join(f.root, f.manifest.staff_account_guard_sql_file));
-  f.manifest.sql_files.pop();
+  f.manifest.sql_files=f.manifest.sql_files.filter(row=>row.path!==f.manifest.staff_account_guard_sql_file);
   await f.saveManifest();
   assert.equal(check(await runPreflight(f.root), 'manifest_structure'), false);
   f.manifest.format_version = 2;
@@ -339,4 +341,40 @@ test('the retained optional preparation copy cannot also enter the active invent
   const f = await fixture(t);
   await f.put('supabase/migrations/20260909024020_require_eligible_staff_auth_account.sql', guardFixture);
   assert.equal(check(await runPreflight(f.root), 'migration_inventory_matches'), false);
+});
+
+test('active ten preserves the exact frozen eight baseline and both reviewed SQL copies',async()=>{
+ const frozenBytes=await readFile(join(repository,'tools/office-preflight/history/manifest-eight-2026-09-09.json'));
+ assert.equal(digest(frozenBytes),'572c8a631c293c1c2d322670b8f295de95e3baeb2fa59a82f2ae641e28812c68');
+ const frozen=JSON.parse(frozenBytes);assert.equal(frozen.format_version,3);assert.equal(frozen.sql_files.length,8);assert.deepEqual(template.sql_files.slice(0,8),frozen.sql_files);
+ const mapping=JSON.parse(await readFile(join(repository,'tools/office-preflight/direct-intake-hosted-history-2026-09-10.json'),'utf8'));
+ assert.deepEqual(mapping.mappings.map(r=>r.actual_version),['20260910152017','20260910152030']);
+ for(const row of mapping.mappings){const active=await readFile(join(repository,row.recommended_active_path)),reviewed=await readFile(join(repository,row.reviewed_path));assert.deepEqual(active,reviewed);assert.equal(digest(active),row.sha256);}
+});
+
+test('current packet requires both applied intake migrations and rejects the older active format',async t=>{
+ for(const name of ['direct_intake_sql_file','dispatch_extensions_sql_file']){
+  const f=await fixture(t);await rm(join(f.root,f.manifest[name]));f.manifest.sql_files=f.manifest.sql_files.filter(r=>r.path!==f.manifest[name]);await f.saveManifest();
+  assert.equal(check(await runPreflight(f.root),'manifest_structure'),false);
+ }
+ const f=await fixture(t);f.manifest.format_version=3;await f.saveManifest();assert.equal(check(await runPreflight(f.root),'manifest_structure'),false);
+});
+
+test('direct intake and infrastructure sources must be distinct and follow the account guard',async t=>{
+ const f=await fixture(t);[f.manifest.sql_files[8],f.manifest.sql_files[9]]=[f.manifest.sql_files[9],f.manifest.sql_files[8]];await f.saveManifest();assert.equal(check(await runPreflight(f.root),'manifest_structure'),false);
+ [f.manifest.sql_files[8],f.manifest.sql_files[9]]=[f.manifest.sql_files[9],f.manifest.sql_files[8]];f.manifest.direct_intake_sql_file=f.manifest.staff_account_guard_sql_file;await f.saveManifest();assert.equal(check(await runPreflight(f.root),'manifest_structure'),false);
+});
+
+test('refreshing editable digests cannot weaken direct intake or add an unreviewed scheduler operation',async t=>{
+ const f=await fixture(t);
+ await f.alterSql(source=>source.replace("revoke all on private.app_intake_receipts", "grant all on private.app_intake_receipts"),f.manifest.direct_intake_sql_file);
+ let report=await runPreflight(f.root);assert.equal(report.checks.filter(r=>r.name==='sql_digest_matches').every(r=>r.ok),true);assert.equal(check(report,'reviewed_direct_intake_declared'),false);
+ await f.alterSql(()=>directFixture,f.manifest.direct_intake_sql_file);
+ await f.alterSql(source=>source+"\nselect cron.schedule('unreviewed','* * * * *','select 1');\n",f.manifest.dispatch_extensions_sql_file);
+ report=await runPreflight(f.root);assert.equal(report.checks.filter(r=>r.name==='sql_digest_matches').every(r=>r.ok),true);assert.equal(check(report,'reviewed_dispatch_extensions_declared'),false);
+});
+
+test('retained review filenames cannot also appear as active migrations',async t=>{
+ const f=await fixture(t);await f.put('supabase/migrations/20260909212646_direct_app_intake.sql',directFixture);await f.put('supabase/migrations/20260909215330_direct_intake_dispatch_extensions.sql',extensionsFixture);
+ assert.equal(check(await runPreflight(f.root),'migration_inventory_matches'),false);
 });
