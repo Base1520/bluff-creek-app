@@ -72,3 +72,7 @@ Events, People, document details, care plans/guest records/guidelines and office
 Use the in-app [office guide](help.html) for the operator workflow and [reliability and recovery](../docs/office-reliability.md) for acceptance checks, backup responsibilities and remaining activation gates. Drafts are memory-only; do not treat the open browser as a backup.
 
 The historical staff-first pause remains in force for both old `save_app_connection` entry points. The approved ninth migration provides separate authenticated guest/prayer RPCs without weakening staff eligibility. Published PR #7 enables those new flows; blank development configuration must not overwrite it. Use the reviewed current release files and [intake contract](../tools/direct-intake/README.md), preserving separate checks for real signup, staff access, email delivery and phone behavior. A local demo or a passing source check does not establish those results.
+
+## Prepared extension: five deacon slots
+
+The new [deacon rotation package](../tools/deacon-rotation/README.md) assigns each first guest registration to Deacon 1–5 in sequence. Names and approved notification recipients can be added privately in Intake actions. Until a recipient is connected, Office receives the alert and the action shows the missing deacon setup. This proposed migration is separate from the current ten-migration deployment; see its review record before activation.
