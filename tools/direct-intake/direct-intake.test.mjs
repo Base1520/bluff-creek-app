@@ -6,7 +6,9 @@ import { createRequire } from 'node:module';
 const require=createRequire(new URL('../../admin/tests/package.json',import.meta.url));
 const {PGlite}=require('@electric-sql/pglite');
 const {pgcrypto}=require('@electric-sql/pglite/contrib/pgcrypto');
-const baseline=JSON.parse(await readFile(new URL('../office-preflight/manifest.json',import.meta.url),'utf8'));
+const baselineBytes=await readFile(new URL('../office-preflight/history/manifest-eight-2026-09-09.json',import.meta.url));
+assert.equal(createHash('sha256').update(baselineBytes).digest('hex'),'572c8a631c293c1c2d322670b8f295de95e3baeb2fa59a82f2ae641e28812c68');
+const baseline=JSON.parse(baselineBytes);
 const sql=await readFile(new URL('./migrations/20260909212646_direct_app_intake.sql',import.meta.url),'utf8');
 const hash=x=>createHash('sha256').update(x).digest('hex');
 const ids=Object.fromEntries(['admin','editor','viewer','guest','other','prayer','unconfirmed_staff','banned','deleted','anonymous','blank','unknown','duplicate'].map((name,i)=>[name,`00000000-0000-4000-8000-${String(i+1).padStart(12,'0')}`]));
@@ -45,7 +47,7 @@ async function setup(t,options={}){
  return{db,rows,as,rpc,functionState,oldFunctions,oldPolicies,oldRoles};
 }
 
-test('direct intake on all eight current migrations retains staff security and implements private receipts, quotas and welcome leases',async t=>{
+test('direct intake on the frozen eight-migration baseline retains staff security and implements private receipts, quotas and welcome leases',async t=>{
  const f=await setup(t),{db,rows,as,rpc}=f;
  const guest=(name,req=randomUUID(),p=profile())=>rpc(name,'register_app_guest',[req,p]);
  const pray=(name,req=randomUUID(),p=prayer())=>rpc(name,'submit_app_prayer',[req,p]);

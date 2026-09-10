@@ -1,4 +1,9 @@
-# Direct intake delivery worker — prepared, not activated
+# Direct intake delivery worker
+
+Activated September 10, 2026 in the reviewed church project. The two migrations
+are recorded under their actual hosted versions in the active migration manifest.
+The named one-minute schedule is installed. Do not rerun activation or create a
+second job. Real guest, prayer and inbox acceptance is a separate operator check.
 
 The app submits to transactional database RPCs first. A valid receipt means the
 record, follow-up task and email jobs are saved together. The browser then calls
@@ -29,23 +34,28 @@ separate. Prayer and guest details never appear in staff notification emails.
 - Queue status is visible in Office. The worker returns counts only and does not
   log names, email addresses, tokens, provider errors or prayer text.
 
-## Exact activation scope to review
+## Reviewed activation procedure (completed)
 
-1. Confirm the church project is `xzfeumdonxeodqhfirjr`, its current eight migration
-   hashes still match, and the two existing approved administrators are preserved.
-2. Apply the reviewed draft direct-intake migrations from `tools/direct-intake/`.
-   Do not use the old `tools/public-intake` reopening package.
+1. Confirm the church project is `xzfeumdonxeodqhfirjr`, its historical eight
+   migration hashes match, and the two approved administrators are preserved.
+2. Apply the reviewed direct-intake migrations once. The active manifest now has
+   ten hosted migrations; the frozen eight-file baseline remains for regression
+   checks. Do not use the old `tools/public-intake` reopening package.
 3. Create one dedicated Sending-only Resend key scoped to
    `auth.bluffcreekbaptistchurch.org`. Store it only as
    `CREEK_WELCOME_RESEND_KEY`. Do not read, reuse, replace or revoke either SMTP key.
 4. Set server `CREEK_PUBLIC_KEY` to the church publishable key. Use the runtime's
-   `SUPABASE_SERVICE_ROLE_KEY`; never put service credentials in browser files.
+   `SUPABASE_SECRET_KEYS` dictionary's valid `default` key, with a valid legacy
+   `SUPABASE_SERVICE_ROLE_KEY` fallback. Modern keys go only in the RPC `apikey`
+   header. Never put service credentials in browser files.
    Generate a dedicated random `CREEK_WELCOME_JOB_SECRET`, put the same value in
    Supabase Vault as `creek_welcome_job_secret`, and do not print it or commit it.
 5. Deploy only this function with `verify_jwt=false` as shown in
    `config.example.toml`. Its handler performs its own user/scheduler authorization.
 6. Install `pg_cron` and `pg_net` through a CLI-generated reviewed migration, then
    apply the reviewed `activation/schedule.sql`. It refuses an existing named job.
+   Its PostgreSQL-compatible guard checks the secret length separately from its
+   URL-safe characters (the original regex repetition bound of 256 was invalid).
 7. Preserve the existing SMTP sender and Office invite template. Change the shared
    recovery subject to **Reset your Creek password** and body to the exact
    `activation/recovery-email.html`. Preserve Site URL and the existing exact
@@ -77,4 +87,5 @@ requests, create no accounts and send no messages.
 
 Sources: [Supabase scheduled functions](https://supabase.com/docs/guides/functions/schedule-functions),
 [Supabase function authentication](https://supabase.com/docs/guides/functions/auth-headers),
+[Supabase server key migration](https://supabase.com/docs/guides/getting-started/migrating-to-new-api-keys),
 [Resend idempotency](https://resend.com/docs/dashboard/emails/idempotency-keys).

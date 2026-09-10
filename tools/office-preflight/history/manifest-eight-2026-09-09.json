@@ -1,5 +1,5 @@
 {
-  "format_version": 4,
+  "format_version": 3,
   "schema_revision": "20260907174301",
   "sql_files": [
     {
@@ -54,20 +54,6 @@
       "sha256": "7530eb7cd955ec1522943a179aebc03088a3ebc8126a4f4300e08eb5695bdc7b",
       "depends_on": [
         "supabase/migrations/20260908220718_pause_public_app_intake.sql"
-      ]
-    },
-    {
-      "path": "supabase/migrations/20260910152017_direct_app_intake.sql",
-      "sha256": "2d4a268bb6bb2c0d87ae7f4d2b238ee79180e862ea5ba026a9f625498955b405",
-      "depends_on": [
-        "supabase/migrations/20260909124122_require_eligible_staff_auth_account.sql"
-      ]
-    },
-    {
-      "path": "supabase/migrations/20260910152030_direct_intake_dispatch_extensions.sql",
-      "sha256": "bfbd4b7e1410a2e80508866e0fbd2029130dce435e5cb7f9ca0c1d9ad0bce6d0",
-      "depends_on": [
-        "supabase/migrations/20260910152017_direct_app_intake.sql"
       ]
     }
   ],
@@ -130,7 +116,5 @@
   ],
   "readiness_sql_file": "supabase/migrations/20260908220707_office_record_recovery.sql",
   "intake_pause_sql_file": "supabase/migrations/20260908220718_pause_public_app_intake.sql",
-  "staff_account_guard_sql_file": "supabase/migrations/20260909124122_require_eligible_staff_auth_account.sql",
-  "direct_intake_sql_file": "supabase/migrations/20260910152017_direct_app_intake.sql",
-  "dispatch_extensions_sql_file": "supabase/migrations/20260910152030_direct_intake_dispatch_extensions.sql"
+  "staff_account_guard_sql_file": "supabase/migrations/20260909124122_require_eligible_staff_auth_account.sql"
 }

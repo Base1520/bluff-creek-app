@@ -10,7 +10,7 @@ begin
     or not exists(select 1 from pg_extension where extname='supabase_vault') then
     raise exception 'Scheduler extensions are not ready';
   end if;
-  if (select count(*) from vault.decrypted_secrets where name='creek_welcome_job_secret' and decrypted_secret ~ '^[A-Za-z0-9_-]{32,256}$')<>1 then
+  if (select count(*) from vault.decrypted_secrets where name='creek_welcome_job_secret' and length(decrypted_secret) between 32 and 256 and decrypted_secret ~ '^[A-Za-z0-9_-]+$')<>1 then
     raise exception 'Exactly one valid dedicated scheduler secret is required';
   end if;
   if exists(select 1 from cron.job where jobname='creek-intake-dispatch') then

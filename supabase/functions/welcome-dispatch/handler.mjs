@@ -7,6 +7,23 @@ const FROM = 'Bluff Creek Baptist Church <office@auth.bluffcreekbaptistchurch.or
 const REPLY = 'bluffcreekbaptist@gmail.com';
 export const WELCOME_VERSION = 'creek-welcome-v1';
 export const NOTICE_VERSION = 'creek-office-notice-v1';
+function serviceKeyKind(value) {
+  if (typeof value !== 'string' || value.length > 16384 || value.trim() !== value) return null;
+  if (/^sb_secret_[A-Za-z0-9_-]+$/.test(value)) return 'modern';
+  return /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(value) ? 'legacy' : null;
+}
+
+// Runtime dictionaries are data only. Select the default secret explicitly;
+// never select another named key or expose any environment value in output.
+export function resolveServiceKey(secretKeys, legacyKey) {
+  if (typeof secretKeys === 'string' && secretKeys.length <= 16384) {
+    try {
+      const keys = JSON.parse(secretKeys);
+      if (keys && typeof keys === 'object' && !Array.isArray(keys) && Object.hasOwn(keys, 'default') && serviceKeyKind(keys.default) === 'modern') return keys.default;
+    } catch { /* An unavailable modern dictionary may still use a valid legacy key. */ }
+  }
+  return serviceKeyKind(legacyKey) === 'legacy' ? legacyKey : undefined;
+}
 const escapeHTML = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 
 export function welcomeMessage(job) {
@@ -48,7 +65,8 @@ async function limitedJSON(response,limit=16384) {
  */
 export function createWelcomeHandler({projectURL,publishableKey,serviceKey,resendKey,jobSecret,allowedOrigin=APP.slice(0,-1),fetcher=fetch,now=()=>new Date(),timeoutMs=8000}={}) {
   const project=validProject(projectURL),timeout=Math.max(1,Math.min(8000,Number(timeoutMs)||8000));
-  const ready=!!(project && typeof publishableKey==='string' && /^sb_publishable_[A-Za-z0-9_-]+$/.test(publishableKey) && typeof serviceKey==='string' && /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(serviceKey) && typeof resendKey==='string' && /^re_[A-Za-z0-9_-]+$/.test(resendKey) && typeof jobSecret==='string' && /^[A-Za-z0-9_-]{32,256}$/.test(jobSecret) && allowedOrigin===APP.slice(0,-1));
+  const serviceMode=serviceKeyKind(serviceKey);
+  const ready=!!(project && typeof publishableKey==='string' && /^sb_publishable_[A-Za-z0-9_-]+$/.test(publishableKey) && serviceMode && typeof resendKey==='string' && /^re_[A-Za-z0-9_-]+$/.test(resendKey) && typeof jobSecret==='string' && /^[A-Za-z0-9_-]{32,256}$/.test(jobSecret) && allowedOrigin===APP.slice(0,-1));
   function respond(body,status,origin) { return new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Vary':'Origin',...(origin===allowedOrigin?{'Access-Control-Allow-Origin':origin}: {})}}); }
   async function requestJSON(url,options,limit=16384) {
     const abort=new AbortController();let timer;
@@ -57,7 +75,7 @@ export function createWelcomeHandler({projectURL,publishableKey,serviceKey,resen
     finally{clearTimeout(timer);}
   }
   async function rpc(name,body) {
-    const result=await requestJSON(project+'/rest/v1/rpc/'+name,{method:'POST',headers:{apikey:serviceKey,Authorization:'Bearer '+serviceKey,'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const result=await requestJSON(project+'/rest/v1/rpc/'+name,{method:'POST',headers:{apikey:serviceKey,...(serviceMode==='legacy'?{Authorization:'Bearer '+serviceKey}:{}),'Content-Type':'application/json'},body:JSON.stringify(body)});
     if(!result.ok)throw new Error('database_unavailable');return result.data;
   }
   async function finish(job,status,providerId,errorCode,kind) {

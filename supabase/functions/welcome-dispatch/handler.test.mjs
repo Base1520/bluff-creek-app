@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createWelcomeHandler,welcomeMessage,officeNoticeMessage,WELCOME_VERSION,NOTICE_VERSION } from './handler.mjs';
+import { createWelcomeHandler,resolveServiceKey,welcomeMessage,officeNoticeMessage,WELCOME_VERSION,NOTICE_VERSION } from './handler.mjs';
 const ORIGIN='https://app.bluffcreekbaptistchurch.org';
 const USER='00000000-0000-4000-8000-000000000001';
 const JOB='00000000-0000-4000-8000-000000000010';
@@ -106,4 +106,52 @@ test('staff notice contains no source details and uses immutable versioned conte
 
 test('final counts reflect a retry that the database moves to attention at the retry deadline',async()=>{
  const f=fixture({provider:()=>json({},500),finish:()=>json({id:JOB,status:'attention'})});const r=await f.invoke();assert.equal(r.body.queued,0);assert.equal(r.body.needs_attention,1);
+});
+
+test('runtime prefers only the modern default service key and safely falls back to a legacy JWT',()=>{
+ const modern='sb_secret_fixture_default';
+ assert.equal(resolveServiceKey(JSON.stringify({other:'sb_secret_other',default:modern}),serviceKey),modern);
+ assert.equal(resolveServiceKey(JSON.stringify({default:modern}),undefined),modern);
+ for(const raw of [undefined,'', '{broken', 'null', '[]', '"sb_secret_fixture"', '{}',
+   JSON.stringify({other:modern}), JSON.stringify({__proto__:null}),
+   '{"__proto__":{"default":"sb_secret_fixture"}}',
+   JSON.stringify({default:'sb_publishable_fixture'}),JSON.stringify({default:serviceKey}),
+   JSON.stringify({default:{value:modern}}),JSON.stringify({default:modern+'\n'}),
+   JSON.stringify({default:modern,padding:'x'.repeat(16384)})]) {
+  assert.equal(resolveServiceKey(raw,serviceKey),serviceKey);
+  assert.equal(resolveServiceKey(raw,undefined),undefined);
+ }
+ for(const invalid of ['sb_publishable_fixture','sb_secret_fixture','missing','test.service.key\n',{},null]) {
+  assert.equal(resolveServiceKey('{}',invalid),undefined);
+ }
+});
+
+test('modern service key sends both queue RPCs only through apikey while user and provider authentication stay separate',async()=>{
+ const modern='sb_secret_fixture_default';
+ const f=fixture({notices:[noticeJob],config:{serviceKey:resolveServiceKey(JSON.stringify({default:modern}),undefined)}});
+ const r=await f.invoke();assert.equal(r.response.status,200);assert.equal(r.body.sent,1);assert.equal(r.body.office_notifications.sent,1);
+ const auth=f.calls.find(x=>x.url.endsWith('/auth/v1/user'));
+ assert.deepEqual(auth.init.headers,{apikey:'sb_publishable_fixture',Authorization:'Bearer fixture.user.jwt'});
+ const rpcs=f.calls.filter(x=>x.url.includes('/rest/v1/rpc/'));assert.equal(rpcs.length,4);
+ for(const rpc of rpcs){assert.equal(rpc.init.headers.apikey,modern);assert.equal(Object.hasOwn(rpc.init.headers,'Authorization'),false);}
+ for(const send of f.calls.filter(x=>x.url==='https://api.resend.com/emails')){assert.equal(send.init.headers.Authorization,'Bearer '+resendKey);assert.equal(Object.hasOwn(send.init.headers,'apikey'),false);}
+ assert.doesNotMatch(JSON.stringify(r.body),/sb_secret|fixture|recipient|token/);
+});
+
+test('modern service key scheduler still needs the exact separate secret and never impersonates a user',async()=>{
+ const config={serviceKey:'sb_secret_fixture_default'};
+ const f=fixture({jobs:[],config});const r=await f.invoke({origin:null,headers:{'x-creek-job-secret':jobSecret,Authorization:''}});
+ assert.equal(r.response.status,200);assert.equal(f.calls.length,2);
+ for(const call of f.calls){assert.equal(call.body.p_scope_user_id,null);assert.equal(call.body.p_limit,3);assert.equal(call.init.headers.apikey,config.serviceKey);assert.equal(Object.hasOwn(call.init.headers,'Authorization'),false);}
+ for(const options of [{origin:null,headers:{'x-creek-job-secret':'b'.repeat(48)}},{headers:{'x-creek-job-secret':jobSecret}},{headers:{Authorization:'Bearer sb_secret_fixture_default'}}]){
+  const bad=fixture({config});assert.equal((await bad.invoke(options)).response.status,401);assert.equal(bad.calls.length,0);
+ }
+});
+
+test('legacy RPC header behavior remains valid and unusable service credentials cannot make upstream requests',async()=>{
+ const f=fixture();assert.equal((await f.invoke()).response.status,200);
+ for(const call of f.calls.filter(x=>x.url.includes('/rest/v1/rpc/'))){assert.equal(call.init.headers.apikey,serviceKey);assert.equal(call.init.headers.Authorization,'Bearer '+serviceKey);}
+ for(const invalid of [undefined,'sb_secret_','sb_secret_fixture\n','sb_publishable_fixture','test.service.key\n','x'.repeat(16385)]){
+  const bad=fixture({config:{serviceKey:invalid}});const r=await bad.invoke();assert.equal(r.response.status,503);assert.deepEqual(r.body,{error:'welcome_unavailable'});assert.equal(bad.calls.length,0);
+ }
 });
