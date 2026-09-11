@@ -6,6 +6,7 @@ const html = await readFile(new URL('../index.html',import.meta.url),'utf8');
 const app = await readFile(new URL('../app.js',import.meta.url),'utf8');
 const membershipSource = await readFile(new URL('../membership.js',import.meta.url),'utf8');
 const weekSource = await readFile(new URL('../week.js',import.meta.url),'utf8');
+const weeklyEmailSource = await readFile(new URL('../weekly-email.js',import.meta.url),'utf8');
 const session = id => ({ user:{ id, email:'staff-'+id+'@example.invalid' }, access_token:'synthetic-token' });
 const pause = () => new Promise(r=>setTimeout(r,15));
 async function until(check, message) {
@@ -53,7 +54,7 @@ function fixture(t,options={}) {
     async getSession(){return {data:{session:current}};},
     async signInWithPassword(){if(options.signInDeferred)return options.signInDeferred.promise;w.sessionStorage.setItem('creek-office-auth',JSON.stringify(session('a')));emit(session('a'),'SIGNED_IN');return {data:{session:current}};},
     async signOut(){if(options.signOutDeferred)return options.signOutDeferred.promise;emit(null);return {error:null};}
-  },rpc(name){calls.push({op:'rpc',name});const role=options.roles?.[current?.user.id]||'editor';return Promise.resolve(typeof options.readiness==='function'?options.readiness():options.readiness||{data:{schema_revision:'20260907174301',staff_role:role,supported_modules:['events','contacts','documents','activity','membership','care','office_content','app_signups','leader_followups']}});},from(table){
+  },rpc(name,args){calls.push({op:'rpc',name});if(options.onRpc){const custom=options.onRpc(name,args,current);if(custom!==undefined)return Promise.resolve(custom);}const role=options.roles?.[current?.user.id]||'editor';return Promise.resolve(typeof options.readiness==='function'?options.readiness():options.readiness||{data:{schema_revision:'20260907174301',staff_role:role,supported_modules:['events','contacts','documents','activity','membership','care','office_content','app_signups','leader_followups']}});},from(table){
     assert.equal(insideCallback,false,'do not start database queries inside the auth callback');
     const q={table,owner:current?.user.id,op:'select'};
     const chain={select(fields,opts){q.count=opts?.count;return chain;},range(a,b){q.range=[a,b];return chain;},eq(k,v){q[k]=v;return chain;},order(){return chain;},limit(){return chain;},maybeSingle(){return chain;},single(){q.single=true;return chain;},insert(row){q.op='insert';q.row=row;return chain;},update(row){q.op='update';q.row=row;return chain;},delete(){q.op='delete';return chain;},then(a,b){return respond(q).then(a,b);}};return chain;
@@ -83,6 +84,13 @@ function fixture(t,options={}) {
     endRefresh(token){assert.equal(token,state.token,'only the active weekly refresh token may finish');state.ends=(state.ends||0)+1;state.afterContent=!!options.officeContent?.loaded;state.atEnd=moduleOptions.getSources();moduleOptions.root.textContent='Fictional weekly coordination';},
     render(){state.renders=(state.renders||0)+1;},clear(){state.clears=(state.clears||0)+1;moduleOptions.root.replaceChildren();}
   };}};
+  if(options.weeklyEmail)w.CreekWeeklyEmail={create(moduleOptions){const state=options.weeklyEmail;state.options=moduleOptions;return {
+    async load(epoch){(state.loads||=[]).push(epoch);state.readyAtLoad=moduleOptions.getContext().workspaceReady;moduleOptions.root.textContent='Fictional shared email';},
+    render(){state.renders=(state.renders||0)+1;},
+    pause(){state.pauses=(state.pauses||0)+1;moduleOptions.root.replaceChildren();},
+    clear(){state.clears=(state.clears||0)+1;moduleOptions.root.replaceChildren();}
+  };}};
+  if(options.realWeeklyEmail)w.eval(weeklyEmailSource);
   if(options.realWeek)w.eval(weekSource);
   let created=0; w.CREEK_OFFICE_CONFIG=options.config||{supabaseUrl:'https://testproject.supabase.co',publishableKey:'sb_publishable_synthetic'};
   w.supabase={createClient(){created++;return client;}};w.eval(app);
@@ -116,7 +124,7 @@ test('late table fetch after logout cannot repopulate private DOM',async t=>{
 test('same-account token events preserve unsaved edits; viewer cannot open editor',async t=>{
   const f=fixture(t);await until(()=>f.el('people-list').querySelector('button'),'editable records loaded');f.el('people-list').querySelector('button').click();f.el('editor-fields').querySelector('[name=notes]').value='Synthetic unsaved edit';f.emit(session('a'));await pause();assert.equal(f.el('editor').open,true);assert.equal(f.el('editor-fields').querySelector('[name=notes]').value,'Synthetic unsaved edit');
   const v=fixture(t,{roles:{a:'viewer'}});await pause();v.w.location.hash='#people';await pause();assert.equal(v.el('primary-action').classList.contains('hidden'),true);v.el('primary-action').click();assert.equal(v.el('editor').open,false);assert.equal(v.el('people-list').querySelector('button'),null);
-  for(const view of ['week','history','care','signups','intake','communications','attention','followups','announcements','committees','slides','prayers']) {
+  for(const view of ['week','history','care','signups','intake','communications','weekly-email','attention','followups','announcements','committees','slides','prayers']) {
     v.w.location.hash='#'+view;await pause();
     assert.equal(v.el(view+'-view').classList.contains('hidden'),true);
     assert.equal(v.w.document.querySelector('[data-view="'+view+'"]').classList.contains('hidden'),true);
@@ -776,4 +784,41 @@ test('the real weekly module renders app projections on initial load and after i
   assert.match(f.el('week-view').textContent,/Updated fictional announcement/);assert.doesNotMatch(f.el('week-view').textContent,/Refreshing|unavailable/i);
   f.el('week-view').querySelector('[data-week-open="announcements"]').click();assert.deepEqual(officeContent.opened,{view:'announcements',id:'real-week-announcement'});assert.equal(f.w.location.hash,'#announcements');
   f.emit(null);assert.equal(f.el('week-view').textContent,'');
+});
+
+
+test('weekly email is a private route loaded only after Office readiness, and clears on logout',async t=>{
+ const weeklyEmail={},f=fixture(t,{weeklyEmail,url:'https://office.example.invalid/admin/#weekly-email'});
+ await until(()=>weeklyEmail.loads?.length,'weekly email loaded');assert.equal(weeklyEmail.readyAtLoad,true);
+ await until(()=>f.el('page-title').textContent==='Weekly email','initial route opened');
+ assert.equal(f.el('weekly-email-view').classList.contains('hidden'),false);
+ assert.match(f.el('weekly-email-view').textContent,/Fictional shared email/);
+ f.emit(null);assert.equal(f.el('weekly-email-view').textContent,'');assert.ok(weeklyEmail.clears>=2);
+ const forbidden={},v=fixture(t,{roles:{a:'viewer'},weeklyEmail:forbidden,url:'https://office.example.invalid/admin/#weekly-email'});
+ await until(()=>v.el('people-list').textContent.includes('Record a'),'viewer core loaded');assert.equal(forbidden.loads,undefined);
+ assert.equal(v.el('weekly-email-view').classList.contains('hidden'),true);assert.equal(v.el('page-title').textContent,'Overview');
+});
+
+test('temporary core failure pauses the weekly email module; successful same-owner refresh resumes it',async t=>{
+ const weeklyEmail={};let fail=false;
+ const f=fixture(t,{weeklyEmail,onQuery(q){if(fail&&q.table==='contacts')return {error:{code:'OFFICE_TIMEOUT'}};}});
+ await until(()=>weeklyEmail.loads?.length,'initial weekly module loaded');const clears=weeklyEmail.clears;
+ fail=true;f.el('workspace-refresh').click();await until(()=>weeklyEmail.pauses===1,'email module paused');
+ assert.equal(f.el('weekly-email-view').textContent,'');assert.equal(weeklyEmail.clears,clears,'pause must not discard identity-bound in-memory draft');
+ fail=false;f.el('workspace-refresh').click();await until(()=>weeklyEmail.loads.length===2,'same-session module resumed');
+ assert.equal(weeklyEmail.options.getContext().workspaceReady,true);
+});
+
+test('actual staff role change discards the weekly-email private draft',async t=>{
+ const roles={a:'admin'},weeklyEmail={},f=fixture(t,{roles,weeklyEmail});await until(()=>weeklyEmail.loads?.length,'module loaded');const clears=weeklyEmail.clears;
+ roles.a='viewer';f.el('workspace-refresh').click();await until(()=>f.el('role-label').textContent==='viewer','viewer role accepted');
+ assert.ok(weeklyEmail.clears>clears);assert.equal(f.el('weekly-email-view').textContent,'');assert.equal(weeklyEmail.loads.length,1);
+});
+
+test('missing weekly-email backend leaves the real Office usable and exposes no synthetic success',async t=>{
+ const f=fixture(t,{realWeeklyEmail:true,url:'https://office.example.invalid/admin/#weekly-email',onRpc(name){if(name==='get_weekly_email_workspace')return {data:null,error:{code:'PGRST202'}};}});
+ await until(()=>f.el('weekly-email-view').textContent.match(/not enabled|not available|unavailable/i),'module reports missing service');
+ assert.equal(f.el('workspace').dataset.connection,'ready');assert.ok(f.el('people-list').querySelector('button'));
+ assert.equal(f.calls.filter(q=>q.op==='rpc'&&/save_weekly_email|review_weekly_email/.test(q.name)).length,0);
+ f.emit(null);assert.equal(f.el('weekly-email-view').textContent,'');
 });
