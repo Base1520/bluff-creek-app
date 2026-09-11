@@ -4,7 +4,7 @@
   var els = {};
   var db = null;
   var localDevelopment = false, backendOrigin = null;
-  var membership = null, care = null, officeContent = null, signups = null, intakeTasks = null, followups = null, reminderCalendar = null;
+  var membership = null, care = null, officeContent = null, signups = null, intakeTasks = null, communications = null, followups = null, reminderCalendar = null;
   var session = null;
   var role = null;
   var authEpoch = 0, loadEpoch = 0, documentEpoch = 0, editorEpoch = 0;
@@ -15,9 +15,9 @@
   var draft = null, readinessEpoch = 0;
   var REQUIRED_REVISION = "20260907174301";
   var state = { events: [], people: [], documents: [], activity: [] };
-  var titles = { dashboard: "Overview", followups: "My follow-ups", calendar: "Staff calendar", announcements: "Announcements", committees: "Committee contacts", slides: "Sunday slides", prayers: "Prayer requests", people: "People & membership", history: "Member history", care: "Guests & care", signups: "Guest register", intake: "Intake actions", documents: "Documents", activity: "Activity" };
+  var titles = { dashboard: "Overview", followups: "My follow-ups", calendar: "Staff calendar", announcements: "Announcements", committees: "Committee contacts", slides: "Sunday slides", prayers: "Prayer requests", people: "People & membership", history: "Member history", care: "Guests & care", signups: "Guest register", intake: "Intake actions", communications: "Communications", documents: "Documents", activity: "Activity" };
   var contentViews = ["announcements", "committees", "slides", "prayers"];
-  var privateViews = ["history", "care", "signups", "intake", "followups"].concat(contentViews);
+  var privateViews = ["history", "care", "signups", "intake", "communications", "followups"].concat(contentViews);
 
   function deadline(request) {
     var timer;
@@ -84,7 +84,7 @@
   function clearPrivate() {
     window.clearTimeout(documentExpiryTimer);
     if (membership) membership.clear(); if (care) care.clear();
-    if (officeContent) officeContent.clear(); if (signups) signups.clear(); if (intakeTasks) intakeTasks.clear();
+    if (officeContent) officeContent.clear(); if (signups) signups.clear(); if (intakeTasks) intakeTasks.clear(); if (communications) communications.clear();
     if (followups) followups.clear(); if (reminderCalendar) reminderCalendar.clear();
     el("dashboard-followup-list").replaceChildren(); el("dashboard-followup-status").textContent = ""; el("followup-badge").textContent = ""; el("followup-badge").removeAttribute("aria-label");
     loadEpoch++; documentEpoch++; peopleReady = false; state = { events: [], people: [], documents: [], activity: [] };
@@ -158,6 +158,7 @@
       }
     }));
     document.querySelectorAll("button[data-intake-filter]").forEach(function(button){button.onclick=function(){if(!canEdit() || button.disabled || !intakeTasks)return;location.hash="intake";route();intakeTasks.showFilter(button.dataset.intakeFilter);};});
+    if (window.CreekCommunications && el("communications-view")) communications = window.CreekCommunications.create(Object.assign({}, moduleOptions, { root: el("communications-view") }));
     if (window.CreekFollowups) followups = window.CreekFollowups.create(Object.assign({}, moduleOptions, { root: el("followups-module"), onSummary: renderFollowupSummary }));
     if (window.CreekReminderCalendar) reminderCalendar = window.CreekReminderCalendar.create({ button: el("weekly-reminder"), allowed: function () { return !!session && canEdit(); } });
     // Refresh these queues without replacing unsaved editors elsewhere.
@@ -361,7 +362,7 @@
       await reconcileDraft(epoch, readDraft);
       if (!current(epoch) || request !== loadEpoch) return;
       freezeOtherDialogs(false);
-      if (canEdit()) await Promise.all([membership ? membership.load(epoch) : null, care ? care.load(epoch) : null, officeContent ? officeContent.load(epoch) : null, signups ? signups.load(epoch) : null, intakeTasks ? intakeTasks.load(epoch) : null, followups ? followups.load(epoch) : null]);
+      if (canEdit()) await Promise.all([membership ? membership.load(epoch) : null, care ? care.load(epoch) : null, officeContent ? officeContent.load(epoch) : null, signups ? signups.load(epoch) : null, intakeTasks ? intakeTasks.load(epoch) : null, communications ? communications.load(epoch) : null, followups ? followups.load(epoch) : null]);
       if (!current(epoch) || request !== loadEpoch) return;
       health("", false); route(); syncEditor();
     } catch (error) {
@@ -405,7 +406,7 @@
     el("activity-list").innerHTML = state.activity.map(activityRow).join("");
     bindRowActions();
     if (membership) membership.render(); if (care) care.render();
-    if (officeContent) officeContent.render(); if (signups) signups.render(); if (intakeTasks) intakeTasks.render(); if (followups) followups.render();
+    if (officeContent) officeContent.render(); if (signups) signups.render(); if (intakeTasks) intakeTasks.render(); if (communications) communications.render(); if (followups) followups.render();
   }
 
   function renderCareSummary(summary) {

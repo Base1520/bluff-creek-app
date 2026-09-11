@@ -31,7 +31,7 @@ function fixture(t, overrides={}) {
   }
   let identity=overrides.user===undefined?A:overrides.user, currentSession=identity?session(identity):null,callback;
   const routes=[];win.addEventListener('creek:open-profile',()=>routes.push('new'));
-  const calls={rpc:[],invoke:[],signup:[],signin:[],getUser:0,factory:[],signout:[],setSession:[],update:[],reset:[]};
+  const calls={communication:[],rpc:[],invoke:[],signup:[],signin:[],getUser:0,factory:[],signout:[],setSession:[],update:[],reset:[]};
   const client={auth:{
     getSession:async()=>overrides.getSession?overrides.getSession():({data:{session:currentSession},error:null}),
     getUser:async()=>{calls.getUser++;return overrides.getUser?overrides.getUser(identity):{data:{user:identity},error:null};},
@@ -42,7 +42,13 @@ function fixture(t, overrides={}) {
     signUp:async value=>{calls.signup.push({...value});return overrides.auth?overrides.auth(value):{data:{session:session(A)},error:null};},
     signInWithPassword:async value=>{calls.signin.push({...value});return overrides.auth?overrides.auth(value):{data:{session:session(A)},error:null};},
     signOut:async value=>{calls.signout.push(value);currentSession=null;callback('SIGNED_OUT',null);return {error:null};},stopAutoRefresh(){}
-  },rpc:async(name,payload)=>{calls.rpc.push({name,payload:payload&&structuredClone(payload)});return overrides.rpc?overrides.rpc(name,payload):{data:name==='get_my_app_connection'?null:saved,error:null};},
+  },rpc:async(name,payload)=>{
+    if(name==='get_app_communication_capabilities' || name==='get_my_communication_preferences' || name==='set_my_communication_preferences') {
+      calls.communication.push({name,payload:payload&&structuredClone(payload)});
+      return overrides.communication?overrides.communication(name,payload):{error:{code:'PGRST202'}};
+    }
+    calls.rpc.push({name,payload:payload&&structuredClone(payload)});return overrides.rpc?overrides.rpc(name,payload):{data:name==='get_my_app_connection'?null:saved,error:null};
+  },
   functions:{invoke:async(name,payload)=>{calls.invoke.push({name,payload});return overrides.invoke?overrides.invoke():{data:{status:'processed',sent:0,queued:1,needs_attention:0},error:null};}}};
   const app=initialize(doc,{config:overrides.config===undefined?config:overrides.config,timeoutMs:overrides.timeoutMs||1000,now:overrides.now,createClient:(...args)=>{calls.factory.push(args);return client;}});
   const el=id=>doc.getElementById('connection-'+id);
@@ -151,7 +157,7 @@ test('both public entry points mount direct forms and no email-draft handler',()
   for(const file of ['index.html','connection.html']){
     const doc=new JSDOM(fs.readFileSync(path.join(__dirname,'..',file),'utf8')).window.document;
     for(const id of ['connection-guest-form','connection-prayer-form','connection-auth-form'])assert.equal(doc.querySelectorAll('#'+id).length,1,file);
-    assert.equal(doc.querySelector('script[src="js/app-forms.js"]'),null);assert.equal(doc.querySelector('script[src="js/connection.js"]')!==null,true);
+    assert.equal(doc.querySelector('script[src="js/app-forms.js"]'),null);assert.equal(doc.querySelector('script[src="js/connection.js?v=weekly-choices-1"]')!==null,true);
     assert.equal(doc.querySelector('[type=password]').getAttribute('autocomplete'),'new-password');assert.equal(doc.querySelector('form[action^="mailto:"]'),null);
   }
 });
@@ -298,5 +304,141 @@ test('navigation and account loss cancel onboarding while an early result waits 
     const f=fixture(t,{indexRouter:true,routerOrder:'controller-first',url:'https://church.example.invalid/',user:null});await f.app.ready;assert.deepEqual(f.routes,[]);f.runRouter();
     if(action==='navigate')f.doc.querySelector('[data-tab="grow"]').click();else f.event('SIGNED_OUT',null);
     f.documentReady();await settle();assert.deepEqual(f.routes,[]);assert.equal(f.win.location.hash,action==='navigate'?'#grow':'#home');
+  }
+});
+
+function preference(version=0,weekly=false,emailMatches=true) { return {version:1,preference_version:version,weekly_email:weekly,email_matches:emailMatches,updated_at:version?'2026-09-10T12:00:00Z':null}; }
+function communicationFixture(t, options={}) {
+  let value=options.value||preference();
+  function write(payload, expectedKey) {
+    if(payload[expectedKey]!==value.preference_version)return {error:{code:'40001',message:'COMMUNICATION_VERSION_CONFLICT'}};
+    value=preference(value.preference_version+1,payload.p_weekly_email);return {data:value,error:null};
+  }
+  const f=fixture(t,{...options,communication:async(name,payload)=>{
+    if(name==='get_app_communication_capabilities')return options.capability?options.capability():{data:{version:1,weekly_email:true},error:null};
+    if(name==='get_my_communication_preferences')return options.read?options.read():{data:value,error:null};
+    return options.set?options.set(payload):write(payload,'p_expected_version');
+  },rpc:async(name,payload)=>{
+    if(name==='get_my_app_connection')return options.profile?options.profile():{data:null,error:null};
+    if(name==='register_app_guest_with_preferences'){
+      if(options.register)return options.register(payload);
+      const result=write(payload,'p_preference_version');return result.error?result:{data:{...saved,communication_preferences:result.data},error:null};
+    }
+    return {data:saved,error:null};
+  }});
+  return Object.assign(f,{getPreference:()=>value,setPreference:next=>{value=next;}});
+}
+function authenticate(f) { f.el('email').value=A.email;f.el('password').value='synthetic-password-123';f.setUser(A);f.submit('auth'); }
+function canceledUnload(f) { const event=new f.win.Event('beforeunload',{cancelable:true});f.win.dispatchEvent(event);return event.defaultPrevented; }
+
+test('weekly email starts unchecked and optional; guest choice and registration use one atomic RPC',async t=>{
+  for(const weekly of [false,true]){
+    const f=communicationFixture(t,{user:null});await f.app.ready;
+    assert.equal(f.el('weekly-choice').hidden,false);assert.equal(f.field('guest','weekly_email').checked,false);assert.equal(f.field('guest','weekly_email').required,false);assert.equal(f.el('preferences').hidden,true);
+    f.fill();if(weekly)f.input('guest','weekly_email',true);f.submit('guest');authenticate(f);await settle();
+    const writes=f.calls.rpc.filter(call=>call.name!=='get_my_app_connection');assert.equal(writes.length,1);assert.equal(writes[0].name,'register_app_guest_with_preferences');assert.equal(writes[0].payload.p_weekly_email,weekly);assert.equal(writes[0].payload.p_preference_version,0);assert.equal(writes[0].payload.p_profile.contact_permission,true);assert.equal(Object.hasOwn(writes[0].payload.p_profile,'weekly_email'),false);
+    assert.equal(f.getPreference().weekly_email,weekly);assert.equal(f.field('preferences','weekly_email').checked,weekly);assert.equal(f.calls.communication.filter(call=>call.name==='set_my_communication_preferences').length,0);assert.equal(f.calls.invoke.length,1);assert.equal(f.el('open-app').hidden,false);assert.equal(canceledUnload(f),false);
+  }
+});
+test('existing weekly choice survives an untouched anonymous form but an explicit unchecked choice wins',async t=>{
+  for(const touched of [false,true]){
+    const f=communicationFixture(t,{user:null,value:preference(3,true)});await f.app.ready;f.fill();
+    if(touched){f.input('guest','weekly_email',true);f.input('guest','weekly_email',false);}
+    f.submit('guest');f.el('auth-mode').value='signin';authenticate(f);await settle();
+    const write=f.calls.rpc.find(call=>call.name==='register_app_guest_with_preferences');assert.equal(write.payload.p_weekly_email,!touched);assert.equal(write.payload.p_preference_version,3);assert.equal(f.getPreference().weekly_email,!touched);
+  }
+});
+test('email withdrawal is independent of invalid registration and personal care consent, and never dispatches mail',async t=>{
+  const f=communicationFixture(t,{value:preference(2,true)});await f.app.ready;
+  assert.equal(f.field('guest','contact_permission').checked,false);assert.equal(f.field('guest','first_name').value,'');
+  f.input('preferences','weekly_email',false);assert.equal(canceledUnload(f),true);assert.equal(f.el('guest-submit').disabled,true);f.submit('guest');f.submit('preferences');f.submit('preferences');await settle();
+  const writes=f.calls.communication.filter(call=>call.name==='set_my_communication_preferences');assert.equal(writes.length,1);assert.deepEqual(Object.keys(writes[0].payload).sort(),['p_expected_version','p_request_id','p_weekly_email']);assert.equal(writes[0].payload.p_weekly_email,false);assert.equal(writes[0].payload.p_expected_version,2);assert.equal(f.getPreference().weekly_email,false);assert.equal(f.calls.rpc.length,1);assert.equal(f.calls.invoke.length,0);assert.equal(f.field('guest','contact_permission').checked,false);assert.equal(canceledUnload(f),false);
+});
+test('missing capability hides both choices and retains the legacy registration endpoint',async t=>{
+  const f=fixture(t);await f.app.ready;assert.equal(f.el('weekly-choice').hidden,true);assert.equal(f.el('preferences').hidden,true);f.fill();f.submit('guest');await settle();
+  assert.deepEqual(f.calls.communication.map(call=>call.name),['get_app_communication_capabilities']);assert.deepEqual(f.calls.rpc.map(call=>call.name),['get_my_app_connection','register_app_guest']);assert.equal(Object.hasOwn(f.calls.rpc[1].payload,'p_weekly_email'),false);
+});
+test('unknown capability fails closed for guest choices but prayer works; a later check can recover',async t=>{
+  for(const response of [{error:{code:'42501',message:'private diagnostic'}},{data:{version:1,weekly_email:false}},{data:{version:2,weekly_email:true}}]){
+    let recovered=false;const f=communicationFixture(t,{capability:async()=>recovered?{data:{version:1,weekly_email:true}}:response});await f.app.ready;f.fill();f.submit('guest');await settle();assert.equal(f.calls.rpc.length,1);assert.equal(f.el('guest-submit').disabled,true);assert.equal(f.el('communication-retry').hidden,false);assert.doesNotMatch(f.doc.body.textContent,/private diagnostic/);
+    f.input('prayer','request_text','Fictional prayer');f.submit('prayer');await settle();assert.equal(f.calls.rpc.at(-1).name,'submit_app_prayer');
+    recovered=true;f.click('communication-retry');await settle();assert.equal(f.el('guest-submit').disabled,false);f.submit('guest');await settle();assert.equal(f.calls.rpc.at(-1).name,'register_app_guest_with_preferences');
+  }
+});
+test('failed or invalid own preference read holds automatic guest submission until explicit reload and Send',async t=>{
+  for(const data of [null,preference(-1),{...preference(),weekly_email:true},{...preference(1),email_matches:false,weekly_email:true},{...preference(1),updated_at:null},{...preference(),email_matches:'yes'}]){
+    let recovered=false;const f=communicationFixture(t,{user:null,read:async()=>({data:recovered?preference():data,error:null})});await f.app.ready;f.fill();f.input('guest','weekly_email',true);f.submit('guest');authenticate(f);await settle();
+    assert.equal(f.calls.rpc.length,1);assert.equal(f.el('guest-submit').disabled,true);assert.equal(f.field('guest','first_name').value,'Fictional');
+    recovered=true;f.click('communication-retry');await settle();assert.equal(f.calls.rpc.length,1);assert.equal(f.el('guest-submit').disabled,false);f.submit('guest');await settle();assert.equal(f.calls.rpc.at(-1).payload.p_weekly_email,true);
+  }
+});
+test('ambiguous atomic registration freezes choice/version/request and fresh read beats historical replay',async t=>{
+  const pending=deferred();let writes=0;
+  const oldReceipt={...saved,communication_preferences:preference(2,true)};
+  const f=communicationFixture(t,{value:preference(1,false),timeoutMs:20,register:async()=>++writes===1?pending.promise:{data:oldReceipt,error:null}});await f.app.ready;f.fill();f.input('guest','weekly_email',true);f.submit('guest');f.submit('guest');await settle();assert.equal(writes,1);
+  await new Promise(resolve=>setTimeout(resolve,30));assert.equal(f.el('guest-submit').disabled,false);assert.equal(f.form('guest').querySelector('fieldset').disabled,true);assert.equal(f.el('preferences-submit').disabled,true);assert.equal(canceledUnload(f),true);
+  f.setPreference(preference(3,false));f.submit('guest');await settle();const calls=f.calls.rpc.filter(call=>call.name==='register_app_guest_with_preferences');assert.equal(calls.length,2);assert.deepEqual(calls[0].payload,calls[1].payload);assert.equal(f.field('preferences','weekly_email').checked,false);assert.equal(f.field('guest','weekly_email').checked,false);assert.match(f.el('preferences-status').textContent,/current choice is off/);
+  pending.resolve({data:{...saved,communication_preferences:preference(2,true)},error:null});await settle();assert.equal(f.field('preferences','weekly_email').checked,false);assert.equal(f.calls.invoke.length,1);assert.equal(canceledUnload(f),false);
+});
+test('ambiguous standalone preference retry is immutable and cannot race a guest registration or late receipt',async t=>{
+  const pending=deferred();let writes=0;
+  const f=communicationFixture(t,{timeoutMs:20,set:async()=>++writes===1?pending.promise:{data:preference(1,true),error:null}});await f.app.ready;f.input('preferences','weekly_email',true);f.submit('preferences');f.submit('preferences');await settle();assert.equal(writes,1);
+  await new Promise(resolve=>setTimeout(resolve,30));assert.equal(f.el('preferences-submit').disabled,false);assert.equal(f.form('preferences').querySelector('fieldset').disabled,true);assert.equal(canceledUnload(f),true);f.fill();f.submit('guest');await settle();assert.equal(f.calls.rpc.length,1);
+  f.setPreference(preference(2,false));f.submit('preferences');await settle();const calls=f.calls.communication.filter(call=>call.name==='set_my_communication_preferences');assert.deepEqual(calls[0].payload,calls[1].payload);assert.equal(f.field('preferences','weekly_email').checked,false);assert.equal(f.calls.invoke.length,0);
+  pending.resolve({data:preference(1,true)});await settle();assert.equal(f.field('preferences','weekly_email').checked,false);
+});
+test('definitive version conflicts preserve choice and profile for explicit review with a fresh version and request',async t=>{
+  for(const kind of ['guest','preferences']){
+    let writes=0;const f=communicationFixture(t,{value:preference(1,false),register:async payload=>++writes===1?{error:{code:'40001',message:'COMMUNICATION_VERSION_CONFLICT'}}:{data:{...saved,communication_preferences:preference(payload.p_preference_version+1,payload.p_weekly_email)}},set:async payload=>++writes===1?{error:{code:'40001',message:'COMMUNICATION_VERSION_CONFLICT'}}:{data:preference(payload.p_expected_version+1,payload.p_weekly_email)}});await f.app.ready;
+    if(kind==='guest')f.fill();f.input(kind,'weekly_email',true);f.setPreference(preference(4,false));f.submit(kind);await settle();assert.equal(writes,1);assert.equal(f.field(kind,'weekly_email').checked,true);assert.equal(f.form(kind).querySelector('fieldset').disabled,false);assert.match(f.el(kind==='guest'?'guest-status':'preferences-status').textContent,/changed elsewhere/);assert.equal(f.calls.invoke.length,0);
+    f.submit(kind);await settle();const calls=(kind==='guest'?f.calls.rpc:f.calls.communication).filter(call=>call.name===(kind==='guest'?'register_app_guest_with_preferences':'set_my_communication_preferences'));assert.equal(calls.length,2);assert.notEqual(calls[0].payload.p_request_id,calls[1].payload.p_request_id);assert.equal(calls[1].payload[kind==='guest'?'p_preference_version':'p_expected_version'],4);
+  }
+});
+test('an email-change projection defaults off and only explicit choice binds a new preference',async t=>{
+  const f=communicationFixture(t,{value:preference(5,false,false)});await f.app.ready;assert.equal(f.field('guest','weekly_email').checked,false);assert.equal(f.field('preferences','weekly_email').checked,false);assert.match(f.el('communication-status').textContent,/email has changed/);assert.equal(f.calls.communication.filter(call=>call.name==='set_my_communication_preferences').length,0);
+  f.input('preferences','weekly_email',true);f.submit('preferences');await settle();assert.equal(f.getPreference().email_matches,true);assert.equal(f.getPreference().weekly_email,true);
+});
+test('account replacement or same-account email change clears preference drafts and ignores old reads/writes',async t=>{
+  for(const replacement of [B,{...A,email:'changed@example.invalid'}]){
+    const pending=deferred();const f=communicationFixture(t,{set:async()=>pending.promise});await f.app.ready;f.input('preferences','weekly_email',true);f.submit('preferences');await settle();assert.equal(canceledUnload(f),true);
+    f.event('USER_UPDATED',replacement);assert.equal(f.field('preferences','weekly_email').checked,false);assert.equal(f.el('preferences').hidden,true);assert.equal(canceledUnload(f),false);await settle();assert.match(f.el('identity').textContent,new RegExp(replacement.email.replaceAll('.','\\.')));
+    pending.resolve({data:preference(1,true)});await settle();assert.equal(f.field('preferences','weekly_email').checked,false);assert.equal(f.el('preferences-status').textContent.includes('saved.'),false);assert.equal(f.calls.invoke.length,0);
+  }
+  const pending=deferred();let reads=0;const f=communicationFixture(t,{read:async()=>++reads===1?pending.promise:{data:preference()}});await tick();await tick();f.event('SIGNED_IN',B);pending.resolve({data:preference(8,true)});await f.app.ready;await settle();assert.equal(f.field('preferences','weekly_email').checked,false);assert.match(f.el('identity').textContent,/second@example.invalid/);
+});
+test('getUser detects a same-ID changed email before preference write and signout clears unresolved drafts',async t=>{
+  const f=communicationFixture(t);await f.app.ready;f.input('preferences','weekly_email',true);f.setUser({...A,email:'changed@example.invalid'});f.submit('preferences');await settle();assert.equal(f.calls.communication.filter(call=>call.name==='set_my_communication_preferences').length,0);assert.equal(f.field('preferences','weekly_email').checked,false);assert.equal(canceledUnload(f),false);
+  const pending=deferred();const g=communicationFixture(t,{set:async()=>pending.promise});await g.app.ready;g.input('preferences','weekly_email',true);g.submit('preferences');await settle();g.click('signout');assert.equal(g.el('preferences').hidden,true);assert.equal(g.field('preferences','weekly_email').checked,false);assert.equal(canceledUnload(g),false);pending.resolve({data:preference(1,true)});await settle();assert.equal(g.el('preferences').hidden,true);assert.equal(g.win.localStorage.length,0);
+});
+
+test('definitive opt-in rate limit releases the rejected request so opt-out remains possible',async t=>{
+  for(const kind of ['guest','preferences']){
+    let calls=0;
+    const response=payload=>{if(++calls===1){f.setPreference(preference(3,true));return {error:{code:'P0001',message:'COMMUNICATION_RATE_LIMIT'}};}return {data:kind==='guest'?{...saved,communication_preferences:preference(4,false)}:preference(4,false)};};
+    const f=communicationFixture(t,{value:preference(2,false),register:async payload=>response(payload),set:async payload=>response(payload)});await f.app.ready;
+    if(kind==='guest')f.fill();f.input(kind,'weekly_email',true);f.submit(kind);
+    await settle();assert.equal(calls,1);assert.equal(f.form(kind).querySelector('fieldset').disabled,false);assert.equal(f.calls.invoke.length,0);
+    f.input(kind,'weekly_email',false);f.submit(kind);await settle();assert.equal(calls,2);
+    const writes=(kind==='guest'?f.calls.rpc:f.calls.communication).filter(call=>call.name===(kind==='guest'?'register_app_guest_with_preferences':'set_my_communication_preferences'));
+    assert.equal(writes[1].payload.p_weekly_email,false);assert.notEqual(writes[0].payload.p_request_id,writes[1].payload.p_request_id);assert.equal(writes[1].payload[kind==='guest'?'p_preference_version':'p_expected_version'],3);
+  }
+});
+test('atomic and standalone malformed preference receipts never clear attempts or claim a completed choice',async t=>{
+  for(const kind of ['guest','preferences']){
+    const f=communicationFixture(t,{register:async()=>({data:{...saved,communication_preferences:preference(1,false)}}),set:async()=>({data:preference(99,true)})});await f.app.ready;if(kind==='guest')f.fill();f.input(kind,'weekly_email',true);f.submit(kind);await settle();
+    assert.equal(f.form(kind).querySelector('fieldset').disabled,true);assert.match(f.el(kind==='guest'?'guest-status':'preferences-status').textContent,/could not confirm/);assert.equal(canceledUnload(f),true);assert.equal(f.calls.invoke.length,0);
+  }
+});
+test('a failed current read after a valid preference receipt requires only a read retry, never another write',async t=>{
+  let reads=0;const f=communicationFixture(t,{read:async()=>++reads===2?{error:{code:'network'}}:{data:reads===1?preference():preference(2,false)},set:async()=>({data:preference(1,true)})});await f.app.ready;f.input('preferences','weekly_email',true);f.submit('preferences');await settle();
+  assert.equal(f.el('preferences-submit').disabled,true);assert.equal(f.el('communication-retry').hidden,false);assert.equal(canceledUnload(f),false);f.click('communication-retry');await settle();assert.equal(f.field('preferences','weekly_email').checked,false);assert.equal(f.calls.communication.filter(call=>call.name==='set_my_communication_preferences').length,1);assert.equal(f.calls.invoke.length,0);
+});
+
+test('request conflicts reload current registration before explicit retry without denying earlier committed records',async t=>{
+  for(const message of ['COMMUNICATION_VERSION_CONFLICT','COMMUNICATION_REQUEST_CONFLICT','REQUEST_ID_CONFLICT']){
+    const pending=deferred();let reads=0,writes=0;
+    const f=communicationFixture(t,{profile:async()=>++reads===1?{data:null}:pending.promise,register:async payload=>++writes===1?{error:{code:'40001',message}}:{data:{...saved,communication_preferences:preference(1,payload.p_weekly_email)}}});await f.app.ready;f.fill();f.input('guest','weekly_email',true);f.submit('guest');await settle();
+    assert.equal(reads,2);assert.equal(writes,1);assert.equal(f.el('guest-submit').disabled,true);assert.equal(f.field('guest','first_name').value,'Fictional');assert.doesNotMatch(f.el('guest-status').textContent,/Nothing from.*saved|registration was not saved/i);f.submit('guest');await settle();assert.equal(writes,1);
+    pending.resolve({data:{first_name:'Fictional saved record',email:A.email}});await settle();assert.equal(f.field('guest','first_name').value,'Fictional');assert.equal(f.el('guest-submit').disabled,false);assert.equal(writes,1);f.submit('guest');await settle();assert.equal(writes,2);
   }
 });

@@ -68,6 +68,7 @@ function fixture(t,options={}) {
   if (options.care) w.CreekCare = { create(moduleOptions) { options.care.options=moduleOptions; return { load: async () => { moduleOptions.onSummary(options.care.summary || null); }, render() {}, clear() { moduleOptions.onSummary(null); }, selectPerson(id) { (options.care.selected ||= []).push(id); return options.care.accepted !== false; }, openQueue(kind) { (options.care.queues ||= []).push(kind); return options.care.queueAccepted !== false; } }; } };
   if (options.followups) w.CreekFollowups = { create(moduleOptions) { options.followups.options = moduleOptions; return { load: async () => moduleOptions.onSummary(options.followups.summary), render() {}, clear() { moduleOptions.onSummary({ due:null, overdue:null, upcoming:null, items:[] }); }, openNew() {} }; } };
   if (options.intake) w.CreekIntakeTasks={create(moduleOptions){options.intake.options=moduleOptions;return{load:async()=>moduleOptions.onSummary(options.intake.summary||null),render(){},clear(){moduleOptions.onSummary(null);},showFilter(value){(options.intake.filters??=[]).push(value);},taskForSource(){return null;}};}};
+  if(options.communications)w.CreekCommunications={create(moduleOptions){options.communications.options=moduleOptions;return {load:async e=>{(options.communications.loads??=[]).push(e);moduleOptions.root.textContent='Fictional private choices';},render(){},clear(){moduleOptions.root.replaceChildren();}};}};
   let created=0; w.CREEK_OFFICE_CONFIG=options.config||{supabaseUrl:'https://testproject.supabase.co',publishableKey:'sb_publishable_synthetic'};
   w.supabase={createClient(){created++;return client;}};w.eval(app);
   const el=id=>w.document.getElementById(id);
@@ -100,7 +101,7 @@ test('late table fetch after logout cannot repopulate private DOM',async t=>{
 test('same-account token events preserve unsaved edits; viewer cannot open editor',async t=>{
   const f=fixture(t);await pause();f.el('people-list').querySelector('button').click();f.el('editor-fields').querySelector('[name=notes]').value='Synthetic unsaved edit';f.emit(session('a'));await pause();assert.equal(f.el('editor').open,true);assert.equal(f.el('editor-fields').querySelector('[name=notes]').value,'Synthetic unsaved edit');
   const v=fixture(t,{roles:{a:'viewer'}});await pause();v.w.location.hash='#people';await pause();assert.equal(v.el('primary-action').classList.contains('hidden'),true);v.el('primary-action').click();assert.equal(v.el('editor').open,false);assert.equal(v.el('people-list').querySelector('button'),null);
-  for(const view of ['history','care','signups','intake','followups','announcements','committees','slides','prayers']) {
+  for(const view of ['history','care','signups','intake','communications','followups','announcements','committees','slides','prayers']) {
     v.w.location.hash='#'+view;await pause();
     assert.equal(v.el(view+'-view').classList.contains('hidden'),true);
     assert.equal(v.w.document.querySelector('[data-view="'+view+'"]').classList.contains('hidden'),true);
@@ -663,4 +664,11 @@ test('intake dashboard accepts counted actions, opens an explicit filter, and cl
 
 test('intake dashboard refuses malformed totals rather than inventing a complete queue',async t=>{
  const intake={summary:{new:4,due:2,open:1}},f=fixture(t,{intake});await until(()=>f.el('people-list').querySelector('button'),'workspace ready');assert.equal(f.el('intake-new-count').textContent,'—');assert.equal(f.w.document.querySelector('button[data-intake-filter="new"]').disabled,true);assert.match(f.el('dashboard-intake-status').textContent,/unavailable/);
+});
+
+test('communications is wired to the private workspace lifecycle and never exposed to viewers',async t=>{
+ const communications={},f=fixture(t,{communications});await pause();await pause();assert.ok(communications.loads?.length);assert.equal(communications.options.getContext().canEdit,true);
+ f.w.location.hash='#communications';f.w.dispatchEvent(new f.w.Event('hashchange'));assert.equal(f.el('communications-view').classList.contains('hidden'),false);assert.match(f.el('communications-view').textContent,/Fictional private choices/);
+ f.emit(null);assert.equal(f.el('communications-view').textContent,'');
+ const privateModule={},v=fixture(t,{roles:{a:'viewer'},communications:privateModule});await pause();await pause();assert.equal(privateModule.loads,undefined);v.w.location.hash='#communications';v.w.dispatchEvent(new v.w.Event('hashchange'));assert.equal(v.el('communications-view').classList.contains('hidden'),true);
 });
