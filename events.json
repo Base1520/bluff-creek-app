@@ -1,42 +1,10 @@
 {
   "source": "icloud",
-  "updated": "2026-09-06",
-  "synced_at": "2026-09-07T04:00:43.242Z",
-  "valid_until": "2026-12-04",
+  "updated": "2026-09-11",
+  "synced_at": "2026-09-11T14:22:41.446Z",
+  "valid_until": "2026-12-09",
   "recurring": [],
   "events": [
-    {
-      "when": "2026-09-08",
-      "time": "3:45p",
-      "title": "Yoga @ the Creek",
-      "where": "Check with the church for location",
-      "tag": "Weekly",
-      "endsAt": "2026-09-08T21:30:00.000Z"
-    },
-    {
-      "when": "2026-09-09",
-      "time": "6:00p",
-      "title": "Prayer meeting",
-      "where": "Check with the church for location",
-      "tag": "Weekly",
-      "endsAt": "2026-09-09T23:30:00.000Z"
-    },
-    {
-      "when": "2026-09-09",
-      "time": "6:00p",
-      "title": "Youth @ the Creek",
-      "where": "Check with the church for location",
-      "tag": "Weekly",
-      "endsAt": "2026-09-10T01:00:00.000Z"
-    },
-    {
-      "when": "2026-09-10",
-      "time": "3:45p",
-      "title": "Yoga @ the Creek",
-      "where": "Check with the church for location",
-      "tag": "Weekly",
-      "endsAt": "2026-09-10T21:30:00.000Z"
-    },
     {
       "when": "2026-09-13",
       "time": "8:00a",
@@ -422,14 +390,6 @@
       "endsAt": "2026-10-25T16:30:00.000Z"
     },
     {
-      "when": "2026-10-25",
-      "time": "6:00p",
-      "title": "Sunday evening discipleship",
-      "where": "Check with the church for location",
-      "tag": "Weekly",
-      "endsAt": "2026-10-26T00:00:00.000Z"
-    },
-    {
       "when": "2026-10-27",
       "time": "3:45p",
       "title": "Yoga @ the Creek",
@@ -757,6 +717,54 @@
       "where": "Check with the church for location",
       "tag": "Weekly",
       "endsAt": "2026-12-03T22:30:00.000Z"
+    },
+    {
+      "when": "2026-12-06",
+      "time": "8:00a",
+      "title": "Sunday morning prayer",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-12-06T15:00:00.000Z"
+    },
+    {
+      "when": "2026-12-06",
+      "time": "9:00a",
+      "title": "Sunday School & Morning Worship",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-12-06T17:30:00.000Z"
+    },
+    {
+      "when": "2026-12-06",
+      "time": "6:00p",
+      "title": "Sunday evening discipleship",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-12-07T01:00:00.000Z"
+    },
+    {
+      "when": "2026-12-08",
+      "time": "3:45p",
+      "title": "Yoga @ the Creek",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-12-08T22:30:00.000Z"
+    },
+    {
+      "when": "2026-12-09",
+      "time": "6:00p",
+      "title": "Prayer meeting",
+      "where": "Check with the church for location",
+      "tag": "Weekly",
+      "endsAt": "2026-12-10T00:30:00.000Z"
+    },
+    {
+      "when": "2026-12-09",
+      "time": "6:00p",
+      "title": "Youth Christmas party",
+      "where": "Bluff Creek Baptist Church",
+      "tag": "Weekly",
+      "endsAt": "2026-12-10T02:00:00.000Z"
     }
   ]
 }
