@@ -286,8 +286,18 @@
     <label>Your visits to the Creek<select name="visit_status"><option value="not_yet">I haven’t visited yet</option><option value="first_visit">This is my first visit</option><option value="returning">I’ve visited before</option></select></label>
     <label>Date of your first visit <span>(optional)</span><input type="date" name="first_visit_on"></label>
     <label class="connection-consent"><input type="checkbox" name="contact_permission" required><span>I give the church team permission to contact me personally using these details and send a welcome email.</span></label>
+    <label id="connection-weekly-choice" class="connection-consent connection-weekly-choice" hidden><input type="checkbox" name="weekly_email"><span>I’d like to receive weekly church updates by email when available. <small>Optional. You can change this choice below at any time.</small></span></label>
   </fieldset><button id="connection-guest-submit" type="submit" disabled>Save my registration</button></form>
   <p id="connection-guest-status" class="connection-status" role="status" aria-live="polite" hidden></p><button id="connection-open-app" class="connection-button" type="button" data-go="home" hidden>Open the app</button> <button id="connection-guest-new" class="connection-quiet" type="button" hidden>Clear this form</button>
+  <p id="connection-communication-status" class="connection-status" role="status" aria-live="polite" hidden></p><button id="connection-communication-retry" class="connection-quiet" type="button" hidden>Reload email choices</button>
+  <section id="connection-preferences" class="connection-preferences" aria-labelledby="connection-preferences-title" hidden>
+    <h4 id="connection-preferences-title">Your weekly email choice</h4>
+    <p class="connection-fine">Church updates, when available. Change this without resending your profile or changing personal care permission.</p>
+    <form id="connection-preferences-form" autocomplete="off"><fieldset disabled><legend class="sr-only">Weekly church email preference</legend>
+      <label class="connection-consent"><input type="checkbox" name="weekly_email"><span>Receive weekly church updates by email when available.</span></label>
+    </fieldset><button id="connection-preferences-submit" class="connection-quiet" type="submit" disabled>Save email choice</button></form>
+    <p id="connection-preferences-status" class="connection-status" role="status" aria-live="polite" hidden></p>
+  </section>
 </div>
       <p class="note">Your unfinished forms stay in this page’s memory. Keep this page open until you receive a receipt. <a class="direct-email">Email the office instead</a>.</p>
       <h3>What to expect on Sunday</h3>
@@ -553,7 +563,7 @@
 <script src="js/calendar-config.js"></script>
 <script src="js/calendar-feed.js"></script>
 <script src="js/connection-config.js"></script>
-<script src="js/connection.js"></script>
+<script src="js/connection.js?v=weekly-choices-1"></script>
 <script src="js/grow-content.js"></script>
 <script src="js/grow.js"></script>
 <script src="js/app-status.js"></script>
