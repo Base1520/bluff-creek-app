@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "status": "prepared_not_live",
+  "migration": {
+    "path": "tools/guest-sheet/migrations/20260911210428_guest_sheet_snapshot.sql",
+    "sha256": "652332c1ad938c4db6bca95cf6b6560531a6e697cfb1e0c551f70e02819525d6",
+    "bytes": 6287
+  },
+  "requires": "Recorded ten-migration Office baseline; optional deacon and guest removal supported. No other proposed package required.",
+  "active_baseline_manifest_sha256": "0734cdc37022af4c946b2e4a8d93ad1b199093834f28373b1bf8c0c9497276ae",
+  "new_functions": 6,
+  "new_private_rls_tables": 1,
+  "snapshot_columns": 18,
+  "max_rows": 5000,
+  "target": {
+    "tab": "Guest Register",
+    "header_row": 8,
+    "first_data_row": 9,
+    "status_cells": [
+      "B5",
+      "E5",
+      "A6"
+    ],
+    "function": "guest-sheet-snapshot"
+  },
+  "tests": {
+    "sql": 11,
+    "edge_and_apps_script": 16,
+    "total": 27,
+    "deno_check": "passed",
+    "actual_google_or_hosted_acceptance": "not_run"
+  },
+  "files": [
+    {
+      "path": "supabase/functions/guest-sheet-snapshot/handler.mjs",
+      "sha256": "da931ef9d89b00cefc09f20540f4b9c9538b4bfdd71fd2885642cc00750f2b3c",
+      "bytes": 4839
+    },
+    {
+      "path": "supabase/functions/guest-sheet-snapshot/index.ts",
+      "sha256": "49104915750dcb9721354501e17a4ead1955c9d6dd8a6c9b9673b0eaf868ddd2",
+      "bytes": 410
+    },
+    {
+      "path": "tools/guest-sheet/README.md",
+      "sha256": "650df5c5491f5acb37da86f69c3aa7e76562bc1387a7d3eaef108c45f5709132",
+      "bytes": 9875
+    },
+    {
+      "path": "tools/guest-sheet/apps-script/Code.gs",
+      "sha256": "057fbc8fe93a9e39d13a44efe6973c0cd9cf80f333529bfde56d66d4060a0a12",
+      "bytes": 8844
+    },
+    {
+      "path": "tools/guest-sheet/apps-script/appsscript.json",
+      "sha256": "bfef84f393989054a1f2b1ae0869b41e906e1c8fb2035bcb0b7172e66fd4e5ff",
+      "bytes": 452
+    },
+    {
+      "path": "tools/guest-sheet/guest-sheet.test.mjs",
+      "sha256": "a6c8507fbbf782d6211101e2446e9418b14f10cb6ac77acb94d2518c618b94db",
+      "bytes": 10953
+    },
+    {
+      "path": "tools/guest-sheet/migrations/20260911210428_guest_sheet_snapshot.sql",
+      "sha256": "652332c1ad938c4db6bca95cf6b6560531a6e697cfb1e0c551f70e02819525d6",
+      "bytes": 6287
+    },
+    {
+      "path": "tools/guest-sheet/transport.test.mjs",
+      "sha256": "87157eded83112d63dac47e9a131c77f987b185df488bc6d53d5fa753b5a30f7",
+      "bytes": 11945
+    }
+  ]
+}
