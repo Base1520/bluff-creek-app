@@ -11,7 +11,12 @@ import { configurationPresence, runPreflight, textReport } from './index.mjs';
 const repository = fileURLToPath(new URL('../../', import.meta.url));
 const cli = fileURLToPath(new URL('./cli.mjs', import.meta.url));
 const manifestPath = 'tools/office-preflight/manifest.json';
-const template = JSON.parse(await readFile(join(repository, manifestPath), 'utf8'));
+const frozenTenPath = 'tools/office-preflight/history/manifest-ten-2026-09-10.json';
+const activeBytes = await readFile(join(repository, manifestPath));
+const activeManifest = JSON.parse(activeBytes);
+// Keep the format-4 regression fixtures intact after eventual source alignment.
+const templateBytes = activeManifest.format_version === 4 ? activeBytes : await readFile(join(repository, frozenTenPath));
+const template = JSON.parse(templateBytes);
 const guardFixture = await readFile(join(repository, template.staff_account_guard_sql_file), 'utf8');
 const directFixture = await readFile(join(repository, template.direct_intake_sql_file), 'utf8');
 const extensionsFixture = await readFile(join(repository, template.dispatch_extensions_sql_file), 'utf8');
@@ -19,6 +24,11 @@ const pauseFixture = 'begin; revoke execute on function public.save_app_connecti
 const blankConfig = 'window.CREEK_OFFICE_CONFIG = {supabaseUrl: "", publishableKey: "", membershipSheetUrl: ""};';
 const digest = source => createHash('sha256').update(source).digest('hex');
 const check = (report, name) => report.checks.find(item => item.name === name)?.ok;
+const extensionFixtures = [
+  ['deacon_rotation_sql_file', 'deacon_guest_rotation', 'tools/deacon-rotation/migrations/20260910213024_deacon_guest_rotation.sql', 'reviewed_deacon_rotation_declared'],
+  ['communication_preferences_sql_file', 'communication_preferences', 'tools/communication-preferences/migrations/20260911023920_communication_preferences.sql', 'reviewed_communication_preferences_declared'],
+  ['office_attention_sql_file', 'office_attention', 'tools/office-attention/migrations/20260911132539_office_attention.sql', 'reviewed_office_attention_declared']
+];
 
 async function fixture(t) {
   const root = await mkdtemp(join(tmpdir(), 'bcbc-office-preflight-test-'));
@@ -48,6 +58,34 @@ async function fixture(t) {
   return { root, manifest, put, saveManifest, alterSql };
 }
 
+async function thirteenFixture(t) {
+  const f = await fixture(t);
+  // Real reviewed bytes are needed to prove the immutable ten-file history.
+  // These future version names are fictional inputs, not hosted history claims.
+  f.manifest.format_version = 5;
+  f.manifest.sql_files = structuredClone(template.sql_files);
+  for (const row of f.manifest.sql_files) await f.put(row.path, await readFile(join(repository, row.path)));
+  await f.put(frozenTenPath, templateBytes);
+  for (const [index, [field, suffix, source]] of extensionFixtures.entries()) {
+    const bytes = await readFile(join(repository, source));
+    const path = `supabase/migrations/2099010100000${index + 1}_${suffix}.sql`;
+    f.manifest[field] = path;
+    f.manifest.sql_files.push({ path, sha256: digest(bytes), depends_on: [f.manifest.sql_files.at(-1).path] });
+    await f.put(path, bytes);
+  }
+  await f.saveManifest();
+  f.renameExtension = async (index, next) => {
+    const row = f.manifest.sql_files[10 + index], old = row.path;
+    row.path = next;
+    f.manifest[extensionFixtures[index][0]] = next;
+    if (index < 2) f.manifest.sql_files[11 + index].depends_on = [next];
+    await f.put(next, await readFile(join(f.root, old)));
+    await rm(join(f.root, old));
+    await f.saveManifest();
+  };
+  return f;
+}
+
 function invoke(args) {
   return new Promise(resolve => execFile(process.execPath, [cli, ...args], { timeout: 10000 }, (error, stdout, stderr) => resolve({ code: error?.code || 0, stdout, stderr })));
 }
@@ -56,7 +94,7 @@ test('the real local checkout matches the reviewed setup manifest without claimi
   const report = await runPreflight(repository);
   assert.equal(report.status, 'passed', textReport(report));
   assert.equal(report.schema_revision, '20260907174301');
-  assert.equal(report.sql_apply_order.length, 10);
+  assert.equal(report.sql_apply_order.length, activeManifest.format_version === 5 ? 13 : 10);
   assert.equal(check(report, 'eligible_staff_account_guard_declared'), true);
   assert.equal(check(report, 'staff_first_intake_pause_declared'), true);
   assert.ok(['not_configured', 'supplied_unverified'].includes(report.configuration.status));
@@ -377,4 +415,134 @@ test('refreshing editable digests cannot weaken direct intake or add an unreview
 test('retained review filenames cannot also appear as active migrations',async t=>{
  const f=await fixture(t);await f.put('supabase/migrations/20260909212646_direct_app_intake.sql',directFixture);await f.put('supabase/migrations/20260909215330_direct_intake_dispatch_extensions.sql',extensionsFixture);
  assert.equal(check(await runPreflight(f.root),'migration_inventory_matches'),false);
+});
+
+test('format 5 accepts all thirteen reviewed files and supplied version names while format 4 remains supported', async t => {
+  const ten = await fixture(t);
+  assert.equal(ten.manifest.format_version, 4);
+  assert.equal((await runPreflight(ten.root)).status, 'passed');
+  const f = await thirteenFixture(t), report = await runPreflight(f.root);
+  assert.equal(report.status, 'passed', textReport(report));
+  assert.equal(report.sql_apply_order.length, 13);
+  assert.equal(check(report, 'frozen_ten_manifest_digest_matches'), true);
+  assert.equal(check(report, 'frozen_ten_history_preserved'), true);
+  for (const [, , , name] of extensionFixtures) assert.equal(check(report, name), true);
+  assert.equal(report.hosted_services, 'not_assessed');
+  assert.equal(report.sql_applied, false);
+  assert.equal(report.network_used, false);
+  assert.ok(report.warnings.some(warning => warning.includes('actual hosted migration history')));
+});
+
+test('format 5 refuses missing or altered frozen-ten evidence without returning its contents', async t => {
+  const f = await thirteenFixture(t);
+  await rm(join(f.root, frozenTenPath));
+  let report = await runPreflight(f.root);
+  assert.equal(check(report, 'frozen_ten_manifest_readable'), false);
+  assert.equal(check(report, 'frozen_ten_history_preserved'), false);
+  await f.put(frozenTenPath, templateBytes.toString('utf8') + '\nfictional-hidden-history-marker');
+  report = await runPreflight(f.root);
+  assert.equal(check(report, 'frozen_ten_manifest_digest_matches'), false);
+  assert.equal(report.status, 'failed');
+  assert.ok(!JSON.stringify(report).includes('fictional-hidden-history-marker'));
+});
+
+test('format 5 cannot replace an earlier migration by refreshing its manifest digest', async t => {
+  const f = await thirteenFixture(t);
+  await f.alterSql(source => source + '\n-- changed prior history\n', f.manifest.sql_files[1].path);
+  const report = await runPreflight(f.root);
+  assert.equal(report.checks.filter(item => item.name === 'sql_digest_matches').every(item => item.ok), true);
+  assert.equal(check(report, 'frozen_ten_manifest_digest_matches'), true);
+  assert.equal(check(report, 'frozen_ten_history_preserved'), false);
+  assert.equal(report.status, 'failed');
+});
+
+test('format 5 keeps prior readiness and dependency metadata and required assets intact', async t => {
+  for (const mutate of [
+    manifest => { manifest.sql_files[2].depends_on.push(manifest.sql_files[0].path); },
+    manifest => { manifest.readiness_modules.pop(); },
+    manifest => { manifest.prerequisite_tables.pop(); },
+    manifest => { manifest.required_files = manifest.required_files.filter(path => path !== 'admin/care.js'); }
+  ]) {
+    const f = await thirteenFixture(t);
+    mutate(f.manifest); await f.saveManifest();
+    const report = await runPreflight(f.root);
+    assert.equal(check(report, 'manifest_structure'), true);
+    assert.equal(check(report, 'frozen_ten_history_preserved'), false);
+  }
+});
+
+test('format 5 rejects partial upgrades and format 4 cannot hide extension declarations', async t => {
+  for (const keep of [10, 11, 12]) {
+    const f = await thirteenFixture(t);
+    for (const row of f.manifest.sql_files.slice(keep)) await rm(join(f.root, row.path));
+    f.manifest.sql_files.length = keep; await f.saveManifest();
+    assert.equal(check(await runPreflight(f.root), 'manifest_structure'), false);
+  }
+  const f = await fixture(t);
+  f.manifest.office_attention_sql_file = 'supabase/migrations/20990101000003_office_attention.sql';
+  await f.saveManifest();
+  assert.equal(check(await runPreflight(f.root), 'manifest_structure'), false);
+});
+
+test('format 5 requires the three distinct sources in reviewed order', async t => {
+  for (const mutate of [
+    manifest => { [manifest.sql_files[10], manifest.sql_files[11]] = [manifest.sql_files[11], manifest.sql_files[10]]; },
+    manifest => { manifest.communication_preferences_sql_file = manifest.deacon_rotation_sql_file; },
+    manifest => { manifest.sql_files[12] = structuredClone(manifest.sql_files[11]); },
+    manifest => { delete manifest.deacon_rotation_sql_file; }
+  ]) {
+    const f = await thirteenFixture(t);
+    mutate(f.manifest); await f.saveManifest();
+    assert.equal(check(await runPreflight(f.root), 'manifest_structure'), false);
+  }
+});
+
+test('format 5 extensions require unique increasing fourteen-digit migration versions', async t => {
+  const f = await thirteenFixture(t);
+  const original = f.manifest.communication_preferences_sql_file;
+  await f.renameExtension(1, original.replace('20990101000002', '20990101000001'));
+  let report = await runPreflight(f.root);
+  assert.equal(check(report, 'explicit_sql_dependency_order'), true);
+  assert.equal(check(report, 'migration_inventory_matches'), true);
+  assert.equal(check(report, 'unique_migration_versions'), false);
+  await f.renameExtension(1, original.replace('20990101000002', '20990101000004'));
+  report = await runPreflight(f.root);
+  assert.equal(check(report, 'unique_migration_versions'), true);
+  assert.equal(check(report, 'migration_filename_order_agrees'), false);
+  await f.renameExtension(1, original.replace('20990101000002', '20990101'));
+  assert.equal(check(await runPreflight(f.root), 'manifest_structure'), false);
+});
+
+test('format 5 cannot rename an extension type or omit its immediate predecessor', async t => {
+  const f = await thirteenFixture(t);
+  f.manifest.sql_files[11].depends_on = [f.manifest.sql_files[9].path];
+  await f.saveManifest();
+  assert.equal(check(await runPreflight(f.root), 'explicit_sql_dependency_order'), false);
+  await f.renameExtension(2, f.manifest.office_attention_sql_file.replace('_office_attention.sql', '_unreviewed.sql'));
+  assert.equal(check(await runPreflight(f.root), 'manifest_structure'), false);
+});
+
+test('independent extension pins reject changed SQL even with all editable digests refreshed', async t => {
+  for (const [field, , , name] of extensionFixtures) {
+    const f = await thirteenFixture(t);
+    await f.alterSql(source => source + '\nselect 1; -- unreviewed addition\n', f.manifest[field]);
+    const report = await runPreflight(f.root);
+    assert.equal(report.checks.filter(item => item.name === 'sql_digest_matches').every(item => item.ok), true);
+    assert.equal(check(report, name), false);
+    assert.equal(report.status, 'failed');
+  }
+});
+
+test('format 5 rejects missing reviewed files and retained draft copies in the active inventory', async t => {
+  const f = await thirteenFixture(t);
+  const draft = extensionFixtures[0][2];
+  const activeDraft = 'supabase/migrations/' + draft.split('/').at(-1);
+  await f.put(activeDraft, await readFile(join(repository, draft)));
+  assert.equal(check(await runPreflight(f.root), 'migration_inventory_matches'), false);
+  await rm(join(f.root, activeDraft));
+  await rm(join(f.root, f.manifest.office_attention_sql_file));
+  const report = await runPreflight(f.root);
+  assert.equal(check(report, 'migration_inventory_matches'), false);
+  assert.equal(check(report, 'reviewed_office_attention_declared'), false);
+  assert.equal(report.status, 'failed');
 });
