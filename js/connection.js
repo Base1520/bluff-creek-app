@@ -125,6 +125,8 @@
     el('remember').checked = store.remembered;
     var resetBusy = false, pendingSubmit = null, pendingOnboarding = null, waitingForDocument = false;
     var authForm = el('auth-form'), dialog = el('dialog'), modes = { guest: makeMode('guest'), prayer: makeMode('prayer') };
+    var preferences = { capability: 'checking', reading: false, loaded: false, busy: false, value: null, dirty: false, guestTouched: false, attempt: null, serial: 0 };
+    var preferenceForm = el('preferences-form');
     function makeMode(kind) { var form = el(kind + '-form'); return { kind: kind, form: form, fields: form.querySelector('fieldset'), dirty: false, busy: false, attempt: null, saved: null, serial: 0, extraTouched: new Set() }; }
     function field(form, key) { return form.elements.namedItem(key); }
     var extraKeys = ['birth_date','membership_status','address_line1','address_line2','city','state_region','postal_code','family_members'];
@@ -216,13 +218,14 @@
     function current(token) { return !destroyed && epoch === token; }
     function status(id, message, bad) { var nodes = id === 'availability' ? doc.querySelectorAll('[data-connection-availability]') : [el(id)]; nodes.forEach(function (node) { node.textContent = message || ''; node.hidden = !message; node.classList.toggle('error', !!bad); }); }
     function bounded(promise) { var timer; return Promise.race([promise, new Promise(function (_, reject) { timer = win.setTimeout(function () { reject(new Error('deadline')); }, options.timeoutMs || 15000); })]).finally(function () { win.clearTimeout(timer); }); }
-    function hasDraft() { return Object.values(modes).some(function (mode) { return mode.dirty || mode.busy || mode.attempt; }); }
+    function hasDraft() { return preferences.dirty || preferences.busy || preferences.attempt || Object.values(modes).some(function (mode) { return mode.dirty || mode.busy || mode.attempt; }); }
+    function preferenceBlocked() { return preferences.capability !== 'absent' && (preferences.capability !== 'available' || (!!user && (!preferences.loaded || preferences.reading || preferences.busy || !!preferences.attempt || preferences.dirty))); }
     function beforeUnload(event) { if (hasDraft()) { event.preventDefault(); event.returnValue = true; } }
     function draw() {
       Object.values(modes).forEach(function (mode) {
-        mode.fields.disabled = !client || !!mode.attempt || mode.busy || (mode.kind === 'guest' && reading);
+        mode.fields.disabled = !client || !!mode.attempt || mode.busy || (mode.kind === 'guest' && (reading || preferences.reading || preferences.busy || !!preferences.attempt));
         var button = el(mode.kind + '-submit');
-        button.disabled = !client || mode.busy || (!user && (authBusy || authPending || authUncertain)) || (mode.kind === 'guest' && (reading || (!!user && !loaded)));
+        button.disabled = !client || mode.busy || (!user && (authBusy || authPending || authUncertain)) || (mode.kind === 'guest' && (reading || (!!user && !loaded) || preferenceBlocked()));
         button.textContent = mode.attempt && mode.attempt.started ? 'Check and retry this submission' : mode.kind === 'guest' ? 'Save my registration' : 'Send prayer request';
         el(mode.kind + '-new').hidden = !mode.saved;
       });
@@ -236,12 +239,21 @@
       el('auth-submit').textContent = el('auth-mode').value === 'signup' ? (pendingSubmit ? 'Create account & send' : 'Create my account') : (pendingSubmit ? 'Sign in & send' : 'Sign in');
       el('reset-send').disabled = !client || resetBusy; el('reset-open').hidden = !!user;
       el('open-app').hidden = !modes.guest.saved; el('family-add').disabled = familyRows().length >= 20; el('family-limit').hidden = familyRows().length < 20; field(modes.guest.form,'birth_date').max = today();
+      el('weekly-choice').hidden = preferences.capability !== 'available';
+      el('preferences').hidden = !user || preferences.capability !== 'available';
+      var guestLocked = modes.guest.busy || !!modes.guest.attempt;
+      preferenceForm.querySelector('fieldset').disabled = !user || !preferences.loaded || preferences.reading || preferences.busy || !!preferences.attempt || guestLocked;
+      el('preferences-submit').disabled = !client || !user || preferences.reading || preferences.busy || guestLocked || (!preferences.attempt && (!preferences.loaded || !preferences.dirty));
+      el('preferences-submit').textContent = preferences.attempt ? 'Check and retry email choice' : 'Save email choice';
+      el('communication-retry').hidden = preferences.capability !== 'unavailable' && !(user && preferences.capability === 'available' && !preferences.loaded);
+      el('communication-retry').disabled = preferences.capability === 'checking' || preferences.reading || preferences.busy || !!preferences.attempt || (guestLocked && !!modes.guest.attempt && modes.guest.attempt.started);
       win.removeEventListener('beforeunload', beforeUnload);
       if (hasDraft()) win.addEventListener('beforeunload', beforeUnload);
     }
     function clearPrivate() {
       pendingSubmit = null; user = null; loaded = false; reading = false; authForm.reset(); el('remember').checked = store.remembered; el('password').autocomplete = 'new-password'; el('password').minLength = 12; el('auth-submit').textContent = 'Create my account'; authBusy = false; authUncertain = false;
       Object.values(modes).forEach(function (mode) { mode.serial++; mode.form.reset(); mode.dirty = false; mode.busy = false; mode.attempt = null; mode.saved = null; status(mode.kind + '-status', ''); });
+      preferences.serial++; preferences.loaded = false; preferences.reading = false; preferences.busy = false; preferences.value = null; preferences.dirty = false; preferences.guestTouched = false; preferences.attempt = null; preferenceForm.reset(); status('preferences-status', ''); status('communication-status', '');
       resetExtras(); status('auth-status', ''); status('profile-status', ''); status('reset-status', ''); el('reset-form').reset(); el('reset-form').hidden = true; resetBusy = false; closeDialog(); draw();
     }
     function loseIdentity(message) { epoch++; store.clear(); clearPrivate(); status('auth-status', message || 'Your account changed. Sign in again before sending.', true); }
@@ -258,8 +270,69 @@
       if (!result || result.error) { if (result && result.error && [401,403].includes(result.error.status)) loseIdentity('Please sign in again before sending.'); throw new Error('identity'); }
       if (!eligible(result.data && result.data.user)) { loseIdentity('Your account is unavailable. Sign in again before sending.'); return null; }
       var confirmed = result.data.user;
-      if ((owner && confirmed.id !== owner) || (user && confirmed.id !== user.id)) { loseIdentity(); return null; }
+      if ((owner && confirmed.id !== owner) || (user && (confirmed.id !== user.id || confirmed.email !== user.email))) { loseIdentity('Your account or email changed. Sign in again and review your choices.'); return null; }
       return confirmed;
+    }
+    function preferenceValue(data) {
+      var value = row(data);
+      if (!value || value.version !== 1 || !Number.isSafeInteger(value.preference_version) || value.preference_version < 0 || typeof value.weekly_email !== 'boolean' || typeof value.email_matches !== 'boolean' || (value.updated_at !== null && (typeof value.updated_at !== 'string' || !Number.isFinite(Date.parse(value.updated_at)))) || (!value.email_matches && value.weekly_email) || (value.preference_version === 0 && (value.weekly_email || !value.email_matches || value.updated_at !== null)) || (value.preference_version > 0 && value.updated_at === null)) return null;
+      return value;
+    }
+    function communicationConflict(error) { return error && error.code === '40001' && ['COMMUNICATION_VERSION_CONFLICT','COMMUNICATION_REQUEST_CONFLICT','REQUEST_ID_CONFLICT'].includes(error.message); }
+    function communicationRateLimit(error) { return error && error.code === 'P0001' && error.message === 'COMMUNICATION_RATE_LIMIT'; }
+    async function readCapabilities(token) {
+      preferences.capability = 'checking'; draw();
+      try {
+        var result = await bounded(client.rpc('get_app_communication_capabilities'));
+        if (destroyed) return;
+        if (result && result.error && result.error.code === 'PGRST202') { preferences.capability = 'absent'; status('communication-status', ''); return; }
+        if (!result || result.error || !result.data || result.data.version !== 1 || result.data.weekly_email !== true) throw new Error('capability');
+        preferences.capability = 'available'; status('communication-status', '');
+      } catch (_) { if (!destroyed) { preferences.capability = 'unavailable'; status('communication-status', 'Email choices could not be checked. Reload them before saving your registration. Prayer requests are still available.', true); } }
+      finally { if (!destroyed) draw(); }
+    }
+    async function readPreferences(token) {
+      if (!current(token) || !user || preferences.capability !== 'available' || preferences.reading || preferences.busy || preferences.attempt || modes.guest.busy || (modes.guest.attempt && modes.guest.attempt.started)) return;
+      var serial = ++preferences.serial, owner = user.id; preferences.reading = true; preferences.loaded = false;
+      status('communication-status', 'Loading your email choice…'); draw();
+      try {
+        if (!await verify(token, owner)) return;
+        var result = await bounded(client.rpc('get_my_communication_preferences'));
+        if (!current(token) || preferences.serial !== serial) return;
+        var value = result && !result.error && preferenceValue(result.data); if (!value) throw new Error('preference');
+        preferences.value = value; preferences.loaded = true;
+        if (!preferences.dirty) field(preferenceForm, 'weekly_email').checked = value.weekly_email;
+        if (!preferences.guestTouched) field(modes.guest.form, 'weekly_email').checked = value.weekly_email;
+        status('communication-status', value.email_matches ? '' : 'Your email has changed. Weekly updates are off for this address. Choose them again if you would like to receive them.');
+        status('preferences-status', preferences.dirty ? 'Your unsaved email choice is still here. Review it before saving.' : value.weekly_email ? 'Your current choice is on. Weekly church emails may be sent when available.' : 'Your current choice is off. You can still receive personal care and registration messages.');
+      } catch (_) { if (current(token) && preferences.serial === serial) status('communication-status', 'Your saved email choice could not be loaded. Reload it before changing it or saving a registration. Prayer requests are still available.', true); }
+      finally { if (current(token) && preferences.serial === serial) { preferences.reading = false; draw(); } }
+    }
+    function guestPreference() { return preferences.capability === 'available' ? { weekly: field(modes.guest.form, 'weekly_email').checked, touched: preferences.guestTouched, version: user && preferences.loaded ? preferences.value.preference_version : null } : null; }
+    async function savePreference() {
+      if (!client || !user || destroyed || preferences.capability !== 'available' || preferences.reading || preferences.busy || modes.guest.busy || modes.guest.attempt || (!preferences.attempt && (!preferences.loaded || !preferences.dirty))) return;
+      var token = epoch, owner = user.id, serial = ++preferences.serial;
+      if (!preferences.attempt) preferences.attempt = { id: win.crypto.randomUUID(), owner: owner, weekly: field(preferenceForm,'weekly_email').checked, version: preferences.value.preference_version };
+      var attempt = preferences.attempt;
+      if (attempt.owner !== owner) { loseIdentity(); return; }
+      preferences.busy = true; status('preferences-status', 'Saving your email choice…'); draw();
+      var refresh = false, conflicted = false, limited = false;
+      try {
+        if (!await verify(token, owner)) return;
+        var result = await bounded(client.rpc('set_my_communication_preferences', {p_request_id:attempt.id,p_expected_version:attempt.version,p_weekly_email:attempt.weekly}));
+        if (!current(token) || preferences.serial !== serial || preferences.attempt !== attempt) return;
+        if (communicationConflict(result && result.error)) {
+          preferences.attempt = null; preferences.loaded = false; refresh = true; conflicted = true;
+          status('preferences-status', 'Your saved choice changed elsewhere. Review the current choice before saving again.', true); return;
+        }
+        if (communicationRateLimit(result && result.error)) { preferences.attempt = null; preferences.loaded = false; refresh = true; limited = true; return; }
+        var value = result && !result.error && preferenceValue(result.data);
+        if (!value || value.preference_version !== attempt.version + 1 || value.weekly_email !== attempt.weekly || !value.email_matches) throw new Error('receipt');
+        preferences.attempt = null; preferences.dirty = false; preferences.loaded = false; refresh = true;
+        // Replays prove the original operation only. A fresh read supplies current settings.
+        status('preferences-status', 'Email choice saved. Checking the current setting…');
+      } catch (_) { if (current(token) && preferences.serial === serial) status('preferences-status', 'We could not confirm your email choice. Check and retry to safely repeat this same choice.', true); }
+      finally { if (current(token) && preferences.serial === serial) { preferences.busy = false; draw(); if (refresh) { await readPreferences(token); if (current(token) && preferences.loaded) { if (conflicted) status('preferences-status', 'Your saved choice changed elsewhere. The checkbox keeps your unsaved choice; review it and save again to apply it.', true); if (limited) status('preferences-status', 'This save did not change your email choice. Wait before turning weekly emails on again. You can still turn them off now.', true); } } } }
     }
     async function readProfile(token) {
       if (!current(token) || !user || reading || (modes.guest.attempt && modes.guest.attempt.started) || modes.guest.busy) return;
@@ -289,7 +362,7 @@
       var token = epoch;
       try {
         var confirmed = await verify(token, next.id); if (!confirmed || !current(token)) return;
-        user = confirmed; authUncertain = false; status('auth-status', 'You’re signed in. Review your form, then send it when you’re ready.'); draw(); closeDialog(); await readProfile(token);
+        user = confirmed; authUncertain = false; status('auth-status', 'You’re signed in. Review your form, then send it when you’re ready.'); draw(); closeDialog(); await Promise.all([readProfile(token), readPreferences(token)]);
       } catch (_) { if (current(token)) { loseIdentity('We could not confirm your account. Sign in again before sending.'); } }
     }
     async function signout() {
@@ -326,33 +399,54 @@
     }
     async function submit(mode) {
       if (!client || destroyed || mode.busy) return;
+      if (mode.kind === 'guest' && preferenceBlocked()) return;
       if (!user) {
         if (authBusy || authPending || authUncertain) return;
         var captured = mode.attempt ? mode.attempt.payload : payload(mode); if (!captured) return;
         if (pendingSubmit && pendingSubmit.mode !== mode) cancelIntent(false);
-        if (!mode.attempt) mode.attempt = { id: win.crypto.randomUUID(), payload: captured, owner: null, started: false };
+        if (!mode.attempt) mode.attempt = { id: win.crypto.randomUUID(), payload: captured, owner: null, started: false, preference: mode.kind === 'guest' ? guestPreference() : null };
         pendingSubmit = { mode: mode, attempt: mode.attempt }; mode.dirty = true;
         draw(); openDialog(); status('auth-status', 'Create an account or sign in to send this ' + (mode.kind === 'guest' ? 'registration' : 'prayer request') + '.'); return;
       }
       if (mode.kind === 'guest' && (!loaded || reading)) return;
       var body = mode.attempt ? mode.attempt.payload : payload(mode); if (!body) return;
       var token = epoch, owner = user.id, serial = ++mode.serial;
-      if (!mode.attempt) mode.attempt = { id: win.crypto.randomUUID(), payload: body, owner: owner, started: false };
+      if (!mode.attempt) mode.attempt = { id: win.crypto.randomUUID(), payload: body, owner: owner, started: false, preference: mode.kind === 'guest' ? guestPreference() : null };
       var attempt = mode.attempt; if (attempt.owner === null && !attempt.started) attempt.owner = owner;
+      if (attempt.preference && attempt.preference.version === null) {
+        if (!preferences.loaded) return;
+        if (!attempt.preference.touched) attempt.preference.weekly = preferences.value.weekly_email;
+        attempt.preference.version = preferences.value.preference_version;
+      }
       if (pendingSubmit && pendingSubmit.attempt === attempt) pendingSubmit = null;
       if (attempt.owner !== owner) { loseIdentity(); return; }
       mode.busy = true; mode.dirty = true; mode.saved = null; status(mode.kind + '-status', 'Sending securely to the church office…'); draw();
+      var refreshPreferences = false, refreshProfile = false;
       try {
         if (!await verify(token, owner)) return;
         var parameters = { p_request_id: attempt.id }; parameters[mode.kind === 'guest' ? 'p_profile' : 'p_request'] = attempt.payload;
+        if (attempt.preference) { parameters.p_weekly_email = attempt.preference.weekly; parameters.p_preference_version = attempt.preference.version; }
         attempt.started = true; draw();
-        var result = await bounded(client.rpc(mode.kind === 'guest' ? 'register_app_guest' : 'submit_app_prayer', parameters));
+        var result = await bounded(client.rpc(mode.kind === 'guest' ? (attempt.preference ? 'register_app_guest_with_preferences' : 'register_app_guest') : 'submit_app_prayer', parameters));
         if (!current(token) || serial !== mode.serial || mode.attempt !== attempt) return;
-        var saved = !result.error && receipt(result.data, mode.kind); if (!saved) throw new Error('receipt');
+        if (attempt.preference && communicationConflict(result && result.error)) {
+          mode.attempt = null; preferences.loaded = false; loaded = false; refreshPreferences = true; refreshProfile = true;
+          status('guest-status', 'This save did not change your records. Your saved registration or email choice changed elsewhere. Your form is kept here; review it before saving again.', true); return;
+        }
+        if (attempt.preference && communicationRateLimit(result && result.error)) {
+          mode.attempt = null; preferences.loaded = false; refreshPreferences = true;
+          status('guest-status', 'This save did not change your records. Wait before turning weekly emails on again, or uncheck weekly updates and save your registration now.', true); return;
+        }
+        var saved = result && !result.error && receipt(result.data, mode.kind); if (!saved) throw new Error('receipt');
+        if (attempt.preference) {
+          var choice = preferenceValue(saved.communication_preferences);
+          if (!choice || choice.preference_version !== attempt.preference.version + 1 || choice.weekly_email !== attempt.preference.weekly || !choice.email_matches) throw new Error('receipt');
+          preferences.loaded = false; preferences.guestTouched = false; refreshPreferences = true;
+        }
         mode.saved = saved; mode.attempt = null; mode.dirty = false;
         if (mode.kind === 'guest') {
           field(mode.form, 'contact_permission').checked = false; mode.extraTouched.clear();
-          status('guest-status', 'Registration saved. Your details are in the private guest register. This does not make you a church member or subscribe you to group messages.');
+          status('guest-status', 'Registration saved. Your details are in the private guest register. This does not make you a church member.');
           // A registration receipt is durable even if this separate mail request fails.
           void dispatch(token, mode, saved, serial);
         } else {
@@ -360,14 +454,17 @@
           void dispatch(token, mode, saved, serial);
         }
       } catch (_) { if (current(token) && serial === mode.serial) status(mode.kind + '-status', 'We could not confirm a receipt. Your form is kept here. Use “Check and retry” to resend the same request safely; do not start a second submission.', true); }
-      finally { if (current(token) && serial === mode.serial) { mode.busy = false; draw(); } }
+      finally { if (current(token) && serial === mode.serial) { mode.busy = false; draw(); if (refreshPreferences) await Promise.all([readPreferences(token), refreshProfile ? readProfile(token) : Promise.resolve()]); } }
     }
     Object.values(modes).forEach(function (mode) {
       mode.form.addEventListener('submit', function (event) { event.preventDefault(); void submit(mode); });
-      mode.form.addEventListener('input', function (event) { if (mode.kind === 'guest' && !mode.attempt) { var key = event.target.closest('[data-family-row]') ? 'family_members' : event.target.name; if (extraKeys.includes(key)) mode.extraTouched.add(key); } if (!mode.attempt) { mode.dirty = true; mode.saved = null; mode.serial++; } draw(); });
-      mode.form.addEventListener('change', function (event) { if (mode.kind === 'guest' && !mode.attempt) { var key = event.target.closest('[data-family-row]') ? 'family_members' : event.target.name; if (extraKeys.includes(key)) mode.extraTouched.add(key); } if (!mode.attempt) { mode.dirty = true; mode.saved = null; } field(modes.guest.form, 'phone').required = field(modes.guest.form, 'preferred_contact').value !== 'email'; draw(); });
-      el(mode.kind + '-new').addEventListener('click', function () { if (!mode.busy && !mode.attempt) { mode.form.reset(); if (mode.kind === 'guest') resetExtras(); mode.saved = null; mode.dirty = false; mode.serial++; status(mode.kind + '-status', ''); draw(); } });
+      mode.form.addEventListener('input', function (event) { if (mode.kind === 'guest' && !mode.attempt) { var key = event.target.closest('[data-family-row]') ? 'family_members' : event.target.name; if (extraKeys.includes(key)) mode.extraTouched.add(key); if (key === 'weekly_email') preferences.guestTouched = true; } if (!mode.attempt) { mode.dirty = true; mode.saved = null; mode.serial++; } draw(); });
+      mode.form.addEventListener('change', function (event) { if (mode.kind === 'guest' && !mode.attempt) { var key = event.target.closest('[data-family-row]') ? 'family_members' : event.target.name; if (extraKeys.includes(key)) mode.extraTouched.add(key); if (key === 'weekly_email') preferences.guestTouched = true; } if (!mode.attempt) { mode.dirty = true; mode.saved = null; } field(modes.guest.form, 'phone').required = field(modes.guest.form, 'preferred_contact').value !== 'email'; draw(); });
+      el(mode.kind + '-new').addEventListener('click', function () { if (!mode.busy && !mode.attempt) { mode.form.reset(); if (mode.kind === 'guest') { resetExtras(); preferences.guestTouched = false; if (preferences.loaded) field(mode.form,'weekly_email').checked = preferences.value.weekly_email; } mode.saved = null; mode.dirty = false; mode.serial++; status(mode.kind + '-status', ''); draw(); } });
     });
+    preferenceForm.addEventListener('input', function () { if (!preferences.loaded || preferences.busy || preferences.attempt || modes.guest.busy || modes.guest.attempt) return; preferences.dirty = field(preferenceForm,'weekly_email').checked !== preferences.value.weekly_email; status('preferences-status', preferences.dirty ? 'Your email choice has not been saved yet.' : ''); draw(); });
+    preferenceForm.addEventListener('submit', function (event) { event.preventDefault(); void savePreference(); });
+    el('communication-retry').addEventListener('click', async function () { if (!client || destroyed || el('communication-retry').disabled) return; if (preferences.capability !== 'available') await readCapabilities(epoch); if (user) await readPreferences(epoch); });
     el('family-add').addEventListener('click', function () { if (!client || modes.guest.attempt || modes.guest.busy || reading) return; addFamily(null, true); });
     doc.querySelectorAll('[data-connection-account]').forEach(function (button) { button.addEventListener('click', openDialog); });
     el('close').addEventListener('click', function () { cancelIntent(false); closeDialog(); });
@@ -401,8 +498,8 @@
         // Auth events, late/uncertain responses and later profile retries never trigger it.
         if (current(token) && user && intent && pendingSubmit === intent && intent.mode.attempt === intent.attempt) {
           pendingSubmit = null; intent.attempt.owner = user.id;
-          if (intent.mode.kind !== 'guest' || loaded) await submit(intent.mode);
-          else status('guest-status', 'You’re signed in. Load your saved registration, then select Save my registration to send these details.', true);
+          if (intent.mode.kind !== 'guest' || (loaded && !preferenceBlocked())) await submit(intent.mode);
+          else status('guest-status', 'You’re signed in. Load your saved registration and email choice, then select Save my registration to send these details.', true);
         }
       } catch (_) { if (current(token)) { cancelIntent(true); authUncertain = true; status('auth-status', 'The account response could not be confirmed. When the request finishes, use Check sign-in before trying again. Your form has not been sent.', true); } }
       finally { credentials.password = ''; if (current(token)) { el('password').value = ''; authBusy = false; draw(); } }
@@ -417,7 +514,7 @@
     function onAuth(event, session) {
       if (destroyed || signingOut || event === 'INITIAL_SESSION') return;
       if (event === 'SIGNED_OUT' || !session) { epoch++; store.clear(); clearPrivate(); return; }
-      if (user && (!session.user || session.user.id !== user.id)) { epoch++; clearPrivate(); }
+      if (user && (!session.user || session.user.id !== user.id || session.user.email !== user.email)) { epoch++; clearPrivate(); }
       if (authBusy || authUncertain || authPending || (user && session.user.id === user.id)) return;
       var token = epoch; win.setTimeout(function () { if (current(token)) void adopt(session, !user); }, 0);
     }
@@ -432,6 +529,8 @@
         client = create(config.url, config.key, { auth: { storageKey: SESSION_KEY, storage: store.storage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, flowType: 'implicit' } });
         subscription = client.auth.onAuthStateChange(onAuth).data.subscription;
         status('availability', ''); draw();
+        await readCapabilities(epoch); if (destroyed) return;
+        if (user && preferences.capability === 'available' && !preferences.loaded && !preferences.reading) await readPreferences(epoch);
         var token = epoch, result = await bounded(client.auth.getSession()); if (!current(token)) return;
         if (result.error) throw new Error('session'); if (result.data.session) await adopt(result.data.session, true); else onboarding(true);
       } catch (_) { if (!destroyed) { status('availability', 'Account services could not be reached. Your information has not been sent. Please reload to try again.', true); client = null; draw(); } }

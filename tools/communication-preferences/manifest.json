@@ -1,0 +1,117 @@
+{
+  "format_version": 1,
+  "status": "proposed_not_applied",
+  "feature": "weekly_email_preferences",
+  "capability_version": 1,
+  "generated_with": "Supabase CLI migration new communication_preferences",
+  "migration": {
+    "path": "tools/communication-preferences/migrations/20260911023920_communication_preferences.sql",
+    "sha256": "d45307bada93bc3f7258eeb41e372477b56f8085ba2fcb138cb520076e567362"
+  },
+  "baseline": {
+    "path": "tools/office-preflight/manifest.json",
+    "sha256": "0734cdc37022af4c946b2e4a8d93ad1b199093834f28373b1bf8c0c9497276ae",
+    "recorded_migration_count": 10,
+    "sql_files": [
+      {
+        "path": "supabase/migrations/20260908220558_office_base.sql",
+        "sha256": "8c8a971885d4d2ec60a3f57c4a416ecc2bb6282c4b9065bc67ed87280bc2a28b",
+        "depends_on": []
+      },
+      {
+        "path": "supabase/migrations/20260908220613_membership_care.sql",
+        "sha256": "3c2fa9df159b4b7d6c6c84a9d883cac6d4dde411aa01f26df802d9665cee5b53",
+        "depends_on": [
+          "supabase/migrations/20260908220558_office_base.sql"
+        ]
+      },
+      {
+        "path": "supabase/migrations/20260908220623_office_content.sql",
+        "sha256": "e4d287bfcfc8f8c6f68b7a217fe2abe87e7f7c337a548bb991dc6bbe441783a7",
+        "depends_on": [
+          "supabase/migrations/20260908220613_membership_care.sql"
+        ]
+      },
+      {
+        "path": "supabase/migrations/20260908220645_app_connections_care_roles.sql",
+        "sha256": "41fed80650afca46abb763569173e4a4656610634b60bbd6dd223c7ec103875d",
+        "depends_on": [
+          "supabase/migrations/20260908220623_office_content.sql"
+        ]
+      },
+      {
+        "path": "supabase/migrations/20260908220658_leader_followups.sql",
+        "sha256": "63c1d7400f99bdb1ffff9d616b93affc7321004bff6cac459ba31b4b59cbfc34",
+        "depends_on": [
+          "supabase/migrations/20260908220645_app_connections_care_roles.sql"
+        ]
+      },
+      {
+        "path": "supabase/migrations/20260908220707_office_record_recovery.sql",
+        "sha256": "c8d53cb0b4025d4d36b03169a50ff30f7d1eb8956357e0b1130e2bfbbbeb8b7b",
+        "depends_on": [
+          "supabase/migrations/20260908220658_leader_followups.sql"
+        ]
+      },
+      {
+        "path": "supabase/migrations/20260908220718_pause_public_app_intake.sql",
+        "sha256": "8eba1837cffba0ca00934faccc4308239b4b49f534a4ba1a968a71bd7eeb00e3",
+        "depends_on": [
+          "supabase/migrations/20260908220707_office_record_recovery.sql"
+        ]
+      },
+      {
+        "path": "supabase/migrations/20260909124122_require_eligible_staff_auth_account.sql",
+        "sha256": "7530eb7cd955ec1522943a179aebc03088a3ebc8126a4f4300e08eb5695bdc7b",
+        "depends_on": [
+          "supabase/migrations/20260908220718_pause_public_app_intake.sql"
+        ]
+      },
+      {
+        "path": "supabase/migrations/20260910152017_direct_app_intake.sql",
+        "sha256": "2d4a268bb6bb2c0d87ae7f4d2b238ee79180e862ea5ba026a9f625498955b405",
+        "depends_on": [
+          "supabase/migrations/20260909124122_require_eligible_staff_auth_account.sql"
+        ]
+      },
+      {
+        "path": "supabase/migrations/20260910152030_direct_intake_dispatch_extensions.sql",
+        "sha256": "bfbd4b7e1410a2e80508866e0fbd2029130dce435e5cb7f9ca0c1d9ad0bce6d0",
+        "depends_on": [
+          "supabase/migrations/20260910152017_direct_app_intake.sql"
+        ]
+      }
+    ]
+  },
+  "optional_rotation_compatibility": {
+    "path": "tools/deacon-rotation/migrations/20260910213024_deacon_guest_rotation.sql",
+    "sha256": "679530d6e25194c61a3b5e0fa165ce7c47d91db58e67f99d5f2f5453eca94f1a",
+    "required_for_preferences": false
+  },
+  "private_tables": [
+    "app_communication_preferences",
+    "app_communication_receipts"
+  ],
+  "public_rpcs": [
+    "get_app_communication_capabilities",
+    "get_my_communication_preferences",
+    "set_my_communication_preferences",
+    "register_app_guest_with_preferences",
+    "get_office_communication_audience"
+  ],
+  "hosted_applied": false,
+  "active_manifest_changed": false,
+  "accounts_roles_changed": false,
+  "newsletter_sender_added": false,
+  "messages_sent": false,
+  "verification_report": "tools/communication-preferences/test-report.json",
+  "verification": {
+    "status": "passed_local_only",
+    "pglite_passed": 24,
+    "real_postgres_passed": 9,
+    "observed_account_row_waits": 4,
+    "isolated_database_removed": true,
+    "preexisting_databases_preserved": 4,
+    "evidence_sha256": "4ad1beee525514c1f187450f3a132a317050877662cc5d5a3082f914635fad39"
+  }
+}

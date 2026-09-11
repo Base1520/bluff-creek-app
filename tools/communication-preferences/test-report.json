@@ -1,0 +1,98 @@
+{
+  "status": "passed_local_only",
+  "verified_at": "2026-09-11T02:56:01.067289+00:00",
+  "sql_sha256": "d45307bada93bc3f7258eeb41e372477b56f8085ba2fcb138cb520076e567362",
+  "pglite": {
+    "passed": 24,
+    "failed": 0,
+    "scope": "frozen_eight_plus_recorded_intake_with_optional_rotation_compatibility",
+    "infrastructure_extensions_executed": false
+  },
+  "real_postgres": {
+    "status": "passed",
+    "scope": "local_database_concurrency_only",
+    "checks": [
+      {
+        "name": "current_application_baseline_rotation_and_preferences_applied_only_to_new_database",
+        "passed": true,
+        "active_baseline_files": 8,
+        "reviewed_application_additions": 3,
+        "cluster_roles_preserved": true
+      },
+      {
+        "name": "same_request_serializes_on_actual_account_row_and_returns_one_receipt",
+        "passed": true,
+        "second_session_observed_lock_wait": true
+      },
+      {
+        "name": "unsubscribe_beats_stale_concurrent_optin_and_old_replay_cannot_resubscribe",
+        "passed": true,
+        "second_session_observed_lock_wait": true
+      },
+      {
+        "name": "concurrent_auth_email_change_is_locked_before_new_preference_binding",
+        "passed": true,
+        "second_session_observed_lock_wait": true
+      },
+      {
+        "name": "concurrent_atomic_registration_creates_one_guest_preference_and_rotation_slot",
+        "passed": true,
+        "second_session_observed_lock_wait": true
+      },
+      {
+        "name": "atomic_preference_conflict_rolls_back_guest_task_outboxes_and_deacon_cursor",
+        "passed": true
+      },
+      {
+        "name": "explicit_atomic_rollback_preserves_all_preference_intake_and_rotation_state",
+        "passed": true
+      },
+      {
+        "name": "duplicate_current_emails_changed_addresses_and_malformed_profiles_are_not_requested",
+        "passed": true
+      },
+      {
+        "name": "private_tables_and_audience_permissions_deny_unauthorized_actors_with_staff_positive_control",
+        "passed": true,
+        "denied_requests": 8,
+        "cluster_roles_preserved": true,
+        "active_manifest_preserved": true
+      }
+    ],
+    "cleanup": {
+      "created_database_dropped": true,
+      "preexisting_database_inventory_unchanged": true
+    },
+    "hosted_or_auth_or_email_calls": false,
+    "preexisting_database_count": 4,
+    "preexisting_database_inventory_sha256": "5b68b168f5f28cc277a1f2943d9328269a9feb80a40a782b5e375cfe5bf7357a",
+    "communication_sha256": "d45307bada93bc3f7258eeb41e372477b56f8085ba2fcb138cb520076e567362",
+    "rotation_sha256": "679530d6e25194c61a3b5e0fa165ce7c47d91db58e67f99d5f2f5453eca94f1a",
+    "intake_sha256": "2d4a268bb6bb2c0d87ae7f4d2b238ee79180e862ea5ba026a9f625498955b405",
+    "frozen_eight_manifest_sha256": "572c8a631c293c1c2d322670b8f295de95e3baeb2fa59a82f2ae641e28812c68",
+    "postgres_version": "17.6",
+    "omitted_local_extension_only_migration": true,
+    "limitations": [
+      "One synthetic PostgreSQL database with mocked Auth/Storage; no hosted/Auth/API/email/newsletter calls.",
+      "The pg_cron/pg_net extension-only migration is byte-verified but not applied in this database-only rehearsal.",
+      "A current audience snapshot is not newsletter permission in perpetuity, email ownership proof or delivery acceptance."
+    ],
+    "passed": 9,
+    "failed": 0,
+    "observed_account_row_waits": 4,
+    "evidence_path": "work/communication-preferences-real-postgres/result.json",
+    "evidence_sha256": "4ad1beee525514c1f187450f3a132a317050877662cc5d5a3082f914635fad39"
+  },
+  "source_review": {
+    "independent_read_only_review": "passed",
+    "reviewer_reran_tests": false
+  },
+  "hosted_changes": false,
+  "real_email_or_auth_calls": false,
+  "active_manifest": {
+    "path": "tools/office-preflight/manifest.json",
+    "sha256": "0734cdc37022af4c946b2e4a8d93ad1b199093834f28373b1bf8c0c9497276ae",
+    "recorded_migration_count": 10,
+    "changed": false
+  }
+}
