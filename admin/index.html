@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="signups.css">
   <link rel="stylesheet" href="intake-tasks.css?v=deacon-rotation-1">
   <link rel="stylesheet" href="communications.css?v=weekly-choices-1">
+  <link rel="stylesheet" href="attention.css?v=attention-1">
   <link rel="stylesheet" href="followups.css">
   <link rel="stylesheet" href="reminder-calendar.css">
 </head>
@@ -50,6 +51,7 @@
       <a class="office-brand" href="#dashboard"><img src="../assets/logo.png" alt=""><span>Creek Office<small>Church operations</small></span></a>
       <nav id="workspace-nav" aria-label="Workspace">
         <a href="#dashboard" data-view="dashboard">Overview</a>
+        <a href="#attention" data-view="attention" data-private-module>Needs attention</a>
         <a href="#followups" data-view="followups" data-private-module>My follow-ups <span id="followup-badge" class="personal-nav-badge"></span></a>
         <a href="#calendar" data-view="calendar">Staff calendar</a>
         <a href="#announcements" data-view="announcements" data-private-module>Announcements</a>
@@ -99,6 +101,7 @@
           <p id="dashboard-followup-status" role="status">Loading your personal reminders…</p>
           <div id="dashboard-followup-list"></div>
         </section>
+        <section class="panel attention-dashboard" data-private-module aria-labelledby="attention-dashboard-title"><div><p class="eyebrow">A clear place to start</p><h2 id="attention-dashboard-title"><span id="attention-count" class="attention-dashboard-count">—</span>Needs attention</h2><p id="attention-dashboard-status">Refresh the Office to check intake, member care and your leader follow-ups.</p></div><a href="#attention">Review the queue →</a></section>
         <section class="panel intake-dashboard" data-private-module aria-labelledby="intake-dashboard-title">
           <div class="panel-head"><div><p class="eyebrow">Every submission has a next step</p><h2 id="intake-dashboard-title">New intake, ready for care.</h2></div><a href="#intake">Open intake actions →</a></div>
           <p id="dashboard-intake-status" class="intake-note" role="status">Intake action counts are not loaded.</p>
@@ -137,6 +140,7 @@
       <section id="signups-view" class="view hidden"></section>
       <section id="intake-view" class="view hidden"></section>
       <section id="communications-view" class="view hidden"></section>
+      <section id="attention-view" class="view hidden"></section>
       <section id="announcements-view" class="view hidden"></section>
       <section id="committees-view" class="view hidden"></section>
       <section id="slides-view" class="view hidden"></section>
@@ -159,13 +163,14 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
   <script src="config.js"></script>
   <script src="membership.js"></script>
-  <script src="care.js"></script>
+  <script src="care.js?v=attention-1"></script>
   <script src="office-content.js"></script>
-  <script src="signups.js"></script>
-  <script src="intake-tasks.js?v=deacon-rotation-1"></script>
+  <script src="signups.js?v=attention-1"></script>
+  <script src="intake-tasks.js?v=attention-1"></script>
   <script src="communications.js?v=weekly-choices-1"></script>
-  <script src="followups.js"></script>
+  <script src="followups.js?v=attention-1"></script>
   <script src="reminder-calendar.js"></script>
-  <script src="app.js?v=weekly-choices-1"></script>
+  <script src="attention.js?v=attention-1"></script>
+  <script src="app.js?v=attention-1"></script>
 </body>
 </html>

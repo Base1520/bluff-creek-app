@@ -84,6 +84,34 @@
     function dateLabel(value) { return validDate(value) ? new Date(value + 'T12:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }) : 'Not set'; }
     function people() { return Array.isArray(options.people()) ? options.people() : []; }
     function peopleAvailable() { return Array.isArray(options.people()) && (typeof options.peopleReady !== 'function' || options.peopleReady() === true); }
+    function attentionSnapshot(date) {
+      var ctx = context();
+      if (!writable() || ctx.workspaceReady !== true || !peopleAvailable() || !ready || loading || failed || saving || (draft && draft.requiresRefresh) || dataEpoch !== ctx.epoch || mountedEpoch !== ctx.epoch || mountedOwner !== ctx.userId) return null;
+      var currentPeople = people(), ids = new Set(currentPeople.map(function (person) { return person.id; }));
+      var plans = state.assignments.filter(function (plan) { return ids.has(plan.contact_id); }), items = [], byPlan = new Map();
+      function owner(plan) { var label = plan && String(plan.assigned_to || '').trim(); return label ? 'Care label: ' + label : 'Unassigned care label'; }
+      function item(type, id, contact, role, plan, due, reasons) {
+        var title = personName(contact);
+        return {key:type + ':' + id + (type === 'care_coverage' ? ':' + role : ''),category:'care',source_type:type,source_id:id,contact_id:contact,care_role:ROLES.includes(role) ? role : null,title:typeof title === 'string' ? title : 'Unnamed person',owner_label:owner(plan),due_on:validDate(due) ? due : null,reasons:reasons};
+      }
+      plans.forEach(function (plan) {
+        var due = dueFor(plan, state.visits, date), reasons = [];
+        if (due.paused || due.completed) return;
+        if (due.state === 'overdue') reasons.push('care_overdue');
+        if (due.state === 'due') reasons.push('care_due_today');
+        if (!String(plan.assigned_to || '').trim()) reasons.push('care_unassigned');
+        if (due.state === 'unscheduled') reasons.push('care_unscheduled');
+        if (!reasons.length) return;
+        var projected = item('care_plan',plan.id,plan.contact_id,roleOf(plan),plan,due.due,reasons);
+        items.push(projected); byPlan.set(plan.id,projected);
+      });
+      coverageFor(currentPeople, plans).forEach(function (gap) {
+        var existing = gap.plan && byPlan.get(gap.plan.id);
+        if (existing) existing.reasons.push('care_coverage_gap');
+        else items.push(item('care_coverage',gap.contact_id,gap.contact_id,gap.care_role,gap.plan,null,['care_coverage_gap']));
+      });
+      return {items:items};
+    }
     function publishSummary() {
       if (typeof options.onSummary !== 'function') return;
       var ctx = context(), summary = null;
@@ -310,7 +338,7 @@
     }
     function selectPerson(id) {
       var ctx = context();
-      function eligible() { return typeof id === 'string' && !!id && current(ctx.epoch, ctx.userId) && writable() && ready && dataEpoch === ctx.epoch && mountedEpoch === ctx.epoch && mountedOwner === ctx.userId && people().some(function (person) { return person.id === id; }); }
+      function eligible() { return typeof id === 'string' && !!id && current(ctx.epoch, ctx.userId) && writable() && peopleAvailable() && ready && !loading && dataEpoch === ctx.epoch && mountedEpoch === ctx.epoch && mountedOwner === ctx.userId && people().some(function (person) { return person.id === id; }); }
       if (!eligible()) return false;
       var editorPerson = q('[data-care-form] [name="contact_id"]');
       if (selectedPerson !== id || activeForm && (!editorPerson || editorPerson.value !== id)) {
@@ -328,6 +356,20 @@
       closeEditor(false); selectedPerson = ''; search = ''; deacon = ''; careRole = '';
       view = kind === 'coverage' ? 'coverage' : 'followup'; planStatus = kind === 'coverage' ? '' : kind;
       render(); return true;
+    }
+    function openFromAttention(item, date) {
+      var ctx = context();
+      function matchingItem() {
+        if (!item || typeof item !== 'object' || !current(ctx.epoch,ctx.userId)) return null;
+        var snapshot = attentionSnapshot(date);
+        return snapshot && snapshot.items.find(function (row) { return row.key === item.key && row.source_type === item.source_type && row.source_id === item.source_id && row.contact_id === item.contact_id && row.care_role === item.care_role; });
+      }
+      if (!matchingItem() || !mayDiscard(false)) return false;
+      var target = matchingItem(); if (!target) return false;
+      closeEditor(false); selectedPerson = target.contact_id; careRole = target.care_role || ''; search = ''; deacon = ''; planStatus = '';
+      view = target.source_type === 'care_coverage' ? 'coverage' : 'followup'; render();
+      var action = q('[data-care-list="' + (view === 'coverage' ? 'coverage' : 'assignments') + '"] button'); if (action) action.focus();
+      return true;
     }
     function clearPerson() {
       var ctx = context();
@@ -459,7 +501,7 @@
       syncUnloadWarning();
     });
     host.addEventListener('submit', save);
-    return { load: load, render: render, clear: clear, selectPerson: selectPerson, openQueue: openQueue };
+    return { load: load, render: render, clear: clear, selectPerson: selectPerson, openQueue: openQueue, attentionSnapshot: attentionSnapshot, openFromAttention: openFromAttention };
   }
   return { create: create, dueFor: dueFor, today: today, validDate: validDate, addMonths: addMonths, coverageFor: coverageFor };
 }));
