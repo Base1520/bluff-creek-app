@@ -1,6 +1,7 @@
 import { readFile, readdir, realpath, stat } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
+import { isDeepStrictEqual } from 'node:util';
 
 const MANIFEST_PATH = 'tools/office-preflight/manifest.json';
 const CONFIG_PATH = 'admin/config.js';
@@ -12,6 +13,13 @@ const PAUSE_SQL = 'begin; revoke execute on function public.save_app_connection(
 const STAFF_ACCOUNT_GUARD_SHA256 = '7530eb7cd955ec1522943a179aebc03088a3ebc8126a4f4300e08eb5695bdc7b';
 const DIRECT_INTAKE_SHA256 = '2d4a268bb6bb2c0d87ae7f4d2b238ee79180e862ea5ba026a9f625498955b405';
 const DISPATCH_EXTENSIONS_SHA256 = 'bfbd4b7e1410a2e80508866e0fbd2029130dce435e5cb7f9ca0c1d9ad0bce6d0';
+const FROZEN_TEN_PATH = 'tools/office-preflight/history/manifest-ten-2026-09-10.json';
+const FROZEN_TEN_SHA256 = '0734cdc37022af4c946b2e4a8d93ad1b199093834f28373b1bf8c0c9497276ae';
+const OFFICE_EXTENSIONS = [
+  { field: 'deacon_rotation_sql_file', suffix: 'deacon_guest_rotation', check: 'reviewed_deacon_rotation_declared', sha256: '679530d6e25194c61a3b5e0fa165ce7c47d91db58e67f99d5f2f5453eca94f1a' },
+  { field: 'communication_preferences_sql_file', suffix: 'communication_preferences', check: 'reviewed_communication_preferences_declared', sha256: 'd45307bada93bc3f7258eeb41e372477b56f8085ba2fcb138cb520076e567362' },
+  { field: 'office_attention_sql_file', suffix: 'office_attention', check: 'reviewed_office_attention_declared', sha256: '94d578ad7e735f3de676422be869b73d3a255d9965039cde896e799af2be8054' }
+];
 const compactSQL = source => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/--[^\n\r]*/g, '').replace(/\s+/g, '').toLowerCase();
 const allowedPath = value => typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(value)
   && !value.split('/').some(part => part === '..' || part === '.' || part === '') && !isAbsolute(value);
@@ -90,8 +98,9 @@ export function configurationPresence(source) {
 }
 
 function validManifest(manifest) {
-  return manifest?.format_version === 4 && /^\d{14}$/.test(manifest.schema_revision || '')
-    && Array.isArray(manifest.sql_files) && manifest.sql_files.length === 10
+  const extended = manifest?.format_version === 5;
+  return [4, 5].includes(manifest?.format_version) && /^\d{14}$/.test(manifest.schema_revision || '')
+    && Array.isArray(manifest.sql_files) && manifest.sql_files.length === (extended ? 13 : 10)
     && manifest.sql_files.every(row => row && allowedPath(row.path) && /^supabase\/migrations\/\d{14}_[a-z0-9_]+\.sql$/.test(row.path)
       && /^[a-f0-9]{64}$/.test(row.sha256 || '') && Array.isArray(row.depends_on) && row.depends_on.every(allowedPath))
     && new Set(manifest.sql_files.map(row => row.path)).size === manifest.sql_files.length
@@ -101,11 +110,15 @@ function validManifest(manifest) {
     && allowedPath(manifest.staff_account_guard_sql_file) && /_require_eligible_staff_auth_account\.sql$/.test(manifest.staff_account_guard_sql_file)
     && allowedPath(manifest.direct_intake_sql_file) && /_direct_app_intake\.sql$/.test(manifest.direct_intake_sql_file)
     && allowedPath(manifest.dispatch_extensions_sql_file) && /_direct_intake_dispatch_extensions\.sql$/.test(manifest.dispatch_extensions_sql_file)
-    && manifest.sql_files.at(-5)?.path === manifest.readiness_sql_file
-    && manifest.sql_files.at(-4)?.path === manifest.intake_pause_sql_file
-    && manifest.sql_files.at(-3)?.path === manifest.staff_account_guard_sql_file
-    && manifest.sql_files.at(-2)?.path === manifest.direct_intake_sql_file
-    && manifest.sql_files.at(-1)?.path === manifest.dispatch_extensions_sql_file
+    && manifest.sql_files[5]?.path === manifest.readiness_sql_file
+    && manifest.sql_files[6]?.path === manifest.intake_pause_sql_file
+    && manifest.sql_files[7]?.path === manifest.staff_account_guard_sql_file
+    && manifest.sql_files[8]?.path === manifest.direct_intake_sql_file
+    && manifest.sql_files[9]?.path === manifest.dispatch_extensions_sql_file
+    && OFFICE_EXTENSIONS.every(({ field, suffix }, index) => extended
+      ? new RegExp('^supabase/migrations/\\d{14}_' + suffix + '\\.sql$').test(manifest[field] || '')
+        && manifest.sql_files[10 + index]?.path === manifest[field]
+      : !Object.hasOwn(manifest, field))
     && Array.isArray(manifest.required_files) && manifest.required_files.every(allowedPath)
     && [CONFIG_PATH, CLIENT_PATH, 'admin/index.html', 'admin/help.html'].every(path => manifest.required_files.includes(path))
     && Array.isArray(manifest.readiness_modules) && manifest.readiness_modules.length > 0
@@ -125,6 +138,23 @@ export async function runPreflight(rootPath) {
   catch (_) { check('manifest_readable', false); return report; }
   if (!validManifest(manifest)) { check('manifest_structure', false); return report; }
   check('manifest_structure', true);
+  if (manifest.format_version === 5) {
+    // A supplied format-5 manifest names the recorded versions; this local check
+    // verifies declared history and bytes, not the existence of hosted records.
+    let frozen;
+    try {
+      const bytes = await readLocal(root, FROZEN_TEN_PATH, null);
+      const pinned = createHash('sha256').update(bytes).digest('hex') === FROZEN_TEN_SHA256;
+      check('frozen_ten_manifest_digest_matches', pinned);
+      if (pinned) frozen = JSON.parse(bytes.toString('utf8'));
+    } catch (_) { check('frozen_ten_manifest_readable', false); }
+    check('frozen_ten_history_preserved', !!frozen
+      && isDeepStrictEqual(manifest.sql_files.slice(0, 10), frozen.sql_files)
+      && ['schema_revision', 'readiness_sql_file', 'intake_pause_sql_file', 'staff_account_guard_sql_file',
+        'direct_intake_sql_file', 'dispatch_extensions_sql_file', 'readiness_modules', 'prerequisite_tables']
+        .every(field => isDeepStrictEqual(manifest[field], frozen[field]))
+      && frozen.required_files.every(path => manifest.required_files.includes(path)));
+  }
   report.schema_revision = manifest.schema_revision;
   report.sql_apply_order = manifest.sql_files.map(row => row.path);
   const seen = new Set();
@@ -159,6 +189,10 @@ export async function runPreflight(rootPath) {
   check('eligible_staff_account_guard_declared', createHash('sha256').update(sources.get(manifest.staff_account_guard_sql_file) || '').digest('hex') === STAFF_ACCOUNT_GUARD_SHA256);
   check('reviewed_direct_intake_declared', createHash('sha256').update(sources.get(manifest.direct_intake_sql_file) || '').digest('hex') === DIRECT_INTAKE_SHA256);
   check('reviewed_dispatch_extensions_declared', createHash('sha256').update(sources.get(manifest.dispatch_extensions_sql_file) || '').digest('hex') === DISPATCH_EXTENSIONS_SHA256);
+  if (manifest.format_version === 5) {
+    for (const extension of OFFICE_EXTENSIONS) check(extension.check,
+      createHash('sha256').update(sources.get(manifest[extension.field]) || '').digest('hex') === extension.sha256);
+  }
   const client = sources.get(CLIENT_PATH) || '';
   const sqlRevision = recovery.match(/'schema_revision'\s*,\s*'(\d{14})'/)?.[1];
   const clientRevision = client.match(/\bREQUIRED_REVISION\s*=\s*["'](\d{14})["']/)?.[1];
@@ -175,6 +209,7 @@ export async function runPreflight(rootPath) {
   else if (report.configuration.status === 'supplied_unverified') report.warnings.push('Office URL/key fields are nonempty. Their values, ownership, safety, validity and hosted behavior have not been verified.');
   else report.warnings.push('Office configuration is partial or uses unsupported syntax. Review it privately; no configuration values are included in this report.');
   report.warnings.push('The seventh migration keeps the old save_app_connection signatures paused; the eighth checks current Auth eligibility for staff roles. The ninth adds authenticated direct guest/prayer intake and private follow-up/outbox RPCs; the tenth enables scheduler extensions only. Auth settings, scheduler/Edge activation, delivery, phone acceptance and hosted privileges are not assessed.');
+  if (manifest.format_version === 5) report.warnings.push('The three additional reviewed migrations declare deacon rotation, communication preferences and a read-only attention queue. Their supplied version names and frozen prior history were checked locally; actual hosted migration history, activation and operational behavior were not verified. Communication preferences do not implement a weekly email sender.');
   if (/\b(?:src|href)=["']https?:\/\//i.test(sources.get('admin/index.html') || '')) report.warnings.push('The office page has external assets. Their availability was not checked.');
   report.status = report.checks.every(item => item.ok) ? 'passed' : 'failed';
   return report;
