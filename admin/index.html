@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="intake-tasks.css?v=deacon-rotation-1">
   <link rel="stylesheet" href="communications.css?v=weekly-choices-1">
   <link rel="stylesheet" href="attention.css?v=attention-1">
+  <link rel="stylesheet" href="week.css?v=week-1">
   <link rel="stylesheet" href="followups.css">
   <link rel="stylesheet" href="reminder-calendar.css">
 </head>
@@ -51,6 +52,7 @@
       <a class="office-brand" href="#dashboard"><img src="../assets/logo.png" alt=""><span>Creek Office<small>Church operations</small></span></a>
       <nav id="workspace-nav" aria-label="Workspace">
         <a href="#dashboard" data-view="dashboard">Overview</a>
+        <a href="#week" data-view="week" data-private-module>This week</a>
         <a href="#attention" data-view="attention" data-private-module>Needs attention</a>
         <a href="#followups" data-view="followups" data-private-module>My follow-ups <span id="followup-badge" class="personal-nav-badge"></span></a>
         <a href="#calendar" data-view="calendar">Staff calendar</a>
@@ -79,6 +81,7 @@
       </section>
 
       <section id="dashboard-view" class="view">
+        <section class="panel office-help-card" data-private-module><div><p class="eyebrow">Prepare together</p><h2>One week. One shared view.</h2><p>Review Sunday slides, current announcements, staff events and committee terms, then open the saved record to make a change.</p></div><a href="#week">Open This week →</a></section>
         <section class="panel member-journey" data-private-module aria-labelledby="member-journey-title">
           <div class="member-journey-intro"><p class="eyebrow">Caring for our church family</p><h2 id="member-journey-title">Start with a person.</h2><p>Keep their story together, and make the next conversation a little easier.</p></div>
           <ol class="member-journey-steps">
@@ -116,6 +119,8 @@
         <div class="panel"><div class="panel-head"><div><p class="eyebrow">Coming up</p><h2>Next events</h2></div><a href="#calendar">Open calendar →</a></div><div id="dashboard-events" class="rows"></div></div>
         <section class="panel office-help-card"><div><p class="eyebrow">A little help, right here</p><h2>Know what happens next.</h2><p>Find help with saving, recovering an interrupted task, and keeping church information current.</p></div><a href="help.html">Open the office guide →</a></section>
       </section>
+
+      <section id="week-view" class="view hidden" data-private-module></section>
 
       <section id="calendar-view" class="view hidden">
         <div class="panel calendar-guide"><p class="eyebrow">Church calendar</p><h2>Keep everyone on the same page.</h2><p>The church calendar is maintained in iCloud. Open Apple Calendar or iCloud Calendar with an account invited by the calendar owner to add or change church events.</p><p><a href="https://www.icloud.com/calendar/" target="_blank" rel="noopener">Open iCloud Calendar ↗</a></p><details><summary>How editor access works</summary><p>The calendar owner invites each editor through Apple Calendar sharing and enables editing. Creek Office access and iCloud permissions are separate. Use Apple Calendar on iPhone, or iCloud Calendar on a tablet or computer.</p><p><a href="https://support.apple.com/guide/icloud/share-a-calendar-mm6b1a9479/icloud" target="_blank" rel="noopener">Apple’s calendar-sharing instructions ↗</a></p></details><p class="calendar-note">Review community event requests with the calendar owner, then make approved changes in iCloud so everyone sees the same schedule.</p></div>
@@ -164,13 +169,14 @@
   <script src="config.js"></script>
   <script src="membership.js"></script>
   <script src="care.js?v=attention-1"></script>
-  <script src="office-content.js"></script>
+  <script src="office-content.js?v=week-1"></script>
   <script src="signups.js?v=attention-1"></script>
   <script src="intake-tasks.js?v=attention-1"></script>
   <script src="communications.js?v=weekly-choices-1"></script>
   <script src="followups.js?v=attention-1"></script>
   <script src="reminder-calendar.js"></script>
   <script src="attention.js?v=attention-1"></script>
-  <script src="app.js?v=attention-1"></script>
+  <script src="week.js?v=week-1"></script>
+  <script src="app.js?v=week-1"></script>
 </body>
 </html>

@@ -4,7 +4,7 @@
   var els = {};
   var db = null;
   var localDevelopment = false, backendOrigin = null;
-  var membership = null, care = null, officeContent = null, signups = null, intakeTasks = null, communications = null, attention = null, followups = null, reminderCalendar = null;
+  var membership = null, care = null, officeContent = null, signups = null, intakeTasks = null, communications = null, attention = null, week = null, followups = null, reminderCalendar = null;
   var session = null;
   var role = null;
   var authEpoch = 0, loadEpoch = 0, documentEpoch = 0, editorEpoch = 0;
@@ -15,9 +15,9 @@
   var draft = null, readinessEpoch = 0;
   var REQUIRED_REVISION = "20260907174301";
   var state = { events: [], people: [], documents: [], activity: [] };
-  var titles = { dashboard: "Overview", followups: "My follow-ups", calendar: "Staff calendar", announcements: "Announcements", committees: "Committee contacts", slides: "Sunday slides", prayers: "Prayer requests", people: "People & membership", history: "Member history", care: "Guests & care", signups: "Guest register", intake: "Intake actions", communications: "Communications", attention: "Needs attention", documents: "Documents", activity: "Activity" };
+  var titles = { dashboard: "Overview", week: "This week", followups: "My follow-ups", calendar: "Staff calendar", announcements: "Announcements", committees: "Committee contacts", slides: "Sunday slides", prayers: "Prayer requests", people: "People & membership", history: "Member history", care: "Guests & care", signups: "Guest register", intake: "Intake actions", communications: "Communications", attention: "Needs attention", documents: "Documents", activity: "Activity" };
   var contentViews = ["announcements", "committees", "slides", "prayers"];
-  var privateViews = ["history", "care", "signups", "intake", "communications", "attention", "followups"].concat(contentViews);
+  var privateViews = ["week", "history", "care", "signups", "intake", "communications", "attention", "followups"].concat(contentViews);
 
   function deadline(request) {
     var timer;
@@ -84,7 +84,7 @@
   function clearPrivate() {
     window.clearTimeout(documentExpiryTimer);
     if (membership) membership.clear(); if (care) care.clear();
-    if (officeContent) officeContent.clear(); if (signups) signups.clear(); if (intakeTasks) intakeTasks.clear(); if (communications) communications.clear(); if (attention) attention.clear();
+    if (officeContent) officeContent.clear(); if (signups) signups.clear(); if (intakeTasks) intakeTasks.clear(); if (communications) communications.clear(); if (attention) attention.clear(); if (week) week.clear();
     if (followups) followups.clear(); if (reminderCalendar) reminderCalendar.clear();
     el("dashboard-followup-list").replaceChildren(); el("dashboard-followup-status").textContent = ""; el("followup-badge").textContent = ""; el("followup-badge").removeAttribute("aria-label");
     loadEpoch++; documentEpoch++; peopleReady = false; state = { events: [], people: [], documents: [], activity: [] };
@@ -170,6 +170,22 @@
         if(["care_plan","care_coverage"].includes(item.source_type)&&care&&care.openFromAttention&&care.openFromAttention(item,date)){location.hash="care";route();return true;}
         if(item.source_type==="leader"&&followups&&followups.openFromAttention&&followups.openFromAttention(item.source_id)){location.hash="followups";route();return true;}
         return false;
+      }
+    }));
+    if (window.CreekWeek && el("week-view")) week = window.CreekWeek.create(Object.assign({}, moduleOptions, {
+      root: el("week-view"), getSources: function () {
+        var available = !!session && canEdit() && workspaceReady && !refreshing;
+        return { content: available && officeContent && officeContent.weekSnapshot ? officeContent.weekSnapshot() : null,
+          events: { available: available, items: available ? state.events.filter(function (row) { return !row.is_archived; }).map(function (row) {
+            return { id: row.id, title: row.title, starts_at: row.starts_at, ends_at: row.ends_at || null, updated_at: row.updated_at || null };
+          }) : [] } };
+      }, onOpen: function (view, id) {
+        if (!canEdit() || !workspaceReady || refreshing || typeof id !== "string") return false;
+        var opened = false;
+        if (["announcements", "slides", "committees"].includes(view) && officeContent) opened = officeContent.openRecord(view, id) === true;
+        if (view === "calendar") { var item = state.events.find(function (row) { return row.id === id && !row.is_archived; }); if (item) opened = openEvent(item) === true; }
+        if (opened) { location.hash = view; route(); }
+        return opened;
       }
     }));
     if (window.CreekReminderCalendar) reminderCalendar = window.CreekReminderCalendar.create({ button: el("weekly-reminder"), allowed: function () { return !!session && canEdit(); } });
@@ -282,7 +298,7 @@
     el("followup-badge").textContent = ""; el("followup-badge").removeAttribute("aria-label"); el("dashboard-followup-status").textContent = "Follow-ups are unavailable until the workspace refreshes.";
     el("primary-action").disabled = true;
     privateViews.forEach(function (name) { var view = el(name + "-view"); if (view) view.classList.add("hidden"); });
-    syncMembershipSheet(); renderCareSummary(null); renderIntakeSummary(null); if(attention)attention.clear(); renderAttentionSummary(null); freezeOtherDialogs(true); syncEditor(); health(message, setup);
+    syncMembershipSheet(); renderCareSummary(null); renderIntakeSummary(null); if(attention)attention.clear(); if(week)week.clear(); renderAttentionSummary(null); freezeOtherDialogs(true); syncEditor(); health(message, setup);
   }
   function connectionDiagnostic(phase,error) {
     var labels={role:"staff access",readiness:"workspace setup",records:"office records"};
@@ -359,7 +375,7 @@
   async function loadAll(epoch) {
     epoch = epoch === undefined ? authEpoch : epoch;
     if (epoch !== authEpoch || !session || refreshing || (draft && draft.busy)) return;
-    var request = ++loadEpoch; refreshing = true; if(attention)attention.beginRefresh();
+    var request = ++loadEpoch; refreshing = true; if(attention)attention.beginRefresh(); var weekRefresh = week ? week.beginRefresh() : null;
     health("Checking the office connection and refreshing records…", false);
     try {
       if (!await verifyReadiness(epoch)) return;
@@ -376,6 +392,7 @@
       if (invalid) throw { code: "OFFICE_SETUP" };
       ["events", "people", "documents", "activity"].forEach(function (name, index) { state[name] = results[index].data; });
       workspaceReady = true; peopleReady = true; el("workspace").dataset.connection = "ready";
+      if (week) weekRefresh = week.beginRefresh();
       await reconcileDraft(epoch, readDraft);
       if (!current(epoch) || request !== loadEpoch) return;
       freezeOtherDialogs(false);
@@ -389,7 +406,7 @@
       if (authFailure(error)) { queueSession(null); el("login-error").textContent = "Your session could not be verified. Sign in again."; return; }
       var setup = ["OFFICE_SETUP", "42P01", "42703", "PGRST204"].includes(error.code);
       blockWorkspace(setup ? "Office setup is incomplete or out of date. Editing is paused until the required database update is installed." : "Some office records could not be refreshed. Editing is paused and stale lists have been cleared. Your draft is preserved; refresh to try again."+connectionDiagnostic("records",error), setup);
-    } finally { if (epoch === authEpoch) { refreshing = false; syncEditor(); ["workspace-refresh", "editor-refresh"].forEach(function (id) { if (el(id)) el(id).disabled = !!(draft && draft.busy); }); } }
+    } finally { if (epoch === authEpoch) { refreshing = false; if(week && request === loadEpoch && workspaceReady && canEdit())week.endRefresh(weekRefresh); syncEditor(); ["workspace-refresh", "editor-refresh"].forEach(function (id) { if (el(id)) el(id).disabled = !!(draft && draft.busy); }); } }
   }
 
   function route() {
@@ -425,7 +442,7 @@
     el("activity-list").innerHTML = state.activity.map(activityRow).join("");
     bindRowActions();
     if (membership) membership.render(); if (care) care.render();
-    if (officeContent) officeContent.render(); if (signups) signups.render(); if (intakeTasks) intakeTasks.render(); if (communications) communications.render(); if(attention)attention.render(); if (followups) followups.render();
+    if (officeContent) officeContent.render(); if (signups) signups.render(); if (intakeTasks) intakeTasks.render(); if (communications) communications.render(); if(attention)attention.render(); if(week)week.render(); if (followups) followups.render();
   }
 
   function renderAttentionSummary(summary) {
@@ -492,12 +509,12 @@
   }
 
   function primaryAction() { var view = (location.hash || "#dashboard").slice(1); if (view === "calendar") openEvent(); if (view === "people") openPerson(); if (view === "documents") openUpload(); if (officeContent && contentViews.includes(view)) officeContent.open(view); }
-  function openEditor(kind, title, fields, id) { if (!session || !canEdit() || (draft && draft.busy)) return; if (!clearEditor()) return; var list = state[kind === "event" ? "events" : kind === "person" ? "people" : "documents"], existing = id ? list.find(function (row) { return row.id === id; }) : null; if (id && !existing) return; draft = { kind: kind, id: id || crypto.randomUUID(), isNew: !id, version: existing ? existing.version : 0, archived: !!(existing && existing.is_archived), busy: false, requiresRefresh: false, conflict: false }; el("editor-kicker").textContent = kind; el("editor-title").textContent = title; el("editor-fields").innerHTML = fields; el("editor-error").textContent = ""; el("editor-form").dataset.kind = kind; el("editor-form").dataset.id = id || ""; el("editor").showModal(); draft.initial = editorSnapshot(); syncEditor(); }
+  function openEditor(kind, title, fields, id) { if (!session || !canEdit() || (draft && draft.busy)) return false; if (!clearEditor()) return false; var list = state[kind === "event" ? "events" : kind === "person" ? "people" : "documents"], existing = id ? list.find(function (row) { return row.id === id; }) : null; if (id && !existing) return false; draft = { kind: kind, id: id || crypto.randomUUID(), isNew: !id, version: existing ? existing.version : 0, archived: !!(existing && existing.is_archived), busy: false, requiresRefresh: false, conflict: false }; el("editor-kicker").textContent = kind; el("editor-title").textContent = title; el("editor-fields").innerHTML = fields; el("editor-error").textContent = ""; el("editor-form").dataset.kind = kind; el("editor-form").dataset.id = id || ""; el("editor").showModal(); draft.initial = editorSnapshot(); syncEditor(); return true; }
   function input(name, label, type, value, wide) { return '<label class="' + (wide ? "wide" : "") + '">' + label + '<input name="' + name + '" type="' + type + '" value="' + safe(value || "") + '" ' + (["title", "first_name", "starts_at"].indexOf(name) > -1 ? "required" : "") + '></label>'; }
   function select(name, label, options, value) { return '<label>' + label + '<select name="' + name + '">' + options.map(function (x) { return '<option value="' + x + '" ' + (x === value ? "selected" : "") + '>' + x + '</option>'; }).join("") + '</select></label>'; }
   function textArea(name, label, value) { return '<label class="wide">' + label + '<textarea name="' + name + '">' + safe(value || "") + '</textarea></label>'; }
   function localDateTime(value) { if (!value) return ""; var d = new Date(value); var offset = d.getTimezoneOffset(); return new Date(d.getTime() - offset * 60000).toISOString().slice(0, 16); }
-  function openEvent(item) { item = item || {}; openEditor("event", item.id ? "Edit event" : "Add event", '<div class="form-grid">' + input("title", "Title", "text", item.title) + select("tag", "Type", ["Weekly", "Monthly", "Special"], item.tag || "Special") + input("starts_at", "Starts", "datetime-local", localDateTime(item.starts_at)) + input("ends_at", "Ends", "datetime-local", localDateTime(item.ends_at)) + input("location", "Location", "text", item.location, true) + textArea("description", "Details", item.description) + '</div>', item.id); }
+  function openEvent(item) { item = item || {}; return openEditor("event", item.id ? "Edit event" : "Add event", '<div class="form-grid">' + input("title", "Title", "text", item.title) + select("tag", "Type", ["Weekly", "Monthly", "Special"], item.tag || "Special") + input("starts_at", "Starts", "datetime-local", localDateTime(item.starts_at)) + input("ends_at", "Ends", "datetime-local", localDateTime(item.ends_at)) + input("location", "Location", "text", item.location, true) + textArea("description", "Details", item.description) + '</div>', item.id); }
   function openPerson(item) {
     item = item || {};
     var hasLedgerDetails = ["former_names", "membership_number", "legacy_member_id", "birth_date_text", "received_date_text", "how_received", "baptism_date_text", "dismissal_date_text", "reason_for_decrease"].some(function (name) { return !!item[name]; });

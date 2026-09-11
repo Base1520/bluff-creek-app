@@ -10,7 +10,7 @@ function fixture(t, options={}) {
   const dom=new JSDOM(names.map(n=>'<section id="'+n+'"></section>').join(''),{url:'https://office.example.invalid/',runScripts:'outside-only'}),w=dom.window;
   t.after(()=>w.close());w.confirm=()=>true;w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};
   w.eval(code);const rows=Object.fromEntries(tables.map(n=>[n,structuredClone(options.rows?.[n]||[]).map(r=>({version:1,...r}))]));
-  let context={epoch:1,userId:'sample-user',canEdit:true,role:options.role||'editor'}, refreshes=0, uploads=0, nextId=1;
+  let context={epoch:1,userId:'sample-user',canEdit:true,workspaceReady:true,role:options.role||'editor'}, refreshes=0, uploads=0, nextId=1;
   const calls=[],notices=[],opened=[],control={hold:null,error:null,noRows:false};
   const roots=Object.fromEntries(names.map(n=>[n,w.document.getElementById(n)]));
   const db={rpc:async()=>control.capability?control.capability():({data:{available:options.directIntake===true,version:1}}),from(table){
@@ -263,4 +263,75 @@ test('new prayer contact fields require positive capability and stop safely if i
 
 test('intake source label and record handoff cannot reuse prayer data after an account replacement',async t=>{
  const f=fixture(t,{rows:{office_prayer_requests:[{id:'prayer-fixture',display_name:'Fictional private request',request_text:'Synthetic prayer',status:'active',share_scope:'staff_only',sharing_approved:false}]}});await f.api.load(1);assert.equal(f.api.labelFor('prayers','prayer-fixture'),'Fictional private request');f.setContext({epoch:1,userId:'replacement-user',role:'editor',canEdit:true});assert.equal(f.api.labelFor('prayers','prayer-fixture'),'');f.api.openRecord('prayers','prayer-fixture');assert.equal(f.form(),null);
+});
+
+const plain = value => JSON.parse(JSON.stringify(value));
+const weekContentRows = () => ({
+  office_announcements:[{id:'week-announcement',title:'Fictional announcement',status:'ready',starts_on:'2026-09-13',ends_on:'2026-09-20',updated_at:'2026-09-11T12:00:00Z',body:'PRIVATE_BODY_CANARY'}],
+  sunday_slides:[{id:'week-slides',title:'Fictional slides',status:'draft',service_date:'2026-09-13',deck_url:'https://example.invalid/private-deck',document_id:null,notes:'PRIVATE_SLIDE_CANARY',updated_at:'2026-09-11T12:00:00Z'}],
+  committee_contacts:[{id:'week-committee',committee_name:'Fictional committee',status:'active',term_start:'2026-01-01',term_end:'2026-09-15',updated_at:'2026-09-11T12:00:00Z',contact_name:'PRIVATE_CONTACT_CANARY',email:'private@example.invalid',notes:'PRIVATE_NOTES_CANARY'}],
+  office_prayer_requests:[{id:'private-prayer',display_name:'PRIVATE_PRAYER_CANARY',request_text:'PRIVATE_REQUEST_CANARY',status:'active',share_scope:'staff_only'}]
+});
+function assertWeekUnavailable(api) {
+  const snapshot=plain(api.weekSnapshot());
+  assert.deepEqual(Object.keys(snapshot).sort(),['announcements','committees','slides']);
+  for(const source of Object.values(snapshot))assert.deepEqual(source,{available:false,items:[]});
+}
+test('weekly content snapshot is a copied allowlist independent of workspace filters',async t=>{
+  const rows=weekContentRows();rows.office_announcements.push({...rows.office_announcements[0],id:'archived-announcement',status:'archived'});
+  rows.sunday_slides.push({...rows.sunday_slides[0],id:'missing-material',deck_url:null,document_id:null});
+  rows.sunday_slides.push({...rows.sunday_slides[0],id:'attached-material',deck_url:null,document_id:'sample-document'});
+  const f=fixture(t,{rows});assertWeekUnavailable(f.api);await f.api.load(1);
+  for(const view of ['announcements','slides','committees']){const search=f.roots[view].querySelector('[data-office-search]');search.value='no matching visible record';search.dispatchEvent(new f.w.Event('input',{bubbles:true}));}
+  const snapshot=f.api.weekSnapshot(),value=plain(snapshot);
+  assert.deepEqual(Object.keys(value).sort(),['announcements','committees','slides']);
+  assert.equal(value.announcements.available,true);assert.equal(value.announcements.items.length,2);
+  assert.deepEqual(Object.keys(value.announcements.items[0]).sort(),['ends_on','id','starts_on','status','title','updated_at']);
+  assert.deepEqual(Object.keys(value.slides.items[0]).sort(),['hasMaterial','id','service_date','status','title','updated_at']);
+  assert.deepEqual(value.slides.items.map(row=>row.hasMaterial),[true,false,true]);
+  assert.deepEqual(Object.keys(value.committees.items[0]).sort(),['committee_name','id','status','term_end','term_start','updated_at']);
+  assert.doesNotMatch(JSON.stringify(value),/PRIVATE_|private@example|private-deck|sample-document/);
+  snapshot.announcements.items[0].title='Caller mutation';snapshot.slides.items.length=0;snapshot.committees.items.push({id:'caller-added'});
+  assert.deepEqual(plain(f.api.weekSnapshot()),value,'caller changes cannot corrupt the next projection');
+  assert.equal(f.api.openRecord('announcements','week-announcement'),true);assert.equal(f.form().elements.title.value,'Fictional announcement');
+});
+test('weekly content availability closes while loading and preserves independent failed-source state',async t=>{
+  const f=fixture(t,{rows:weekContentRows()});await f.api.load(1);
+  const pending=[];f.control.hold=q=>new Promise(resolve=>pending.push({q,resolve}));const loading=f.api.load(1);await tick();
+  assert.equal(pending.length,4);assertWeekUnavailable(f.api);
+  for(const {q,resolve} of pending)resolve(q.table==='office_announcements'?{error:{message:'PRIVATE_BACKEND_CANARY'}}:{data:f.rows[q.table],count:f.rows[q.table].length});
+  assert.equal(await loading,false);const snapshot=plain(f.api.weekSnapshot());assert.deepEqual(snapshot.announcements,{available:false,items:[]});
+  assert.equal(snapshot.slides.available,true);assert.equal(snapshot.committees.available,true);assert.doesNotMatch(JSON.stringify(snapshot),/PRIVATE_/);
+  f.control.hold=null;assert.equal(await f.api.load(1),true);assert.equal(f.api.weekSnapshot().announcements.available,true);
+});
+test('weekly content snapshot cannot expose rows across pause, role, owner, epoch or clear boundaries',async t=>{
+  for(const next of [
+    {epoch:1,userId:'sample-user',role:'editor',canEdit:false,workspaceReady:false},
+    {epoch:1,userId:'sample-user',role:'viewer',canEdit:false,workspaceReady:true},
+    {epoch:1,userId:'replacement-user',role:'editor',canEdit:true,workspaceReady:true},
+    {epoch:2,userId:'sample-user',role:'editor',canEdit:true,workspaceReady:true},
+    {epoch:2,userId:null,role:null,canEdit:false,workspaceReady:false}
+  ]){const f=fixture(t,{rows:weekContentRows()});await f.api.load(1);f.setContext(next);assertWeekUnavailable(f.api);assert.equal(f.api.openRecord('announcements','week-announcement'),false);}
+  const f=fixture(t,{rows:weekContentRows()});await f.api.load(1);f.api.clear();assertWeekUnavailable(f.api);
+});
+test('late content reads cannot repopulate the weekly projection for a replacement account',async t=>{
+  const f=fixture(t,{rows:weekContentRows()}),pending=[];f.control.hold=q=>new Promise(resolve=>pending.push({q,resolve}));
+  const loading=f.api.load(1);await tick();f.setContext({epoch:1,userId:'replacement-user',role:'editor',canEdit:true,workspaceReady:true});
+  for(const {q,resolve} of pending)resolve({data:f.rows[q.table],count:f.rows[q.table].length});
+  assert.equal(await loading,false);assertWeekUnavailable(f.api);assert.equal(f.api.openRecord('announcements','week-announcement'),false);
+});
+test('record handoffs return strict acceptance and preserve original editing and cancelled drafts',async t=>{
+  const f=fixture(t,{rows:weekContentRows()});assert.equal(f.api.openRecord('announcements','week-announcement'),false);await f.api.load(1);
+  assert.equal(f.api.openRecord('unknown','week-announcement'),false);assert.equal(f.api.openRecord('announcements','missing'),false);
+  f.api.open('committees');f.set('committee_name','Keep this draft');const original=f.form();f.w.confirm=()=>false;
+  assert.equal(f.api.openRecord('announcements','week-announcement'),false);assert.equal(f.form(),original);assert.equal(f.form().elements.committee_name.value,'Keep this draft');
+  f.w.confirm=()=>true;assert.equal(f.api.openRecord('announcements','week-announcement'),true);f.set('body','Reviewed updated announcement');await f.submit();
+  const write=f.calls.find(q=>q.op==='update');assert.ok(write.filters.some(([name,value])=>name==='id'&&value==='week-announcement'));assert.equal(write.data.body,'Reviewed updated announcement');
+});
+test('record handoff acceptance rechecks identity and readiness after synchronous discard confirmation',async t=>{
+  for(const next of [
+    {epoch:1,userId:'replacement-user',role:'editor',canEdit:true,workspaceReady:true},
+    {epoch:2,userId:'sample-user',role:'editor',canEdit:true,workspaceReady:true},
+    {epoch:1,userId:'sample-user',role:'editor',canEdit:false,workspaceReady:false}
+  ]){const f=fixture(t,{rows:weekContentRows()});await f.api.load(1);f.api.open('announcements');f.set('title','Unsaved fictional change');f.w.confirm=()=>{f.setContext(next);return true;};assert.equal(f.api.openRecord('committees','week-committee'),false);assert.equal(f.form(),null);assert.equal(f.calls.some(q=>q.op!=='select'),false);}
 });
