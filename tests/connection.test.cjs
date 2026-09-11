@@ -31,7 +31,7 @@ function fixture(t, overrides={}) {
   }
   let identity=overrides.user===undefined?A:overrides.user, currentSession=identity?session(identity):null,callback;
   const routes=[];win.addEventListener('creek:open-profile',()=>routes.push('new'));
-  const calls={communication:[],rpc:[],invoke:[],signup:[],signin:[],getUser:0,factory:[],signout:[],setSession:[],update:[],reset:[]};
+  const calls={communication:[],rpc:[],invoke:[],signup:[],signin:[],getUser:0,factory:[],signout:[],setSession:[],update:[],reset:[]},profiles=new Map();
   const client={auth:{
     getSession:async()=>overrides.getSession?overrides.getSession():({data:{session:currentSession},error:null}),
     getUser:async()=>{calls.getUser++;return overrides.getUser?overrides.getUser(identity):{data:{user:identity},error:null};},
@@ -47,7 +47,12 @@ function fixture(t, overrides={}) {
       calls.communication.push({name,payload:payload&&structuredClone(payload)});
       return overrides.communication?overrides.communication(name,payload):{error:{code:'PGRST202'}};
     }
-    calls.rpc.push({name,payload:payload&&structuredClone(payload)});return overrides.rpc?overrides.rpc(name,payload):{data:name==='get_my_app_connection'?null:saved,error:null};
+    calls.rpc.push({name,payload:payload&&structuredClone(payload)});
+    if(overrides.rpc)return overrides.rpc(name,payload);
+    if(name==='get_my_app_connection')return {data:profiles.get(identity?.id)||null,error:null};
+    // Successful fictional writes must be visible to the separate current-state read.
+    if(name==='register_app_guest')profiles.set(identity.id,{...structuredClone(payload.p_profile),email:identity.email,guest_removed:false});
+    return {data:saved,error:null};
   },
   functions:{invoke:async(name,payload)=>{calls.invoke.push({name,payload});return overrides.invoke?overrides.invoke():{data:{status:'processed',sent:0,queued:1,needs_attention:0},error:null};}}};
   const app=initialize(doc,{config:overrides.config===undefined?config:overrides.config,timeoutMs:overrides.timeoutMs||1000,now:overrides.now,createClient:(...args)=>{calls.factory.push(args);return client;}});
@@ -111,7 +116,7 @@ test('remembering stores only the isolated Auth session and never touches Office
 test('guest saves exact self-reported visit payload and a durable receipt survives welcome failure',async t=>{
   const f=fixture(t,{invoke:async()=>({error:{message:'welcome_queued'}})});await f.app.ready;f.fill();f.input('guest','visit_status','first_visit');f.input('guest','first_visit_on','2026-09-06');f.submit('guest');await settle();
   const call=f.calls.rpc.find(x=>x.name==='register_app_guest');assert.match(call.payload.p_request_id,/^[0-9a-f-]{36}$/);assert.deepEqual(call.payload.p_profile,{first_name:'Fictional',last_name:'',phone:'',preferred_contact:'email',contact_permission:true,sunday_school:'',visit_status:'first_visit',first_visit_on:'2026-09-06'});
-  assert.deepEqual(f.calls.invoke,[{name:'welcome-dispatch',payload:{body:{}}}]);assert.match(f.el('guest-status').textContent,/Registration saved/);assert.match(f.el('guest-status').textContent,/do not need to register again/);assert.equal(f.el('guest-submit').textContent,'Save my registration');
+  assert.deepEqual(f.calls.invoke,[{name:'welcome-dispatch',payload:{body:{}}}]);assert.match(f.el('guest-status').textContent,/registration receipt is saved/i);assert.match(f.el('guest-status').textContent,/welcome email status could not be confirmed/);assert.doesNotMatch(f.el('guest-status').textContent,/welcome email was requested/);assert.equal(f.el('guest-submit').textContent,'Save my registration');
 });
 test('prayer-only receipt dispatches a body-free notification without registering a guest or emailing prayer text',async t=>{
   const f=fixture(t);await f.app.ready;f.input('prayer','display_name','Fictional');f.input('prayer','request_text','A fictional prayer');f.input('prayer','contact_text','Optional fictional contact');f.submit('prayer');await settle();
@@ -245,7 +250,7 @@ test('a stale account event cannot auto-send a captured intent and replacement c
   const pending=deferred(),f=fixture(t,{user:null,auth:async()=>pending.promise});await f.app.ready;f.fill();f.submit('guest');f.el('email').value=A.email;f.el('password').value='synthetic-password-123';f.submit('auth');f.event('SIGNED_OUT',null);f.event('SIGNED_IN',B);pending.resolve({data:{session:session(A)},error:null});await settle();assert.equal(f.calls.rpc.filter(x=>x.name==='register_app_guest').length,0);assert.equal(f.field('guest','first_name').value,'');
 });
 test('a successful automatic submission with a lost receipt retries the same frozen payload and request ID',async t=>{
-  let writes=0;const f=fixture(t,{user:null,rpc:async name=>name==='get_my_app_connection'?{data:null,error:null}:++writes===1?{error:{message:'lost receipt'}}:{data:saved,error:null}});await f.app.ready;f.fill();f.submit('guest');f.el('auth-mode').value='signin';f.el('remember').checked=true;f.el('auth-mode').dispatchEvent(new f.win.Event('change'));assert.equal(f.el('auth-submit').textContent,'Sign in & send');assert.equal(f.el('remember').checked,true);
+  let writes=0;const f=fixture(t,{user:null,rpc:async name=>name==='get_my_app_connection'?{data:writes?{first_name:'Fictional',email:A.email,guest_removed:false}:null,error:null}:++writes===1?{error:{message:'lost receipt'}}:{data:saved,error:null}});await f.app.ready;f.fill();f.submit('guest');f.el('auth-mode').value='signin';f.el('remember').checked=true;f.el('auth-mode').dispatchEvent(new f.win.Event('change'));assert.equal(f.el('auth-submit').textContent,'Sign in & send');assert.equal(f.el('remember').checked,true);
   f.el('email').value=A.email;f.el('password').value='synthetic-password-123';f.setUser(A);f.submit('auth');await settle();assert.equal(writes,1);assert.match(f.el('guest-status').textContent,/could not confirm/);f.submit('guest');await settle();const attempts=f.calls.rpc.filter(x=>x.name==='register_app_guest');assert.deepEqual(attempts[0].payload,attempts[1].payload);assert.equal(f.calls.invoke.length,1);
 });
 
@@ -309,7 +314,7 @@ test('navigation and account loss cancel onboarding while an early result waits 
 
 function preference(version=0,weekly=false,emailMatches=true) { return {version:1,preference_version:version,weekly_email:weekly,email_matches:emailMatches,updated_at:version?'2026-09-10T12:00:00Z':null}; }
 function communicationFixture(t, options={}) {
-  let value=options.value||preference();
+  let value=options.value||preference(),profile=null;
   function write(payload, expectedKey) {
     if(payload[expectedKey]!==value.preference_version)return {error:{code:'40001',message:'COMMUNICATION_VERSION_CONFLICT'}};
     value=preference(value.preference_version+1,payload.p_weekly_email);return {data:value,error:null};
@@ -319,10 +324,12 @@ function communicationFixture(t, options={}) {
     if(name==='get_my_communication_preferences')return options.read?options.read():{data:value,error:null};
     return options.set?options.set(payload):write(payload,'p_expected_version');
   },rpc:async(name,payload)=>{
-    if(name==='get_my_app_connection')return options.profile?options.profile():{data:null,error:null};
+    if(name==='get_my_app_connection')return options.profile?options.profile():{data:profile,error:null};
     if(name==='register_app_guest_with_preferences'){
-      if(options.register)return options.register(payload);
-      const result=write(payload,'p_preference_version');return result.error?result:{data:{...saved,communication_preferences:result.data},error:null};
+      let result;if(options.register)result=await options.register(payload);
+      else {const written=write(payload,'p_preference_version');result=written.error?written:{data:{...saved,communication_preferences:written.data},error:null};}
+      if(result&&!result.error&&result.data)profile={...structuredClone(payload.p_profile),email:A.email,guest_removed:false};
+      return result;
     }
     return {data:saved,error:null};
   }});
@@ -356,20 +363,20 @@ test('email withdrawal is independent of invalid registration and personal care 
 });
 test('missing capability hides both choices and retains the legacy registration endpoint',async t=>{
   const f=fixture(t);await f.app.ready;assert.equal(f.el('weekly-choice').hidden,true);assert.equal(f.el('preferences').hidden,true);f.fill();f.submit('guest');await settle();
-  assert.deepEqual(f.calls.communication.map(call=>call.name),['get_app_communication_capabilities']);assert.deepEqual(f.calls.rpc.map(call=>call.name),['get_my_app_connection','register_app_guest']);assert.equal(Object.hasOwn(f.calls.rpc[1].payload,'p_weekly_email'),false);
+  assert.deepEqual(f.calls.communication.map(call=>call.name),['get_app_communication_capabilities']);assert.deepEqual(f.calls.rpc.map(call=>call.name),['get_my_app_connection','register_app_guest','get_my_app_connection']);assert.equal(Object.hasOwn(f.calls.rpc[1].payload,'p_weekly_email'),false);
 });
 test('unknown capability fails closed for guest choices but prayer works; a later check can recover',async t=>{
   for(const response of [{error:{code:'42501',message:'private diagnostic'}},{data:{version:1,weekly_email:false}},{data:{version:2,weekly_email:true}}]){
     let recovered=false;const f=communicationFixture(t,{capability:async()=>recovered?{data:{version:1,weekly_email:true}}:response});await f.app.ready;f.fill();f.submit('guest');await settle();assert.equal(f.calls.rpc.length,1);assert.equal(f.el('guest-submit').disabled,true);assert.equal(f.el('communication-retry').hidden,false);assert.doesNotMatch(f.doc.body.textContent,/private diagnostic/);
     f.input('prayer','request_text','Fictional prayer');f.submit('prayer');await settle();assert.equal(f.calls.rpc.at(-1).name,'submit_app_prayer');
-    recovered=true;f.click('communication-retry');await settle();assert.equal(f.el('guest-submit').disabled,false);f.submit('guest');await settle();assert.equal(f.calls.rpc.at(-1).name,'register_app_guest_with_preferences');
+    recovered=true;f.click('communication-retry');await settle();assert.equal(f.el('guest-submit').disabled,false);f.submit('guest');await settle();assert.equal(f.calls.rpc.filter(c=>c.name!=='get_my_app_connection').at(-1).name,'register_app_guest_with_preferences');assert.equal(f.calls.rpc.at(-1).name,'get_my_app_connection');
   }
 });
 test('failed or invalid own preference read holds automatic guest submission until explicit reload and Send',async t=>{
   for(const data of [null,preference(-1),{...preference(),weekly_email:true},{...preference(1),email_matches:false,weekly_email:true},{...preference(1),updated_at:null},{...preference(),email_matches:'yes'}]){
     let recovered=false;const f=communicationFixture(t,{user:null,read:async()=>({data:recovered?preference():data,error:null})});await f.app.ready;f.fill();f.input('guest','weekly_email',true);f.submit('guest');authenticate(f);await settle();
     assert.equal(f.calls.rpc.length,1);assert.equal(f.el('guest-submit').disabled,true);assert.equal(f.field('guest','first_name').value,'Fictional');
-    recovered=true;f.click('communication-retry');await settle();assert.equal(f.calls.rpc.length,1);assert.equal(f.el('guest-submit').disabled,false);f.submit('guest');await settle();assert.equal(f.calls.rpc.at(-1).payload.p_weekly_email,true);
+    recovered=true;f.click('communication-retry');await settle();assert.equal(f.calls.rpc.length,1);assert.equal(f.el('guest-submit').disabled,false);f.submit('guest');await settle();assert.equal(f.calls.rpc.filter(c=>c.name==='register_app_guest_with_preferences').at(-1).payload.p_weekly_email,true);assert.equal(f.calls.rpc.at(-1).name,'get_my_app_connection');
   }
 });
 test('ambiguous atomic registration freezes choice/version/request and fresh read beats historical replay',async t=>{
@@ -441,4 +448,42 @@ test('request conflicts reload current registration before explicit retry withou
     assert.equal(reads,2);assert.equal(writes,1);assert.equal(f.el('guest-submit').disabled,true);assert.equal(f.field('guest','first_name').value,'Fictional');assert.doesNotMatch(f.el('guest-status').textContent,/Nothing from.*saved|registration was not saved/i);f.submit('guest');await settle();assert.equal(writes,1);
     pending.resolve({data:{first_name:'Fictional saved record',email:A.email}});await settle();assert.equal(f.field('guest','first_name').value,'Fictional');assert.equal(f.el('guest-submit').disabled,false);assert.equal(writes,1);f.submit('guest');await settle();assert.equal(writes,2);
   }
+});
+
+test('removed own guest registration blocks guest writes but preserves prayer and explicit restoration reread',async t=>{
+  let removed=true;
+  const f=fixture(t,{rpc:async name=>name==='get_my_app_connection'?{data:{first_name:'Fictional saved guest',email:A.email,guest_removed:removed}}:{data:saved,error:null}});
+  await f.app.ready;assert.equal(f.el('guest-submit').disabled,true);assert.equal(f.form('guest').querySelector('fieldset').disabled,true);assert.equal(f.el('retry-profile').hidden,false);
+  assert.match(f.el('profile-status').textContent,/office removed.*login still works.*prayer request/i);
+  f.fill();f.submit('guest');await settle();assert.equal(f.calls.rpc.some(c=>c.name==='register_app_guest'),false,'forced submit cannot bypass removal');
+  f.input('prayer','request_text','Fictional private prayer after visit removal');f.submit('prayer');await settle();assert.equal(f.calls.rpc.filter(c=>c.name==='submit_app_prayer').length,1);assert.match(f.el('prayer-status').textContent,/received/);
+  removed=false;f.click('retry-profile');await settle();assert.equal(f.el('guest-submit').disabled,false);assert.equal(f.form('guest').querySelector('fieldset').disabled,false);assert.equal(f.calls.rpc.some(c=>c.name==='register_app_guest'),false,'a read alone never resubmits');
+});
+
+test('a durable historical guest receipt is rechecked after removal and never dispatches or claims a current welcome',async t=>{
+  let reads=0,writes=0;
+  const f=fixture(t,{rpc:async name=>name==='get_my_app_connection'?{data:++reads===1?null:{first_name:'Fictional removed guest',email:A.email,guest_removed:true}}:++writes===1?{error:{message:'Synthetic lost receipt'}}:{data:saved,error:null}});
+  await f.app.ready;f.fill();f.submit('guest');await settle();assert.match(f.el('guest-status').textContent,/could not confirm/);
+  f.submit('guest');await settle();const attempts=f.calls.rpc.filter(c=>c.name==='register_app_guest');assert.equal(attempts.length,2);assert.deepEqual(attempts[0].payload,attempts[1].payload);
+  assert.equal(f.calls.invoke.length,0);assert.match(f.el('guest-status').textContent,/original submission was received.*since removed/i);assert.doesNotMatch(f.el('guest-status').textContent,/welcome email was requested|Registration saved\./);
+  assert.equal(f.el('guest-submit').disabled,true);assert.equal(f.el('prayer-submit').disabled,false);assert.equal(f.el('retry-profile').hidden,false);
+});
+
+test('post-receipt current-profile failures expose read retry and cannot dispatch or enable another guest write',async t=>{
+  for(const failure of [{error:{message:'PRIVATE_READ_CANARY'}},{data:null},{data:{first_name:'Another account',email:B.email,guest_removed:false}}]){
+    let reads=0,recovered=false;
+    const f=fixture(t,{rpc:async name=>name==='get_my_app_connection'?(++reads===1?{data:null}:recovered?{data:{first_name:'Fictional restored guest',email:A.email,guest_removed:false}}:failure):{data:saved,error:null}});
+    await f.app.ready;f.fill();f.submit('guest');await settle();assert.equal(f.calls.invoke.length,0);assert.doesNotMatch(f.el('guest-status').textContent,/welcome email was requested|PRIVATE_READ_CANARY/);assert.match(f.el('guest-status').textContent,/could not be confirmed/);
+    assert.equal(f.el('guest-submit').disabled,true);assert.equal(f.el('retry-profile').hidden,false);assert.equal(f.el('prayer-submit').disabled,false);
+    f.submit('guest');await settle();assert.equal(f.calls.rpc.filter(c=>c.name==='register_app_guest').length,1);
+    recovered=true;f.click('retry-profile');await settle();assert.equal(f.el('guest-submit').disabled,false);assert.equal(f.calls.rpc.filter(c=>c.name==='register_app_guest').length,1);assert.equal(f.calls.invoke.length,0,'read recovery never automatically requests mail');
+  }
+});
+
+test('late removed-profile confirmation cannot disable or notify a replacement public account',async t=>{
+  const pending=deferred();let reads=0;
+  const f=fixture(t,{rpc:async name=>name==='get_my_app_connection'?(++reads===1?{data:null}:reads===2?pending.promise:{data:{first_name:'Fictional replacement',email:B.email,guest_removed:false}}):{data:saved,error:null}});
+  await f.app.ready;f.fill();f.submit('guest');await settle();assert.equal(reads,2);assert.equal(f.calls.invoke.length,0);
+  f.event('SIGNED_OUT',null);f.event('SIGNED_IN',B);await settle();pending.resolve({data:{first_name:'Previous removed guest',email:A.email,guest_removed:true}});await settle();
+  assert.equal(f.el('guest-submit').disabled,false);assert.equal(f.field('guest','first_name').value,'Fictional replacement');assert.doesNotMatch(f.el('guest-status').textContent,/removed|saved|welcome/);assert.equal(f.calls.invoke.length,0);
 });

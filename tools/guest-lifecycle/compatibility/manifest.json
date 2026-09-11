@@ -1,0 +1,30 @@
+{
+  "format_version": 1,
+  "status": "proposed_not_applied",
+  "migration": {
+    "path": "tools/guest-lifecycle/compatibility/migrations/20260911211949_removed_guest_projection_compatibility.sql",
+    "sha256": "e9d1f2d2f3ae77a4240057f45ab2697fc867260cff74ab10ecb95cc1be449e4b"
+  },
+  "requires": [
+    {
+      "path": "tools/guest-lifecycle/migrations/20260911210521_guest_registration_lifecycle.sql",
+      "sha256": "7ef37c000a7bbedacd7a275efa2dc973e73fdcbc067d6c8700445989a9966229"
+    },
+    {
+      "path": "tools/office-attention/migrations/20260911132539_office_attention.sql",
+      "sha256": "94d578ad7e735f3de676422be869b73d3a255d9965039cde896e799af2be8054"
+    },
+    {
+      "path": "tools/communication-preferences/migrations/20260911023920_communication_preferences.sql",
+      "sha256": "d45307bada93bc3f7258eeb41e372477b56f8085ba2fcb138cb520076e567362"
+    }
+  ],
+  "replaces_private_functions": [
+    "get_office_attention",
+    "get_office_communication_audience"
+  ],
+  "active_manifest_changed": false,
+  "hosted_applied": false,
+  "messages_sent": false,
+  "ordering": "After all three prerequisites; activate original future projections and this compatibility in the same reviewed change window."
+}

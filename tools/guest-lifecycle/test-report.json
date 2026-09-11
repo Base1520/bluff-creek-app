@@ -1,0 +1,23 @@
+{
+  "format_version": 1,
+  "scope": "fictional_pglite_only",
+  "all_case_run": {
+    "passed": 16,
+    "failed": 0
+  },
+  "affected_final_corrections_rerun": {
+    "passed": 2,
+    "failed": 0,
+    "cases": [
+      "sent notice preservation",
+      "legacy archived state refusal"
+    ]
+  },
+  "final_sql_sha256": "7ef37c000a7bbedacd7a275efa2dc973e73fdcbc067d6c8700445989a9966229",
+  "baseline_hashes_checked": 10,
+  "baseline_functional_sql_executed": 9,
+  "native_extension_only_file_not_executed": true,
+  "live_database_calls": false,
+  "provider_calls": false,
+  "concurrency_observed": false
+}

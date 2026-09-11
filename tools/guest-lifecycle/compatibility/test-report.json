@@ -1,0 +1,14 @@
+{
+  "format_version": 1,
+  "status": "passed_local_only",
+  "tests_passed": 8,
+  "tests_failed": 0,
+  "sql_sha256": "e9d1f2d2f3ae77a4240057f45ab2697fc867260cff74ab10ecb95cc1be449e4b",
+  "baseline_hashes_verified": 10,
+  "prerequisite_hashes_verified": 3,
+  "functional_baseline_sql_executed": 9,
+  "native_extension_only_file_hash_checked_not_executed": true,
+  "hosted_applied": false,
+  "active_manifest_changed": false,
+  "messages_sent": false
+}

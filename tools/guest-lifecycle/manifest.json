@@ -1,0 +1,19 @@
+{
+  "format_version": 1,
+  "mode": "optional_guest_lifecycle_review",
+  "hosted_applied": false,
+  "active_baseline_manifest_sha256": "0734cdc37022af4c946b2e4a8d93ad1b199093834f28373b1bf8c0c9497276ae",
+  "active_baseline_sql_count": 10,
+  "source_file": "tools/guest-lifecycle/migrations/20260911210521_guest_registration_lifecycle.sql",
+  "sha256": "7ef37c000a7bbedacd7a275efa2dc973e73fdcbc067d6c8700445989a9966229",
+  "generated_by": "Supabase CLI migration new guest_registration_lifecycle",
+  "replaces_existing_helpers": [
+    "private.claim_app_welcome_jobs(uuid,integer)",
+    "private.get_my_app_connection()",
+    "private.intake_notice_targets(uuid)"
+  ],
+  "requires_future_feature_compatibility": [
+    "get_office_attention removal filters",
+    "get_office_communication_audience removal filters"
+  ]
+}

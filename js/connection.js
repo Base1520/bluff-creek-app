@@ -121,7 +121,7 @@
     var autoOnboard = win.CREEK_PROFILE_ENTRY === true || (win.CREEK_PROFILE_ENTRY === undefined && ['/', '/index.html'].includes(win.location.pathname) && !win.location.hash);
     var stripped = consumeRedirect(win), config = settings(options.config || win.CREEK_CONNECTION_CONFIG || {}, win.location);
     if (stripped) return recover(doc, options, config, stripped);
-    var store = sessionStore(win), client = null, subscription = null, user = null, epoch = 0, destroyed = false, authBusy = false, authUncertain = false, authPending = false, signingOut = false, reading = false, loaded = false;
+    var store = sessionStore(win), client = null, subscription = null, user = null, epoch = 0, destroyed = false, authBusy = false, authUncertain = false, authPending = false, signingOut = false, reading = false, loaded = false, guestRemoved = false;
     el('remember').checked = store.remembered;
     var resetBusy = false, pendingSubmit = null, pendingOnboarding = null, waitingForDocument = false;
     var authForm = el('auth-form'), dialog = el('dialog'), modes = { guest: makeMode('guest'), prayer: makeMode('prayer') };
@@ -223,9 +223,9 @@
     function beforeUnload(event) { if (hasDraft()) { event.preventDefault(); event.returnValue = true; } }
     function draw() {
       Object.values(modes).forEach(function (mode) {
-        mode.fields.disabled = !client || !!mode.attempt || mode.busy || (mode.kind === 'guest' && (reading || preferences.reading || preferences.busy || !!preferences.attempt));
+        mode.fields.disabled = !client || !!mode.attempt || mode.busy || (mode.kind === 'guest' && (guestRemoved || reading || preferences.reading || preferences.busy || !!preferences.attempt));
         var button = el(mode.kind + '-submit');
-        button.disabled = !client || mode.busy || (!user && (authBusy || authPending || authUncertain)) || (mode.kind === 'guest' && (reading || (!!user && !loaded) || preferenceBlocked()));
+        button.disabled = !client || mode.busy || (!user && (authBusy || authPending || authUncertain)) || (mode.kind === 'guest' && (guestRemoved || reading || (!!user && !loaded) || preferenceBlocked()));
         button.textContent = mode.attempt && mode.attempt.started ? 'Check and retry this submission' : mode.kind === 'guest' ? 'Save my registration' : 'Send prayer request';
         el(mode.kind + '-new').hidden = !mode.saved;
       });
@@ -235,7 +235,7 @@
       el('auth-fields').hidden = !!user;
       el('auth-fields').disabled = authBusy || authUncertain || signingOut || authPending || !client;
       el('auth-check').hidden = !authUncertain; el('auth-check').disabled = authBusy || authPending;
-      el('retry-profile').hidden = !user || loaded; el('retry-profile').disabled = reading;
+      el('retry-profile').hidden = !user || (loaded && !guestRemoved); el('retry-profile').disabled = reading;
       el('auth-submit').textContent = el('auth-mode').value === 'signup' ? (pendingSubmit ? 'Create account & send' : 'Create my account') : (pendingSubmit ? 'Sign in & send' : 'Sign in');
       el('reset-send').disabled = !client || resetBusy; el('reset-open').hidden = !!user;
       el('open-app').hidden = !modes.guest.saved; el('family-add').disabled = familyRows().length >= 20; el('family-limit').hidden = familyRows().length < 20; field(modes.guest.form,'birth_date').max = today();
@@ -251,7 +251,7 @@
       if (hasDraft()) win.addEventListener('beforeunload', beforeUnload);
     }
     function clearPrivate() {
-      pendingSubmit = null; user = null; loaded = false; reading = false; authForm.reset(); el('remember').checked = store.remembered; el('password').autocomplete = 'new-password'; el('password').minLength = 12; el('auth-submit').textContent = 'Create my account'; authBusy = false; authUncertain = false;
+      pendingSubmit = null; user = null; loaded = false; guestRemoved = false; reading = false; authForm.reset(); el('remember').checked = store.remembered; el('password').autocomplete = 'new-password'; el('password').minLength = 12; el('auth-submit').textContent = 'Create my account'; authBusy = false; authUncertain = false;
       Object.values(modes).forEach(function (mode) { mode.serial++; mode.form.reset(); mode.dirty = false; mode.busy = false; mode.attempt = null; mode.saved = null; status(mode.kind + '-status', ''); });
       preferences.serial++; preferences.loaded = false; preferences.reading = false; preferences.busy = false; preferences.value = null; preferences.dirty = false; preferences.guestTouched = false; preferences.attempt = null; preferenceForm.reset(); status('preferences-status', ''); status('communication-status', '');
       resetExtras(); status('auth-status', ''); status('profile-status', ''); status('reset-status', ''); el('reset-form').reset(); el('reset-form').hidden = true; resetBusy = false; closeDialog(); draw();
@@ -350,7 +350,9 @@
           field(modes.guest.form, 'contact_permission').checked = false;
         }
         if (data) extendedProfile(data);
-        loaded = true; onboarding(!data); status('profile-status', data ? (modes.guest.dirty ? 'You have a saved registration. The details you entered here are still in the form; review them before saving an update.' : 'Your saved details are ready to review. Confirm contact permission before saving an update.') : '');
+        var previouslyRemoved=guestRemoved;guestRemoved=!!(data&&data.guest_removed===true);
+        if(previouslyRemoved&&data&&!guestRemoved)status('guest-status','The office restored this registration. Review your saved details before making changes.');
+        loaded = true; onboarding(!data); status('profile-status', guestRemoved ? 'The office removed this guest registration. Your login still works. Ask the office to restore the visit if needed; you can still send a prayer request.' : data ? (modes.guest.dirty ? 'You have a saved registration. The details you entered here are still in the form; review them before saving an update.' : 'Your saved details are ready to review. Confirm contact permission before saving an update.') : '');
       } catch (_) { if (current(token) && serial === modes.guest.serial) status('profile-status', 'Your saved details could not be loaded. Try again before saving a registration. You can still send a prayer request.', true); }
       finally { if (current(token) && serial === modes.guest.serial) { reading = false; draw(); } }
     }
@@ -388,14 +390,23 @@
       catch (_) { status('guest-status', 'Check the family names, relationships, and birthdays. Birthdays cannot be in the future.', true); return null; }
     }
     async function dispatch(token, mode, saved, serial) {
+      var profileChecked=mode.kind!=='guest';
       try {
         if (!await verify(token, user && user.id)) return;
+        if(mode.kind==='guest'){
+          var profileResult=await bounded(client.rpc('get_my_app_connection'));
+          if(!current(token)||mode.serial!==serial||mode.saved!==saved)return;
+          var currentProfile=profileResult&&!profileResult.error&&row(profileResult.data);
+          if(!currentProfile||currentProfile.email!==user.email)throw new Error('current-profile');
+          profileChecked=true;
+          if(currentProfile.guest_removed===true){guestRemoved=true;status('guest-status','The original submission was received, but the office has since removed this guest registration. Ask the office to restore it if needed. Your login and prayer requests still work.',true);draw();return;}
+        }
         var result = await bounded(client.functions.invoke('welcome-dispatch', { body: {} }));
         if (!current(token) || mode.serial !== serial || mode.saved !== saved) return;
         if (mode.kind === 'prayer') return;
         if (!result || result.error || !result.data || result.data.status !== 'processed' || !['sent','queued','needs_attention'].every(function (key) { return Number.isSafeInteger(result.data[key]) && result.data[key] >= 0; })) throw new Error('welcome');
         status('guest-status', 'Registration saved. Your details are in the private guest register. The welcome email was requested; delivery is not confirmed.');
-      } catch (_) { if (mode.kind === 'guest' && current(token) && mode.serial === serial && mode.saved === saved) status('guest-status', 'Registration saved. Your details are in the private guest register. The welcome email could not be confirmed; you do not need to register again.'); }
+      } catch (_) { if (mode.kind === 'guest' && current(token) && mode.serial === serial && mode.saved === saved) {if(!profileChecked)loaded=false;status('guest-status', 'Your registration receipt is saved. Current follow-up or welcome email status could not be confirmed. Reload your saved registration before making another submission.');draw();} }
     }
     async function submit(mode) {
       if (!client || destroyed || mode.busy) return;
@@ -408,7 +419,7 @@
         pendingSubmit = { mode: mode, attempt: mode.attempt }; mode.dirty = true;
         draw(); openDialog(); status('auth-status', 'Create an account or sign in to send this ' + (mode.kind === 'guest' ? 'registration' : 'prayer request') + '.'); return;
       }
-      if (mode.kind === 'guest' && (!loaded || reading)) return;
+      if (mode.kind === 'guest' && (!loaded || reading || guestRemoved)) return;
       var body = mode.attempt ? mode.attempt.payload : payload(mode); if (!body) return;
       var token = epoch, owner = user.id, serial = ++mode.serial;
       if (!mode.attempt) mode.attempt = { id: win.crypto.randomUUID(), payload: body, owner: owner, started: false, preference: mode.kind === 'guest' ? guestPreference() : null };
@@ -429,6 +440,9 @@
         attempt.started = true; draw();
         var result = await bounded(client.rpc(mode.kind === 'guest' ? (attempt.preference ? 'register_app_guest_with_preferences' : 'register_app_guest') : 'submit_app_prayer', parameters));
         if (!current(token) || serial !== mode.serial || mode.attempt !== attempt) return;
+        if (mode.kind==='guest' && result && result.error && result.error.code==='55000' && result.error.message==='GUEST_REMOVED') {
+          guestRemoved=true;mode.attempt=null;status('guest-status','The office removed this guest registration. Ask the office to restore it before saving another update. Your login and prayer requests still work.',true);return;
+        }
         if (attempt.preference && communicationConflict(result && result.error)) {
           mode.attempt = null; preferences.loaded = false; loaded = false; refreshPreferences = true; refreshProfile = true;
           status('guest-status', 'This save did not change your records. Your saved registration or email choice changed elsewhere. Your form is kept here; review it before saving again.', true); return;
@@ -446,7 +460,7 @@
         mode.saved = saved; mode.attempt = null; mode.dirty = false;
         if (mode.kind === 'guest') {
           field(mode.form, 'contact_permission').checked = false; mode.extraTouched.clear();
-          status('guest-status', 'Registration saved. Your details are in the private guest register. This does not make you a church member.');
+          status('guest-status', 'Registration receipt confirmed. Checking the current guest registration and welcome email status. This does not make you a church member.');
           // A registration receipt is durable even if this separate mail request fails.
           void dispatch(token, mode, saved, serial);
         } else {
