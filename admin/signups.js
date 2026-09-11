@@ -207,12 +207,12 @@
 
     function open(id) {
       var epoch = context().epoch, owner = context().userId;
-      if (mounted && (mountedEpoch !== epoch || mountedOwner !== owner)) { clear(); return; }
+      if (mounted && (mountedEpoch !== epoch || mountedOwner !== owner)) { clear(); return false; }
       var row = rows.find(function (r) { return r.id === id; });
-      if (!current(epoch, owner) || !ready || !peopleAvailable() || !row) return;
-      if(!close())return;
+      if (!current(epoch, owner) || !ready || !peopleAvailable() || !row) return false;
+      if(!close())return false;
       row=rows.find(function(r){return r.id===id;});
-      if(!current(epoch, owner) || !ready || !peopleAvailable() || !row)return;
+      if(!current(epoch, owner) || !ready || !peopleAvailable() || !row)return false;
       var version = formVersion;
       review={epoch:epoch,owner:owner,version:row.version,linked:!!row.contact_id,busy:false,requiresRefresh:false,conflict:false};
       dialog = doc.createElement('dialog'); dialog.dataset.signupId = row.id; dialog.className = 'signup-dialog'; dialog.setAttribute('aria-labelledby','signup-review-title');
@@ -260,7 +260,7 @@
       }
       dialog.querySelectorAll('[data-signup-close]').forEach(function (b) { b.onclick = close; });
       dialog.addEventListener('cancel',function(e){e.preventDefault();close();});
-      review.initialForm=reviewFingerprint();doc.body.appendChild(dialog);dialog.showModal();syncUnload();
+      review.initialForm=reviewFingerprint();doc.body.appendChild(dialog);dialog.showModal();syncUnload();return true;
     }
     return {load:load,render:render,clear:clear,open:open,openFollowup:openFollowup,labelFor:function(id){var c=context();if(!current(c.epoch,c.userId)||!ready||mountedOwner!==c.userId||mountedEpoch!==c.epoch)return '';var row=rows.find(function(r){return r.id===id;});return row?personName(row):'';}};
   }
