@@ -32,7 +32,7 @@
     var roots = options.roots, first = Object.keys(views).map(function (view) { return roots[view]; }).find(Boolean);
     if (!first) throw new Error('Office content needs a root section.');
     var doc = first.ownerDocument, state = {}, filters = {}, ready = {}, failed = {}, mounted = {}, loadId = 0, mountedEpoch = null, mountedOwner = null;
-    var directIntakeReady=false;
+    var directIntakeReady=false, weekLoading=false;
     var dialog = null, formVersion = 0, dialogEpoch = null, dialogOwner = null, dialogView = null, dialogRecord = null, returnFocus = null, saving = false, draft = null;
     Object.keys(views).forEach(function (view) { state[view] = []; filters[view] = { search: '', status: 'current' }; ready[view] = false; failed[view] = false; });
     function deadline(promise) {
@@ -165,11 +165,11 @@
       if (mountedEpoch !== null && (mountedEpoch !== epoch || mountedOwner !== owner)) clear();
       if (!allowed(context())) { freezeDialog(); return false; }
       mountedEpoch = epoch; mountedOwner = owner;
-      var token = ++loadId, names = Object.keys(views);
+      var token = ++loadId, names = Object.keys(views); weekLoading = true;
       var capability=options.db.rpc ? deadline(Promise.resolve().then(function(){return options.db.rpc('direct_intake_readiness',{});})).then(function(r){return !!(r && !r.error && r.data && r.data.available===true && r.data.version===1);},function(){return false;}) : Promise.resolve(false);
       var results = await Promise.all(names.map(function (view) { return roots[view] ? rowsFor(view, epoch, owner, token) : Promise.resolve({ rows: [], failed: false }); }).concat([capability]));
       if (!current(epoch, owner) || token !== loadId) return false;
-      directIntakeReady=results[names.length]===true;
+      directIntakeReady=results[names.length]===true; weekLoading = false;
       names.forEach(function (view, i) { state[view] = results[i] ? results[i].rows : []; failed[view] = !results[i] || results[i].failed; ready[view] = !failed[view]; });
       mountedEpoch = epoch; mountedOwner = owner; render(); return names.every(function (view) { return !failed[view]; });
     }
@@ -204,13 +204,13 @@
     }
     function openEditor(view, record, trigger) {
       var ctx = context(), config = views[view];
-      if (mountedEpoch !== null && (mountedEpoch !== ctx.epoch || mountedOwner !== ctx.userId)) { clear(); return; }
-      if (!config || !roots[view] || !allowed(ctx) || saving || (draft && draft.uncertain)) return;
-      if (!ready[view]) { notice('Wait for these records to load, or refresh the workspace before editing.', true); return; }
+      if (mountedEpoch !== null && (mountedEpoch !== ctx.epoch || mountedOwner !== ctx.userId)) { clear(); return false; }
+      if (!config || !roots[view] || !allowed(ctx) || saving || (draft && draft.uncertain)) return false;
+      if (!ready[view]) { notice('Wait for these records to load, or refresh the workspace before editing.', true); return false; }
       var epoch = ctx.epoch, owner = ctx.userId, recordId = record && record.id;
-      if (!closeDialog(false) || !current(epoch, owner) || context().userId !== owner || !allowed(context()) || !ready[view]) return;
+      if (!closeDialog(false) || !current(epoch, owner) || context().userId !== owner || !allowed(context()) || !ready[view]) return false;
       ctx = context();
-      if (recordId) { record = state[view].find(function (item) { return item.id === recordId; }); if (!record) return; }
+      if (recordId) { record = state[view].find(function (item) { return item.id === recordId; }); if (!record) return false; }
       dialogView = view; dialogEpoch = ctx.epoch; dialogOwner = ctx.userId; dialogRecord = record ? Object.assign({}, record) : null; draft = { id: record ? record.id : root.crypto.randomUUID(), version: record ? record.version : null, uncertain: false, conflict: false, payload: null }; returnFocus = trigger || doc.activeElement;
       var row = record || {}, fields = '';
       if (view === 'announcements') fields = input('title', 'Title', row.title, 'text', true, 160, true) + textarea('body', 'Announcement text', row.body, true, 10000) + input('starts_on', 'Starts on (optional)', row.starts_on, 'date') + input('ends_on', 'Ends on (optional)', row.ends_on, 'date');
@@ -230,7 +230,7 @@
       dialog.addEventListener('change', function (event) { if (event.target.name === 'share_scope') updatePrayerApproval(true); });
       dialog.querySelector('form').addEventListener('submit', save);
       dialog.querySelector('[data-office-reconcile]').onclick = reconcile;
-      doc.body.appendChild(dialog); updatePrayerApproval(); draft.baseline = JSON.stringify(formValues(dialog.querySelector('form'))); dialog.showModal();
+      doc.body.appendChild(dialog); updatePrayerApproval(); draft.baseline = JSON.stringify(formValues(dialog.querySelector('form'))); dialog.showModal(); return true;
     }
     function formValues(form) {
       var values = {};
@@ -336,7 +336,7 @@
       } finally { if (current(epoch, owner) && version === formVersion && dialog) { saving = false; freezeDialog(); } }
     }
     function clear() {
-      directIntakeReady=false;
+      directIntakeReady=false; weekLoading=false;
       loadId++; closeDialog(false, true); mountedEpoch = null; mountedOwner = null;
       Object.keys(views).forEach(function (view) { state[view] = []; filters[view] = { search: '', status: 'current' }; ready[view] = false; failed[view] = false; mounted[view] = false; if (roots[view]) roots[view].replaceChildren(); });
     }
@@ -355,7 +355,25 @@
       });
     });
     root.addEventListener('beforeunload', function (event) { if (dirty() || saving || (draft && draft.uncertain)) { event.preventDefault(); event.returnValue = ''; } });
-    return { load: load, render: render, clear: clear, open: function (view) { openEditor(view, null, doc.activeElement); }, labelFor: function(view,id) { var c=context();if(!allowed(c)||!ready[view]||mountedOwner!==c.userId||mountedEpoch!==c.epoch)return '';var row=(state[view]||[]).find(function(item){return item.id===id;});return row?row.display_name||'Prayer request':''; }, openRecord: function(view,id) { var row=(state[view]||[]).find(function(item){return item.id===id;}); if(row)openEditor(view,row,doc.activeElement); } };
+    // Minimal shared-work projection. Original records and their editors remain authoritative.
+    function weekSnapshot() {
+      var ctx = context(), result = {}, keys = {
+        announcements: ['id', 'title', 'status', 'starts_on', 'ends_on', 'updated_at'],
+        slides: ['id', 'title', 'status', 'service_date', 'updated_at'],
+        committees: ['id', 'committee_name', 'status', 'term_start', 'term_end', 'updated_at']
+      };
+      var permitted = allowed(ctx) && ctx.workspaceReady === true && mountedOwner === ctx.userId && mountedEpoch === ctx.epoch && !weekLoading;
+      Object.keys(keys).forEach(function (view) {
+        var available = !!(permitted && roots[view] && ready[view] && !failed[view]);
+        result[view] = { available: available, items: available ? state[view].map(function (row) {
+          var item = {}; keys[view].forEach(function (key) { item[key] = row[key] == null ? null : row[key]; });
+          if (view === 'slides') item.hasMaterial = !!deckLink(row.deck_url) || !!(row.document_id && documents().some(function (file) { return file.id === row.document_id; }));
+          return item;
+        }) : [] };
+      });
+      return result;
+    }
+    return { weekSnapshot: weekSnapshot, load: load, render: render, clear: clear, open: function (view) { openEditor(view, null, doc.activeElement); }, labelFor: function(view,id) { var c=context();if(!allowed(c)||!ready[view]||mountedOwner!==c.userId||mountedEpoch!==c.epoch)return '';var row=(state[view]||[]).find(function(item){return item.id===id;});return row?row.display_name||'Prayer request':''; }, openRecord: function(view,id) { var row=(state[view]||[]).find(function(item){return item.id===id;}); return !!row && openEditor(view,row,doc.activeElement) === true; } };
   }
   root.CreekOfficeContent = { create: create };
 }(typeof window !== 'undefined' ? window : globalThis));
