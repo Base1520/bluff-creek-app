@@ -5,6 +5,7 @@ import { JSDOM } from 'jsdom';
 const html = await readFile(new URL('../index.html',import.meta.url),'utf8');
 const app = await readFile(new URL('../app.js',import.meta.url),'utf8');
 const membershipSource = await readFile(new URL('../membership.js',import.meta.url),'utf8');
+const weekSource = await readFile(new URL('../week.js',import.meta.url),'utf8');
 const session = id => ({ user:{ id, email:'staff-'+id+'@example.invalid' }, access_token:'synthetic-token' });
 const pause = () => new Promise(r=>setTimeout(r,15));
 async function until(check, message) {
@@ -71,6 +72,18 @@ function fixture(t,options={}) {
   if(options.communications)w.CreekCommunications={create(moduleOptions){options.communications.options=moduleOptions;return {load:async e=>{(options.communications.loads??=[]).push(e);moduleOptions.root.textContent='Fictional private choices';},render(){},clear(){moduleOptions.root.replaceChildren();}};}};
   if(options.signups)w.CreekSignups={create(moduleOptions){options.signups.options=moduleOptions;return {load:async()=>{},render(){},clear(){},open(id){options.signups.opened=id;return options.signups.accepted!==false;}};}};
   if(options.attention)w.CreekAttention={create(moduleOptions){options.attention.options=moduleOptions;return {beginRefresh(){options.attention.begins=(options.attention.begins||0)+1;moduleOptions.onSummary(null);},load:async e=>{(options.attention.loads||=[]).push(e);options.attention.loadedAfterSources=!!options.care?.loaded&&!!options.followups?.loaded;moduleOptions.root.textContent='Fictional attention record';moduleOptions.onSummary(options.attention.summary||null);},render(){},clear(){moduleOptions.root.replaceChildren();moduleOptions.onSummary(null);}};}};
+  if(options.officeContent)w.CreekOfficeContent={create(moduleOptions){const state=options.officeContent;state.options=moduleOptions;return {
+    async load(epoch){(state.loads||=[]).push(epoch);state.loaded=false;if(state.hold)await state.hold.promise;state.loaded=true;return state.result!==false;},
+    weekSnapshot(){return state.snapshot||null;},
+    openRecord(view,id){state.opened={view,id};return Object.hasOwn(state,'accepted')?state.accepted:true;},
+    render(){},clear(){state.clears=(state.clears||0)+1;state.loaded=false;},open(){},labelFor(){return '';}
+  };}};
+  if(options.week)w.CreekWeek={create(moduleOptions){const state=options.week;state.options=moduleOptions;return {
+    beginRefresh(){state.begins=(state.begins||0)+1;state.token={number:state.begins};state.atBegin=moduleOptions.getSources();moduleOptions.root.replaceChildren();return state.token;},
+    endRefresh(token){assert.equal(token,state.token,'only the active weekly refresh token may finish');state.ends=(state.ends||0)+1;state.afterContent=!!options.officeContent?.loaded;state.atEnd=moduleOptions.getSources();moduleOptions.root.textContent='Fictional weekly coordination';},
+    render(){state.renders=(state.renders||0)+1;},clear(){state.clears=(state.clears||0)+1;moduleOptions.root.replaceChildren();}
+  };}};
+  if(options.realWeek)w.eval(weekSource);
   let created=0; w.CREEK_OFFICE_CONFIG=options.config||{supabaseUrl:'https://testproject.supabase.co',publishableKey:'sb_publishable_synthetic'};
   w.supabase={createClient(){created++;return client;}};w.eval(app);
   const el=id=>w.document.getElementById(id);
@@ -103,7 +116,7 @@ test('late table fetch after logout cannot repopulate private DOM',async t=>{
 test('same-account token events preserve unsaved edits; viewer cannot open editor',async t=>{
   const f=fixture(t);await until(()=>f.el('people-list').querySelector('button'),'editable records loaded');f.el('people-list').querySelector('button').click();f.el('editor-fields').querySelector('[name=notes]').value='Synthetic unsaved edit';f.emit(session('a'));await pause();assert.equal(f.el('editor').open,true);assert.equal(f.el('editor-fields').querySelector('[name=notes]').value,'Synthetic unsaved edit');
   const v=fixture(t,{roles:{a:'viewer'}});await pause();v.w.location.hash='#people';await pause();assert.equal(v.el('primary-action').classList.contains('hidden'),true);v.el('primary-action').click();assert.equal(v.el('editor').open,false);assert.equal(v.el('people-list').querySelector('button'),null);
-  for(const view of ['history','care','signups','intake','communications','attention','followups','announcements','committees','slides','prayers']) {
+  for(const view of ['week','history','care','signups','intake','communications','attention','followups','announcements','committees','slides','prayers']) {
     v.w.location.hash='#'+view;await pause();
     assert.equal(v.el(view+'-view').classList.contains('hidden'),true);
     assert.equal(v.w.document.querySelector('[data-view="'+view+'"]').classList.contains('hidden'),true);
@@ -700,4 +713,67 @@ test('connection diagnostics identify the failed phase without exposing backend 
   ['office records',{onQuery:q=>q.table==='documents'?{error:{message:'PRIVATE_CANARY'}}:undefined}]
  ]){const f=fixture(t,options);await until(()=>f.el('workspace-health-message').textContent.includes('Connection check:'),'phase diagnostic ready');assert.ok(f.el('workspace-health-message').textContent.includes(phase));assert.doesNotMatch(f.el('workspace-health-message').textContent,/PRIVATE_CANARY/);assert.equal(f.el('people-list').textContent,'');}
  const held=deferred(),f=fixture(t,{initial:null,onQuery:q=>q.table==='staff_roles'?held.promise:undefined});await pause();const expire=coreRequestClock(f);f.emit(session('a'));await until(()=>f.calls.some(q=>q.table==='staff_roles'),'role read waiting');expire();await until(()=>f.el('workspace-health-message').textContent.includes('request timed out'),'timeout diagnostic');assert.match(f.el('workspace-health-message').textContent,/staff access/);f.emit(null);held.resolve({data:{role:'admin'}});await pause();assert.equal(f.el('people-list').textContent,'');
+});
+
+const copyJSON = value => JSON.parse(JSON.stringify(value));
+const weekContent = () => ({announcements:{available:true,items:[]},slides:{available:true,items:[]},committees:{available:true,items:[]}});
+test('weekly sources wait for completed loads and expose copied event fields independent of filters',async t=>{
+  const held=deferred(),officeContent={hold:held,snapshot:weekContent()},week={},f=fixture(t,{officeContent,week});
+  await until(()=>officeContent.loads?.length,'content loading');assert.equal(week.ends,undefined);assert.equal(week.atBegin.events.available,false);assert.equal(week.options.getSources().content,null);assert.deepEqual(copyJSON(week.options.getSources().events),{available:false,items:[]});
+  held.resolve();await until(()=>week.ends===1,'weekly refresh complete');assert.equal(week.afterContent,true);assert.equal(week.atEnd.content,officeContent.snapshot);
+  Object.assign(f.rows('a').events[0],{ends_at:'2030-01-06T16:00:00Z',updated_at:'2030-01-01T12:00:00Z',description:'PRIVATE_EVENT_CANARY',location:'PRIVATE_LOCATION_CANARY'});
+  f.rows('a').events.push({id:'archived-event',title:'Archived fictional event',starts_at:'2030-01-07T15:00:00Z',is_archived:true});
+  f.el('workspace-refresh').click();await until(()=>week.ends===2,'updated event snapshot');
+  f.el('event-search').value='no matching visible event';f.el('event-search').dispatchEvent(new f.w.Event('input',{bubbles:true}));f.el('event-status-filter').value='archived';f.el('event-status-filter').dispatchEvent(new f.w.Event('input',{bubbles:true}));
+  const snapshot=week.options.getSources(),value=copyJSON(snapshot.events);assert.equal(value.available,true);assert.equal(value.items.length,1);
+  assert.deepEqual(Object.keys(value.items[0]).sort(),['ends_at','id','starts_at','title','updated_at']);assert.doesNotMatch(JSON.stringify(snapshot),/PRIVATE_|archived-event|synthetic-token|staff-a/);
+  snapshot.events.items[0].title='Caller mutation';snapshot.events.items.push({id:'caller-added'});assert.deepEqual(copyJSON(week.options.getSources().events),value);
+  f.w.location.hash='#week';f.w.dispatchEvent(new f.w.Event('hashchange'));assert.equal(f.el('week-view').classList.contains('hidden'),false);assert.ok(week.renders>0);
+});
+test('weekly refresh closes availability immediately and distinguishes failed content from core failure',async t=>{
+  let broken=false;const week={},officeContent={snapshot:weekContent()},f=fixture(t,{week,officeContent,onQuery:q=>broken&&q.table==='documents'?{error:{message:'PRIVATE_FAILURE_CANARY'}}:undefined});
+  await until(()=>week.ends===1,'initial week ready');const held=deferred();officeContent.hold=held;officeContent.snapshot={...weekContent(),slides:{available:false,items:[]}};officeContent.result=false;
+  f.el('workspace-refresh').click();assert.equal(week.options.getSources().events.available,false);assert.equal(f.el('week-view').textContent,'');await until(()=>officeContent.loads.length===2,'replacement content loading');assert.equal(week.ends,1);
+  held.resolve();await until(()=>week.ends===2,'failed-source result settled');assert.equal(week.atEnd.events.available,true);assert.equal(week.atEnd.content.slides.available,false,'partial source does not become an empty success');
+  officeContent.hold=null;broken=true;f.el('workspace-refresh').click();await until(()=>f.el('workspace').dataset.connection==='blocked','core failure locked workspace');assert.equal(week.ends,2);assert.equal(f.el('week-view').textContent,'');assert.deepEqual(copyJSON(week.options.getSources()),{content:null,events:{available:false,items:[]}});
+  assert.equal(week.options.onOpen('calendar','event-a'),false);
+});
+test('weekly module clears immediately on sign-out and cannot finish for a replaced account',async t=>{
+  const held=deferred(),week={},officeContent={hold:held,snapshot:weekContent()},f=fixture(t,{week,officeContent});
+  await until(()=>officeContent.loads?.length,'old account load pending');f.emit(null);assert.equal(f.el('week-view').textContent,'');assert.equal(week.options.getSources().events.available,false);assert.equal(week.options.onOpen('calendar','event-a'),false);
+  held.resolve();await pause();assert.equal(week.ends,undefined,'old account completion cannot reopen the workspace');
+  officeContent.hold=null;f.emit(session('b'));await until(()=>week.ends===1,'replacement account loaded');assert.equal(week.options.getSources().events.items[0].id,'event-b');
+  assert.equal(week.options.onOpen('calendar','event-a'),false);f.emit(null);assert.equal(f.el('week-view').textContent,'');
+});
+test('viewer cannot route to weekly data or invoke its handoff',async t=>{
+  const week={},officeContent={snapshot:weekContent()},f=fixture(t,{week,officeContent,roles:{a:'viewer'}});await until(()=>f.el('role-label').textContent==='viewer','viewer role ready');
+  f.w.location.hash='#week';f.w.dispatchEvent(new f.w.Event('hashchange'));assert.equal(f.el('week-view').classList.contains('hidden'),true);assert.equal(week.ends,undefined);assert.equal(officeContent.loads,undefined);
+  assert.deepEqual(copyJSON(week.options.getSources()),{content:null,events:{available:false,items:[]}});assert.equal(week.options.onOpen('calendar','event-a'),false);assert.equal(f.el('editor').open,false);
+});
+test('weekly handoffs change route only after the original source accepts a current record',async t=>{
+  const week={},officeContent={snapshot:weekContent()},f=fixture(t,{week,officeContent});await until(()=>week.ends===1,'week ready');
+  const route=()=>{f.w.location.hash='#week';f.w.dispatchEvent(new f.w.Event('hashchange'));};route();
+  for(const view of ['announcements','slides','committees']){for(const accepted of [false,undefined,'true']){officeContent.accepted=accepted;assert.equal(week.options.onOpen(view,'fictional-record'),false);assert.equal(f.w.location.hash,'#week');}officeContent.accepted=true;assert.equal(week.options.onOpen(view,'fictional-record'),true);assert.deepEqual(officeContent.opened,{view,id:'fictional-record'});assert.equal(f.w.location.hash,'#'+view);route();}
+  for(const view of ['prayers','people','documents','unknown']){assert.equal(week.options.onOpen(view,'fictional-record'),false);assert.equal(f.w.location.hash,'#week');}
+  assert.equal(week.options.onOpen('calendar','missing'),false);f.rows('a').events[0].is_archived=true;f.el('workspace-refresh').click();await until(()=>week.ends===2,'archived event loaded');assert.equal(week.options.onOpen('calendar','event-a'),false);
+  f.rows('a').events[0].is_archived=false;f.el('workspace-refresh').click();await until(()=>week.ends===3,'active event restored');f.el('people-list').querySelector('button').click();field(f,'notes').value='Preserve unsaved person';f.w.confirm=()=>false;
+  assert.equal(week.options.onOpen('calendar','event-a'),false);assert.equal(f.w.location.hash,'#week');assert.equal(field(f,'notes').value,'Preserve unsaved person');
+  f.w.confirm=()=>true;assert.equal(week.options.onOpen('calendar','event-a'),true);assert.equal(f.w.location.hash,'#calendar');assert.equal(f.el('editor-form').dataset.id,'event-a');assert.equal(field(f,'title').value,'Synthetic gathering a');
+});
+test('weekly event handoff cannot reopen an old record after identity changes during discard confirmation',async t=>{
+  const week={},officeContent={snapshot:weekContent()},f=fixture(t,{week,officeContent});await until(()=>week.ends===1,'week ready');f.w.location.hash='#week';f.w.dispatchEvent(new f.w.Event('hashchange'));
+  f.el('people-list').querySelector('button').click();field(f,'notes').value='Unsaved old account draft';f.w.confirm=()=>{f.emit(session('b'));return true;};
+  assert.equal(week.options.onOpen('calendar','event-a'),false);assert.equal(f.el('editor').open,false);assert.equal(f.w.location.hash,'#week');
+  await until(()=>f.el('user-label').textContent.includes('staff-b'),'new identity visible');assert.doesNotMatch(f.el('editor-fields').textContent,/Synthetic gathering a|Unsaved old account/);
+});
+test('the real weekly module renders app projections on initial load and after its current refresh finishes',async t=>{
+  const snapshot=weekContent();snapshot.announcements.items=[{id:'real-week-announcement',title:'Fictional shared announcement',status:'draft',starts_on:null,ends_on:null,updated_at:'2026-09-11T12:00:00Z'}];
+  const officeContent={snapshot},f=fixture(t,{realWeek:true,officeContent,url:'https://office.example.invalid/admin/#week'});
+  await until(()=>officeContent.loaded,'original content loaded');await until(()=>!f.el('workspace-refresh').disabled,'initial refresh settled');
+  assert.equal(f.el('week-view').classList.contains('hidden'),false);assert.match(f.el('week-view').textContent,/Fictional shared announcement/);assert.doesNotMatch(f.el('week-view').textContent,/unavailable/i);
+  const held=deferred();officeContent.hold=held;f.el('workspace-refresh').click();await until(()=>officeContent.loads.length===2,'real module waiting for new content');assert.match(f.el('week-view').textContent,/Refreshing/);assert.doesNotMatch(f.el('week-view').textContent,/Fictional shared announcement/);
+  snapshot.announcements.items[0].title='Updated fictional announcement';held.resolve();await until(()=>!f.el('workspace-refresh').disabled,'current refresh settled');
+  assert.match(f.el('week-view').textContent,/Updated fictional announcement/);assert.doesNotMatch(f.el('week-view').textContent,/Refreshing|unavailable/i);
+  f.el('week-view').querySelector('[data-week-open="announcements"]').click();assert.deepEqual(officeContent.opened,{view:'announcements',id:'real-week-announcement'});assert.equal(f.w.location.hash,'#announcements');
+  f.emit(null);assert.equal(f.el('week-view').textContent,'');
 });
