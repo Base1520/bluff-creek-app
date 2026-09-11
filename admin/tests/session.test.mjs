@@ -65,10 +65,12 @@ function fixture(t,options={}) {
   function emit(next,event='TEST'){current=next;insideCallback=true;const returned=callback(event,next);insideCallback=false;assert.equal(returned,undefined);}
   if (options.membership) w.CreekMembership = { create(moduleOptions) { options.membership.options = moduleOptions; return { load: async () => {}, render() {}, clear() {} }; } };
   if (options.sheetControls) { w.eval(membershipSource); const sheetLink=w.CreekMembership.sheetLink; w.CreekMembership={sheetLink,create(){return {load:async()=>{},render(){},clear(){}}}}; }
-  if (options.care) w.CreekCare = { create(moduleOptions) { options.care.options=moduleOptions; return { load: async () => { moduleOptions.onSummary(options.care.summary || null); }, render() {}, clear() { moduleOptions.onSummary(null); }, selectPerson(id) { (options.care.selected ||= []).push(id); return options.care.accepted !== false; }, openQueue(kind) { (options.care.queues ||= []).push(kind); return options.care.queueAccepted !== false; } }; } };
-  if (options.followups) w.CreekFollowups = { create(moduleOptions) { options.followups.options = moduleOptions; return { load: async () => moduleOptions.onSummary(options.followups.summary), render() {}, clear() { moduleOptions.onSummary({ due:null, overdue:null, upcoming:null, items:[] }); }, openNew() {} }; } };
-  if (options.intake) w.CreekIntakeTasks={create(moduleOptions){options.intake.options=moduleOptions;return{load:async()=>moduleOptions.onSummary(options.intake.summary||null),render(){},clear(){moduleOptions.onSummary(null);},showFilter(value){(options.intake.filters??=[]).push(value);},taskForSource(){return null;}};}};
+  if (options.care) w.CreekCare = { create(moduleOptions) { options.care.options=moduleOptions; return { load: async () => { options.care.loaded=true; moduleOptions.onSummary(options.care.summary || null); }, attentionSnapshot(date) { options.care.date=date; return options.care.snapshot||null; }, openFromAttention(item,date) { options.care.opened={item,date};return options.care.accepted!==false; }, render() {}, clear() { moduleOptions.onSummary(null); }, selectPerson(id) { (options.care.selected ||= []).push(id); return options.care.accepted !== false; }, openQueue(kind) { (options.care.queues ||= []).push(kind); return options.care.queueAccepted !== false; } }; } };
+  if (options.followups) w.CreekFollowups = { create(moduleOptions) { options.followups.options = moduleOptions; return { load: async () => {options.followups.loaded=true; moduleOptions.onSummary(options.followups.summary);}, attentionSnapshot(date) {options.followups.date=date; return options.followups.snapshot||null;}, openFromAttention(id) {options.followups.opened=id; return options.followups.accepted!==false;}, render() {}, clear() { moduleOptions.onSummary({ due:null, overdue:null, upcoming:null, items:[] }); }, openNew() {} }; } };
+  if (options.intake) w.CreekIntakeTasks={create(moduleOptions){options.intake.options=moduleOptions;return{load:async()=>moduleOptions.onSummary(options.intake.summary||null),render(){},clear(){moduleOptions.onSummary(null);},showFilter(value){(options.intake.filters??=[]).push(value);},taskForSource(){return null;},openTask(id){options.intake.opened=id;return options.intake.accepted!==false;}};}};
   if(options.communications)w.CreekCommunications={create(moduleOptions){options.communications.options=moduleOptions;return {load:async e=>{(options.communications.loads??=[]).push(e);moduleOptions.root.textContent='Fictional private choices';},render(){},clear(){moduleOptions.root.replaceChildren();}};}};
+  if(options.signups)w.CreekSignups={create(moduleOptions){options.signups.options=moduleOptions;return {load:async()=>{},render(){},clear(){},open(id){options.signups.opened=id;return options.signups.accepted!==false;}};}};
+  if(options.attention)w.CreekAttention={create(moduleOptions){options.attention.options=moduleOptions;return {beginRefresh(){options.attention.begins=(options.attention.begins||0)+1;moduleOptions.onSummary(null);},load:async e=>{(options.attention.loads||=[]).push(e);options.attention.loadedAfterSources=!!options.care?.loaded&&!!options.followups?.loaded;moduleOptions.root.textContent='Fictional attention record';moduleOptions.onSummary(options.attention.summary||null);},render(){},clear(){moduleOptions.root.replaceChildren();moduleOptions.onSummary(null);}};}};
   let created=0; w.CREEK_OFFICE_CONFIG=options.config||{supabaseUrl:'https://testproject.supabase.co',publishableKey:'sb_publishable_synthetic'};
   w.supabase={createClient(){created++;return client;}};w.eval(app);
   const el=id=>w.document.getElementById(id);
@@ -99,9 +101,9 @@ test('late table fetch after logout cannot repopulate private DOM',async t=>{
   assert.equal(f.el('people-list').textContent,'');assert.equal(f.el('documents-list').textContent,'');assert.equal(f.el('workspace').classList.contains('hidden'),true);
 });
 test('same-account token events preserve unsaved edits; viewer cannot open editor',async t=>{
-  const f=fixture(t);await pause();f.el('people-list').querySelector('button').click();f.el('editor-fields').querySelector('[name=notes]').value='Synthetic unsaved edit';f.emit(session('a'));await pause();assert.equal(f.el('editor').open,true);assert.equal(f.el('editor-fields').querySelector('[name=notes]').value,'Synthetic unsaved edit');
+  const f=fixture(t);await until(()=>f.el('people-list').querySelector('button'),'editable records loaded');f.el('people-list').querySelector('button').click();f.el('editor-fields').querySelector('[name=notes]').value='Synthetic unsaved edit';f.emit(session('a'));await pause();assert.equal(f.el('editor').open,true);assert.equal(f.el('editor-fields').querySelector('[name=notes]').value,'Synthetic unsaved edit');
   const v=fixture(t,{roles:{a:'viewer'}});await pause();v.w.location.hash='#people';await pause();assert.equal(v.el('primary-action').classList.contains('hidden'),true);v.el('primary-action').click();assert.equal(v.el('editor').open,false);assert.equal(v.el('people-list').querySelector('button'),null);
-  for(const view of ['history','care','signups','intake','communications','followups','announcements','committees','slides','prayers']) {
+  for(const view of ['history','care','signups','intake','communications','attention','followups','announcements','committees','slides','prayers']) {
     v.w.location.hash='#'+view;await pause();
     assert.equal(v.el(view+'-view').classList.contains('hidden'),true);
     assert.equal(v.w.document.querySelector('[data-view="'+view+'"]').classList.contains('hidden'),true);
@@ -671,4 +673,31 @@ test('communications is wired to the private workspace lifecycle and never expos
  f.w.location.hash='#communications';f.w.dispatchEvent(new f.w.Event('hashchange'));assert.equal(f.el('communications-view').classList.contains('hidden'),false);assert.match(f.el('communications-view').textContent,/Fictional private choices/);
  f.emit(null);assert.equal(f.el('communications-view').textContent,'');
  const privateModule={},v=fixture(t,{roles:{a:'viewer'},communications:privateModule});await pause();await pause();assert.equal(privateModule.loads,undefined);v.w.location.hash='#communications';v.w.dispatchEvent(new v.w.Event('hashchange'));assert.equal(v.el('communications-view').classList.contains('hidden'),true);
+});
+
+test('attention waits for source modules, reports partial counts and clears on sign-out',async t=>{
+ const care={snapshot:{items:[]}},followups={summary:{due:0,overdue:0,upcoming:0,items:[]},snapshot:{items:[]}},attention={summary:{count:null,known:2,unavailable:1}},f=fixture(t,{care,followups,attention});
+ await until(()=>attention.loads?.length,'attention loaded');assert.equal(attention.loadedAfterSources,true);assert.ok(attention.begins>0);assert.equal(f.el('attention-count').textContent,'—');assert.match(f.el('attention-dashboard-status').textContent,/2 known items; 1 source queues unavailable/);
+ const sources=attention.options.getSources('2026-09-11');assert.equal(sources.care,care.snapshot);assert.equal(sources.leaders,followups.snapshot);assert.equal(care.date,'2026-09-11');assert.equal(followups.date,'2026-09-11');
+ attention.options.onSummary({count:0,known:0,unavailable:0});assert.equal(f.el('attention-count').textContent,'0');assert.match(f.el('attention-dashboard-status').textContent,/these three queues/);
+ attention.options.onSummary({count:0,known:3,unavailable:1});assert.equal(f.el('attention-count').textContent,'—');
+ f.w.location.hash='#attention';f.w.dispatchEvent(new f.w.Event('hashchange'));assert.equal(f.el('attention-view').classList.contains('hidden'),false);f.emit(null);assert.equal(f.el('attention-view').textContent,'');assert.equal(f.el('attention-count').textContent,'—');attention.options.onSummary(attention.summary);assert.equal(f.el('attention-count').textContent,'—');
+ const held={},v=fixture(t,{roles:{a:'viewer'},attention:held});await until(()=>v.el('role-label').textContent==='viewer','viewer identified');assert.equal(held.loads,undefined);v.w.location.hash='#attention';v.w.dispatchEvent(new v.w.Event('hashchange'));assert.equal(v.el('attention-view').classList.contains('hidden'),true);
+});
+test('attention handoffs route only after the current source accepts opening',async t=>{
+ const attention={},intake={},signups={},care={},followups={summary:{due:0,overdue:0,upcoming:0,items:[]}},f=fixture(t,{attention,intake,signups,care,followups});await until(()=>attention.loads?.length,'workspace ready');
+ for(const [type,target,module] of [['intake','intake',intake],['registration','signups',signups],['care_plan','care',care],['care_coverage','care',care],['leader','followups',followups]]){
+  f.w.location.hash='#attention';f.w.dispatchEvent(new f.w.Event('hashchange'));module.accepted=false;const item={source_type:type,source_id:'fictional-source',contact_id:'person',care_role:'deacon'};
+  assert.equal(attention.options.openSource(item,'2026-09-11'),false);assert.equal(f.w.location.hash,'#attention');module.accepted=true;assert.equal(attention.options.openSource(item,'2026-09-11'),true);assert.equal(f.w.location.hash,'#'+target);
+  if(type.startsWith('care_'))assert.equal(care.opened.date,'2026-09-11');
+ }
+ f.emit(null);assert.equal(attention.options.openSource({source_type:'intake',source_id:'fictional-source'}),false);
+});
+test('connection diagnostics identify the failed phase without exposing backend details',async t=>{
+ for(const [phase,options] of [
+  ['staff access',{onQuery:q=>q.table==='staff_roles'?{error:{message:'PRIVATE_CANARY',code:'42501'}}:undefined}],
+  ['workspace setup',{readiness:{error:{message:'PRIVATE_CANARY',code:'NETWORK'}}}],
+  ['office records',{onQuery:q=>q.table==='documents'?{error:{message:'PRIVATE_CANARY'}}:undefined}]
+ ]){const f=fixture(t,options);await until(()=>f.el('workspace-health-message').textContent.includes('Connection check:'),'phase diagnostic ready');assert.ok(f.el('workspace-health-message').textContent.includes(phase));assert.doesNotMatch(f.el('workspace-health-message').textContent,/PRIVATE_CANARY/);assert.equal(f.el('people-list').textContent,'');}
+ const held=deferred(),f=fixture(t,{initial:null,onQuery:q=>q.table==='staff_roles'?held.promise:undefined});await pause();const expire=coreRequestClock(f);f.emit(session('a'));await until(()=>f.calls.some(q=>q.table==='staff_roles'),'role read waiting');expire();await until(()=>f.el('workspace-health-message').textContent.includes('request timed out'),'timeout diagnostic');assert.match(f.el('workspace-health-message').textContent,/staff access/);f.emit(null);held.resolve({data:{role:'admin'}});await pause();assert.equal(f.el('people-list').textContent,'');
 });

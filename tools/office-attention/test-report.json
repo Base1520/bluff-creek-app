@@ -1,0 +1,41 @@
+{
+  "status": "passed_local_only",
+  "verified_at": "2026-09-11T13:31:56.699921+00:00",
+  "sql_sha256": "94d578ad7e735f3de676422be869b73d3a255d9965039cde896e799af2be8054",
+  "pglite": {
+    "passed": 21,
+    "failed": 0,
+    "duration_ms": 11200.641542,
+    "scope": "frozen_eight_plus_recorded_intake_with_optional_deacon_and_preferences_compatibility",
+    "infrastructure_extension_bytes_verified": true,
+    "infrastructure_extensions_executed": false
+  },
+  "preservation": {
+    "existing_function_bodies_owners_privileges": true,
+    "roles_policies_bucket_private_schema_acl": true,
+    "task_notice_welcome_audit_quota_state_after_reads": true,
+    "read_only_transaction_succeeded": true,
+    "active_ten_manifest_sha256": "0734cdc37022af4c946b2e4a8d93ad1b199093834f28373b1bf8c0c9497276ae"
+  },
+  "coverage": [
+    "Central date and complete empty snapshot",
+    "eligible admin/editor with role/account denial controls",
+    "grouped due/assignment/setup reasons",
+    "current notice target UUID and normalized email; obsolete targets suppressed",
+    "zero targets and missing current jobs",
+    "completed tasks retain only current mail issues",
+    "no prayer names/body/contact text or Auth/recipient identities in projection",
+    "aged queued or aged expired-lease mail; new/active/sent suppression",
+    "shared welcome job links yield one issue per registration",
+    "optional deacon label and recipient setup; optional preference preservation",
+    "5000 complete items and explicit 5001 overflow"
+  ],
+  "hosted_changes": false,
+  "network_auth_or_email_calls": false,
+  "limitations": [
+    "Local PGlite fictional records with mocked Auth/Storage; no real PostgreSQL concurrency or hosted acceptance in this read-only pass.",
+    "Eight frozen baseline migrations plus recorded intake are applied; optional deacon and preferences are additionally applied in compatibility tests; pg_cron/pg_net extension-only SQL is byte-verified only.",
+    "The 30-minute threshold is an Office review threshold, not a delivery SLA or evidence that a scheduler is healthy.",
+    "No send, retry, acknowledgement, reassignment or task completion is performed."
+  ]
+}

@@ -11,7 +11,7 @@ const plan={id:'sample-plan',owner_id:'sample-owner',display_name:'Sample leader
 function fixture(t,opts={}) {
   const dom=new JSDOM('<section id="followups"></section>',{url:'https://office.example.invalid/admin/',runScripts:'outside-only'}),w=dom.window;
   t.after(()=>w.close());w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};w.eval(code);
-  let ctx={epoch:1,userId:'sample-owner',role:opts.role||'editor',canEdit:true},api,refreshes=0,next=1;
+  let ctx={epoch:1,userId:'sample-owner',role:opts.role||'editor',canEdit:true,workspaceReady:true},api,refreshes=0,next=1;
   const root=w.document.getElementById('followups'),calls=[],notices=[],summaries=[],control={error:null,hold:null,noRows:false,returnOverride:null,leakOwners:false};
   const rows={leader_followups:structuredClone(opts.plans||[]),leader_followup_contacts:structuredClone(opts.contacts||[])};
   const db={from(table){
@@ -320,5 +320,53 @@ test('replacement owner or session clears personal drafts before unavailable-wor
       assert.equal(await f.api.load(replacement.epoch),true);f.api.openNew();
       assert.ok(f.form());assert.equal(f.form().elements.notes.value,'');
     }
+  }
+});
+
+const attentionPlain = value => value === null ? null : JSON.parse(JSON.stringify(value));
+test('leader attention reuses month-end and snooze rules, ignores filters and excludes other owners and private notes',async t=>{
+  const plans=[
+    {...plan,id:'due-leader',display_name:'Fictional due leader',last_contact_on:'2024-01-31',notes:'PRIVATE_LEADER_NOTE',email:'PRIVATE_EMAIL_CANARY'},
+    {...plan,id:'overdue-leader',first_due_on:'2024-02-28',leadership_role:'council'},
+    {...plan,id:'unscheduled-leader',first_due_on:null},
+    {...plan,id:'snoozed-leader',last_contact_on:'2024-01-31',snoozed_until:'2024-03-10'},
+    {...plan,id:'paused-leader',paused:true},
+    {...plan,id:'future-leader',first_due_on:'2024-04-01'},
+    {...plan,id:'other-owner',owner_id:'someone-else',display_name:'PRIVATE_OTHER_OWNER'}
+  ];const f=fixture(t,{plans,contacts:[{id:'note',owner_id:plan.owner_id,followup_id:'due-leader',notes:'PRIVATE_CONTACT_NOTE'}]});f.control.leakOwners=true;assert.equal(f.api.attentionSnapshot('2024-02-29'),null);await f.api.load(1);
+  const snapshot=attentionPlain(f.api.attentionSnapshot('2024-02-29'));assert.equal(snapshot.items.length,3);
+  assert.deepEqual(snapshot.items[0],{key:'leader:due-leader',category:'leaders',source_type:'leader',source_id:'due-leader',contact_id:null,care_role:null,title:'Fictional due leader',owner_label:'You',due_on:'2024-02-29',reasons:['leader_due_today']});
+  assert.deepEqual(snapshot.items[1].reasons,['leader_overdue']);assert.equal(snapshot.items[2].due_on,null);assert.deepEqual(snapshot.items[2].reasons,['leader_unscheduled']);assert.doesNotMatch(JSON.stringify(snapshot),/PRIVATE_|notes|email|team_name|owner_id/);
+  f.api.showView('paused');const search=f.root.querySelector('[data-followups-search]');search.value='nothing matches';search.dispatchEvent(new f.w.Event('input',{bubbles:true}));const role=f.root.querySelector('[data-followups-role]');role.value='other';role.dispatchEvent(new f.w.Event('change',{bubbles:true}));assert.deepEqual(attentionPlain(f.api.attentionSnapshot('2024-02-29')),snapshot);
+  assert.equal(f.api.attentionSnapshot('2024-03-10').items.find(row=>row.source_id==='snoozed-leader').reasons[0],'leader_due_today');assert.equal(f.api.attentionSnapshot('2024-03-01').items.find(row=>row.source_id==='due-leader').reasons[0],'leader_overdue');
+  snapshot.items[0].title='tampered';snapshot.items[0].reasons.push('tampered');assert.doesNotMatch(JSON.stringify(f.api.attentionSnapshot('2024-02-29')),/tampered/);assert.ok(f.calls.every(call=>call.op==='select'));
+});
+test('leader attention uses the existing day cadence across DST and falls back from invalid comparison dates',async t=>{
+  const f=fixture(t,{plans:[{...plan,last_contact_on:'2026-03-01',cadence_months:null,cadence_days:7}]});await f.api.load(1);
+  const item=f.api.attentionSnapshot('2026-03-08').items[0];assert.equal(item.due_on,'2026-03-08');assert.equal(item.reasons[0],'leader_due_today');assert.deepEqual(attentionPlain(f.api.attentionSnapshot('2026-02-30')),attentionPlain(f.api.attentionSnapshot()));
+});
+test('leader attention goes unavailable synchronously during refresh and after incomplete data or identity/readiness loss',async t=>{
+  const f=fixture(t,{plans:[plan]});await f.api.load(1);assert.ok(f.api.attentionSnapshot());let release;f.control.read=(q,result)=>q.table==='leader_followup_contacts'?new Promise(resolve=>release=()=>resolve(result)):result;
+  const pending=f.api.load(1);assert.equal(f.api.attentionSnapshot(),null);assert.equal(f.api.openFromAttention(plan.id),false);await tick();release();await pending;assert.ok(f.api.attentionSnapshot());
+  const base={epoch:1,userId:'sample-owner',role:'editor',canEdit:true,workspaceReady:true};
+  for(const change of [{workspaceReady:false},{workspaceReady:undefined},{canEdit:false},{role:'viewer'},{userId:'replacement'},{epoch:2},{userId:null}]){f.setContext({...base,...change});assert.equal(f.api.attentionSnapshot(),null);assert.equal(f.api.openFromAttention(plan.id),false);}
+  f.setContext(base);f.control.read=null;f.control.error={message:'PRIVATE_FAILURE'};await f.api.load(1);assert.equal(f.api.attentionSnapshot(),null);assert.equal(f.api.openFromAttention(plan.id),false);f.control.error=null;await f.api.load(1);assert.ok(f.api.attentionSnapshot());f.api.clear();assert.equal(f.api.attentionSnapshot(),null);
+});
+test('a late leader refresh cannot restore an attention snapshot for a replaced owner or session',async t=>{
+  for(const replacement of [{userId:'replacement',epoch:1},{userId:'sample-owner',epoch:2}]){
+    const f=fixture(t,{plans:[plan]});await f.api.load(1);let release;f.control.read=(q,result)=>q.table==='leader_followups'?new Promise(resolve=>release=()=>resolve(result)):result;const pending=f.api.load(1);await tick();f.setContext({...replacement,role:'editor',canEdit:true,workspaceReady:true});assert.equal(f.api.attentionSnapshot(),null);release();await pending;assert.equal(f.api.attentionSnapshot(),null);assert.equal(f.api.openFromAttention(plan.id),false);
+  }
+});
+test('opening a leader from attention bypasses search without writing and respects discarded, dirty and uncertain drafts',async t=>{
+  const other={...plan,id:'other-plan',display_name:'Second fictional leader'};const f=fixture(t,{plans:[plan,other]});await f.api.load(1);f.api.showView('paused');assert.equal(f.api.openFromAttention('missing'),false);assert.equal(f.api.openFromAttention(null),false);assert.equal(f.api.openFromAttention(plan.id),true);assert.equal(f.form().querySelector('[type="submit"]').textContent,'Save contact');assert.match(f.w.document.querySelector('dialog').textContent,/Sample leader/);
+  f.set('notes','Fictional unsaved contact',true);f.w.confirm=()=>false;assert.equal(f.api.openFromAttention(other.id),false);assert.equal(f.form().elements.notes.value,'Fictional unsaved contact');
+  f.w.confirm=()=>true;assert.equal(f.api.openFromAttention(other.id),true);assert.match(f.w.document.querySelector('dialog').textContent,/Second fictional leader/);assert.equal(f.form().elements.notes.value,'');assert.ok(f.calls.every(call=>call.op==='select'));
+  let release;f.control.hold=q=>q.op==='rpc'?new Promise(resolve=>release=resolve):Promise.resolve({data:[],count:0});f.set('notes','Fictional pending save',true);await f.submit();assert.equal(f.api.attentionSnapshot(),null);assert.equal(f.api.openFromAttention(plan.id),false);release({data:null,error:null});await tick();await tick();assert.equal(f.api.attentionSnapshot(),null);assert.equal(f.api.openFromAttention(plan.id),false);assert.equal(f.form().elements.notes.value,'Fictional pending save');
+});
+test('attention navigation rechecks owner and loading state after a dirty-draft discard decision',async t=>{
+  for(const action of ['owner','loading']){
+    const f=fixture(t,{plans:[plan]});await f.api.load(1);f.api.openNew();f.set('notes','Fictional draft',true);let pending,release;
+    f.w.confirm=()=>{if(action==='owner')f.setContext({epoch:1,userId:'replacement',role:'editor',canEdit:true,workspaceReady:true});else {f.control.read=(q,result)=>q.table==='leader_followups'?new Promise(resolve=>release=()=>resolve(result)):result;pending=f.api.load(1);}return true;};
+    assert.equal(f.api.openFromAttention(plan.id),false);assert.equal(f.form(),null);assert.ok(f.calls.every(call=>call.op==='select'));if(pending){await tick();release();await pending;}
   }
 });
