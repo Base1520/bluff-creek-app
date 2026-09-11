@@ -38,3 +38,15 @@ The app repository contains a read-only Supabase function at `supabase/functions
 Set the approved public function URL in the shared `js/calendar-config.js` only after deployment and verification, then synchronize the website. No secret or original feed URL goes in that file. The app caches only this exact public endpoint, never arbitrary backend APIs. Until activation, the candidate uses the dated static snapshot. A live endpoint changes the calendar download to its freshly curated ICS response.
 
 Backend creation, editor invitations, deployment, DNS changes and the website cutover remain outside the current authorization. The prepared code is not evidence of a live connection.
+
+## September 11 launch-readiness correction
+
+The checked-in public snapshot remains dated September 6 Central (`synced_at` September 7 at 04:00 UTC), with 94 public occurrences through December 4. The embedded snapshot matches the JSON, and the curated ICS also contains 94 occurrences. It is a dated fallback, not evidence that today's iCloud changes have been fetched. The endpoint in `js/calendar-config.js` remains blank.
+
+An open app page now retains the newest validated public snapshot in memory, including a valid empty calendar. Later timeouts, invalid responses, or HTTP 503 responses cannot replace it with an older static snapshot and resurrect a cancelled occurrence. The shared consumer returns the complete allowlisted `result.snapshot`; the app passes that value as `previousSnapshot` on subsequent reads, only after its current request guard passes. Dates continue to age out using Central time, and the retained snapshot keeps its original sync timestamp with saved-calendar guidance. No raw metadata, calendar descriptions, browser storage, or private account data is added to this retained value. It lasts only for that page; a reload still depends on the live adapter, validated service-worker cache, and dated fallback.
+
+Before the next calendar release, use the same caller retention pattern on the website as well as its shared consumer, and synchronize the curated JSON/ICS snapshot after an authorized fresh read. Review the app service-worker revision when packaging the changed public consumer and page. This correction does not activate the endpoint or change service-worker cache policy.
+
+The remaining activation sequence is to configure the original publication URL only as the server-side `CHURCH_CALENDAR_URL`, deploy the reviewed `public-calendar` function with its anonymous function-specific configuration, verify signed-out JSON and ICS output, and then wire the approved public endpoint in the app and website. It needs no database migration, staff account, or service key. Confirm an ordinary public event and a cancellation against iCloud before calling the connection current; never expose the upstream URL or private events in that check.
+
+Local verification used fictional data only: 124 public tests, including six new refresh regressions, plus 32 importer/adapter tests. The actual app inline router was exercised in JSDOM. This is not hosted, native-browser, or physical-phone calendar acceptance.

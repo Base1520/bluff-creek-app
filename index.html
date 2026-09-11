@@ -636,11 +636,12 @@ var CONFIG = {
     $('#thisweek').innerHTML=events.length?events.slice(0,3).map(ev).join(''):'<div class="ev"><p>See our regular service times and the weekly rhythm in the calendar.</p></div>';
     $('#calendarList').innerHTML=events.length?events.map(ev).join(''):empty;
   }
-  var calendarRequest=0;
+  var calendarRequest=0, latestCalendarSnapshot=null;
   function refreshCalendar(){
     var request=++calendarRequest;
-    CreekCalendar.load({jsonUrl:CONFIG.EVENTS_URL,csvUrl:CONFIG.EVENTS_CSV_URL,calendarUrl:(window.CREEK_PUBLIC_CALENDAR||{}).endpoint||'',fetcher:window.fetch.bind(window),now:new Date(),fallback:CreekCalendar.DEFAULT_FEED}).then(function(result){
+    CreekCalendar.load({jsonUrl:CONFIG.EVENTS_URL,csvUrl:CONFIG.EVENTS_CSV_URL,calendarUrl:(window.CREEK_PUBLIC_CALENDAR||{}).endpoint||'',fetcher:window.fetch.bind(window),now:new Date(),fallback:CreekCalendar.DEFAULT_FEED,previousSnapshot:latestCalendarSnapshot}).then(function(result){
       if(request!==calendarRequest)return;
+      if(result.snapshot&&CreekCalendar.validSnapshot(result.snapshot))latestCalendarSnapshot=result.snapshot;
       renderEvents(result.events);
       $('#calendarStatus').textContent=CreekCalendar.statusText(result);
       $('#homeCalendarStatus').textContent=CreekCalendar.statusText(result);

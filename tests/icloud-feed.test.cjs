@@ -57,3 +57,45 @@ test('offline age and expired horizon are honest; private fields never enter nor
   const expired=await calendar.load({now:new Date('2027-01-01T15:00:00Z'),fallback:feed,fetcher:()=>Promise.reject(Error('offline'))});
   assert.deepEqual(expired.events,[]);assert.match(calendar.statusText(expired),/expired/);
 });
+
+
+test('a newest in-memory cancellation survives an adapter outage and an older static snapshot', async () => {
+  const old = snapshot([row({time:'6:00p'})], {synced_at:'2026-09-12T14:00:00Z'});
+  const removed = snapshot([]);
+  const first = await calendar.load({now,calendarUrl:'live',jsonUrl:'static',fallback:old,fetcher:async url=>reply(url==='live'?removed:old)});
+  const second = await calendar.load({now,calendarUrl:'live',jsonUrl:'static',fallback:old,previousSnapshot:first.snapshot,fetcher:async url=>url==='live'?{ok:false,status:503}:reply(old)});
+  assert.deepEqual(second.events,[]);
+  assert.equal(second.updatedAt,removed.synced_at);
+  assert.equal(second.live,false);
+  assert.equal(second.sources.weekly,'memory');
+  assert.match(calendar.statusText(second),/Saved church calendar/);
+  assert.match(calendar.statusText(second),/Recent changes may be missing/);
+});
+
+test('retained snapshot contains the full allowlisted calendar and re-evaluates event age without restamping', async () => {
+  const incoming = snapshot([row({title:'Ongoing',endsAt:'2026-09-13T16:00:00Z',organizer:'private@example.invalid',details:'Private diagnostic',url:'https://private.invalid'}),row({title:'Later',when:'2026-09-14',time:'6:00p'})], {private_source:'must not retain'});
+  const first = await calendar.load({now,calendarUrl:'live',fallback:snapshot([],{synced_at:'2026-09-12T14:00:00Z'}),fetcher:async()=>reply(incoming)});
+  assert.equal(first.snapshot.events.length,2);
+  assert.equal(JSON.stringify(first.snapshot).includes('private'),false);
+  assert.equal(JSON.stringify(first.snapshot).includes('Private'),false);
+  incoming.events[0].title='External mutation';
+  assert.equal(first.snapshot.events[0].title,'Ongoing');
+  first.events[0].title='Displayed mutation';
+  assert.equal(first.snapshot.events[0].title,'Ongoing');
+  const later = await calendar.load({now:new Date('2026-09-13T17:00:00Z'),calendarUrl:'live',fallback:snapshot([],{synced_at:'2026-09-12T14:00:00Z'}),previousSnapshot:first.snapshot,fetcher:async()=>{throw Error('offline');}});
+  assert.deepEqual(later.events.map(event=>event.title),['Later']);
+  assert.equal(later.snapshot.events.length,2);
+  assert.equal(later.updatedAt,first.updatedAt);
+});
+
+test('malformed or older retained snapshots cannot override a newer validated source', async () => {
+  const current = snapshot([]);
+  for (const previousSnapshot of [snapshot([{title:'Invalid'}],{synced_at:'2026-09-13T14:30:00Z'}),snapshot([row({time:'6:00p'})],{synced_at:'2026-09-12T14:00:00Z'})]) {
+    const result = await calendar.load({now,fallback:current,previousSnapshot,fetcher:async()=>{throw Error('offline');}});
+    assert.deepEqual(result.events,[]);
+    assert.equal(result.updatedAt,current.synced_at);
+  }
+  const newer = snapshot([row({time:'6:00p'})],{synced_at:'2026-09-13T14:30:00Z'});
+  const result = await calendar.load({now,calendarUrl:'live',fallback:current,previousSnapshot:current,fetcher:async()=>reply(newer)});
+  assert.equal(result.events.length,1);assert.equal(result.live,true);assert.equal(result.updatedAt,newer.synced_at);
+});
