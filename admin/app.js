@@ -4,7 +4,7 @@
   var els = {};
   var db = null;
   var localDevelopment = false, backendOrigin = null;
-  var membership = null, care = null, officeContent = null, signups = null, intakeTasks = null, communications = null, followups = null, reminderCalendar = null;
+  var membership = null, care = null, officeContent = null, signups = null, intakeTasks = null, communications = null, attention = null, followups = null, reminderCalendar = null;
   var session = null;
   var role = null;
   var authEpoch = 0, loadEpoch = 0, documentEpoch = 0, editorEpoch = 0;
@@ -15,13 +15,13 @@
   var draft = null, readinessEpoch = 0;
   var REQUIRED_REVISION = "20260907174301";
   var state = { events: [], people: [], documents: [], activity: [] };
-  var titles = { dashboard: "Overview", followups: "My follow-ups", calendar: "Staff calendar", announcements: "Announcements", committees: "Committee contacts", slides: "Sunday slides", prayers: "Prayer requests", people: "People & membership", history: "Member history", care: "Guests & care", signups: "Guest register", intake: "Intake actions", communications: "Communications", documents: "Documents", activity: "Activity" };
+  var titles = { dashboard: "Overview", followups: "My follow-ups", calendar: "Staff calendar", announcements: "Announcements", committees: "Committee contacts", slides: "Sunday slides", prayers: "Prayer requests", people: "People & membership", history: "Member history", care: "Guests & care", signups: "Guest register", intake: "Intake actions", communications: "Communications", attention: "Needs attention", documents: "Documents", activity: "Activity" };
   var contentViews = ["announcements", "committees", "slides", "prayers"];
-  var privateViews = ["history", "care", "signups", "intake", "communications", "followups"].concat(contentViews);
+  var privateViews = ["history", "care", "signups", "intake", "communications", "attention", "followups"].concat(contentViews);
 
   function deadline(request) {
     var timer;
-    return Promise.race([Promise.resolve(request), new Promise(function (_resolve, reject) { timer = window.setTimeout(function () { reject(new Error("The request timed out.")); }, 12000); })]).finally(function () { window.clearTimeout(timer); });
+    return Promise.race([Promise.resolve(request), new Promise(function (_resolve, reject) { timer = window.setTimeout(function () { reject(Object.assign(new Error("The request timed out."), {code:"OFFICE_TIMEOUT"})); }, 12000); })]).finally(function () { window.clearTimeout(timer); });
   }
   function draftWrite(item, epoch, request, phase) {
     var deadlineFinished = false;
@@ -84,7 +84,7 @@
   function clearPrivate() {
     window.clearTimeout(documentExpiryTimer);
     if (membership) membership.clear(); if (care) care.clear();
-    if (officeContent) officeContent.clear(); if (signups) signups.clear(); if (intakeTasks) intakeTasks.clear(); if (communications) communications.clear();
+    if (officeContent) officeContent.clear(); if (signups) signups.clear(); if (intakeTasks) intakeTasks.clear(); if (communications) communications.clear(); if (attention) attention.clear();
     if (followups) followups.clear(); if (reminderCalendar) reminderCalendar.clear();
     el("dashboard-followup-list").replaceChildren(); el("dashboard-followup-status").textContent = ""; el("followup-badge").textContent = ""; el("followup-badge").removeAttribute("aria-label");
     loadEpoch++; documentEpoch++; peopleReady = false; state = { events: [], people: [], documents: [], activity: [] };
@@ -160,6 +160,18 @@
     document.querySelectorAll("button[data-intake-filter]").forEach(function(button){button.onclick=function(){if(!canEdit() || button.disabled || !intakeTasks)return;location.hash="intake";route();intakeTasks.showFilter(button.dataset.intakeFilter);};});
     if (window.CreekCommunications && el("communications-view")) communications = window.CreekCommunications.create(Object.assign({}, moduleOptions, { root: el("communications-view") }));
     if (window.CreekFollowups) followups = window.CreekFollowups.create(Object.assign({}, moduleOptions, { root: el("followups-module"), onSummary: renderFollowupSummary }));
+    if (window.CreekAttention && el("attention-view")) attention = window.CreekAttention.create(Object.assign({}, moduleOptions, {
+      root:el("attention-view"), onSummary:renderAttentionSummary,
+      getSources:function(date){return {care:care&&care.attentionSnapshot?care.attentionSnapshot(date):null,leaders:followups&&followups.attentionSnapshot?followups.attentionSnapshot(date):null};},
+      openSource:function(item,date){
+        if(!canEdit())return false;
+        if(item.source_type==="intake"&&intakeTasks&&intakeTasks.openTask(item.source_id)===true){location.hash="intake";route();return true;}
+        if(item.source_type==="registration"&&signups&&signups.open(item.source_id)===true){location.hash="signups";route();return true;}
+        if(["care_plan","care_coverage"].includes(item.source_type)&&care&&care.openFromAttention&&care.openFromAttention(item,date)){location.hash="care";route();return true;}
+        if(item.source_type==="leader"&&followups&&followups.openFromAttention&&followups.openFromAttention(item.source_id)){location.hash="followups";route();return true;}
+        return false;
+      }
+    }));
     if (window.CreekReminderCalendar) reminderCalendar = window.CreekReminderCalendar.create({ button: el("weekly-reminder"), allowed: function () { return !!session && canEdit(); } });
     // Refresh these queues without replacing unsaved editors elsewhere.
     function refreshPersonalQueues() {
@@ -270,12 +282,17 @@
     el("followup-badge").textContent = ""; el("followup-badge").removeAttribute("aria-label"); el("dashboard-followup-status").textContent = "Follow-ups are unavailable until the workspace refreshes.";
     el("primary-action").disabled = true;
     privateViews.forEach(function (name) { var view = el(name + "-view"); if (view) view.classList.add("hidden"); });
-    syncMembershipSheet(); renderCareSummary(null); renderIntakeSummary(null); freezeOtherDialogs(true); syncEditor(); health(message, setup);
+    syncMembershipSheet(); renderCareSummary(null); renderIntakeSummary(null); if(attention)attention.clear(); renderAttentionSummary(null); freezeOtherDialogs(true); syncEditor(); health(message, setup);
+  }
+  function connectionDiagnostic(phase,error) {
+    var labels={role:"staff access",readiness:"workspace setup",records:"office records"};
+    var reason=error&&error.code==="OFFICE_TIMEOUT"?"request timed out":error&&(error.code==="42501"||error.status===403)?"access could not be confirmed":error&&["PGRST202","PGRST204","42P01","42703","42883","OFFICE_SETUP"].includes(error.code)?"setup needs review":"connection unavailable";
+    return " Connection check: "+labels[phase]+" · "+reason+".";
   }
   function authFailure(error) { return error && (error.status === 401 || ["PGRST301", "PGRST302", "PGRST303"].includes(error.code)); }
   async function verifyReadiness(epoch) {
     if (epoch !== authEpoch || !session) return false;
-    var request = ++readinessEpoch, userId = session.user.id;
+    var request = ++readinessEpoch, userId = session.user.id, phase = "role";
     try {
       var staff = await deadline(db.from("staff_roles").select("role").eq("user_id", userId).maybeSingle());
       if (epoch !== authEpoch || request !== readinessEpoch) return false;
@@ -288,7 +305,7 @@
         clearPrivate(); request = readinessEpoch;
       }
       role = staff.data.role; el("role-label").textContent = role;
-      var result = await deadline(db.rpc("office_readiness"));
+      phase="readiness"; var result = await deadline(db.rpc("office_readiness"));
       if (epoch !== authEpoch || request !== readinessEpoch || !session || session.user.id !== userId) return false;
       if (result.error) throw result.error;
       var ready = result.data;
@@ -301,7 +318,7 @@
       readinessOK = false;
       if (authFailure(error)) { queueSession(null); el("login-error").textContent = "Your session could not be verified. Sign in again."; return false; }
       var setup = ["PGRST202", "PGRST204", "42P01", "42703", "42883", "OFFICE_SETUP"].includes(error.code) || typeof db.rpc !== "function";
-      blockWorkspace(setup ? "Office setup is incomplete or out of date. Editing is paused until the required database update is installed. Your open draft stays in this tab." : "The office connection could not be verified. Editing is paused. Refresh to reconnect; your open draft stays in this tab.", setup);
+      blockWorkspace(setup ? "Office setup is incomplete or out of date. Editing is paused until the required database update is installed. Your open draft stays in this tab." : "The office connection could not be verified. Editing is paused. Refresh to reconnect; your open draft stays in this tab."+connectionDiagnostic(phase,error), setup);
       return false;
     }
   }
@@ -342,7 +359,7 @@
   async function loadAll(epoch) {
     epoch = epoch === undefined ? authEpoch : epoch;
     if (epoch !== authEpoch || !session || refreshing || (draft && draft.busy)) return;
-    var request = ++loadEpoch; refreshing = true;
+    var request = ++loadEpoch; refreshing = true; if(attention)attention.beginRefresh();
     health("Checking the office connection and refreshing records…", false);
     try {
       if (!await verifyReadiness(epoch)) return;
@@ -364,12 +381,14 @@
       freezeOtherDialogs(false);
       if (canEdit()) await Promise.all([membership ? membership.load(epoch) : null, care ? care.load(epoch) : null, officeContent ? officeContent.load(epoch) : null, signups ? signups.load(epoch) : null, intakeTasks ? intakeTasks.load(epoch) : null, communications ? communications.load(epoch) : null, followups ? followups.load(epoch) : null]);
       if (!current(epoch) || request !== loadEpoch) return;
+      if(canEdit()&&attention)await attention.load(epoch);
+      if(!current(epoch)||request!==loadEpoch)return;
       health("", false); route(); syncEditor();
     } catch (error) {
       if (epoch !== authEpoch) return;
       if (authFailure(error)) { queueSession(null); el("login-error").textContent = "Your session could not be verified. Sign in again."; return; }
       var setup = ["OFFICE_SETUP", "42P01", "42703", "PGRST204"].includes(error.code);
-      blockWorkspace(setup ? "Office setup is incomplete or out of date. Editing is paused until the required database update is installed." : "Some office records could not be refreshed. Editing is paused and stale lists have been cleared. Your draft is preserved; refresh to try again.", setup);
+      blockWorkspace(setup ? "Office setup is incomplete or out of date. Editing is paused until the required database update is installed." : "Some office records could not be refreshed. Editing is paused and stale lists have been cleared. Your draft is preserved; refresh to try again."+connectionDiagnostic("records",error), setup);
     } finally { if (epoch === authEpoch) { refreshing = false; syncEditor(); ["workspace-refresh", "editor-refresh"].forEach(function (id) { if (el(id)) el(id).disabled = !!(draft && draft.busy); }); } }
   }
 
@@ -406,9 +425,15 @@
     el("activity-list").innerHTML = state.activity.map(activityRow).join("");
     bindRowActions();
     if (membership) membership.render(); if (care) care.render();
-    if (officeContent) officeContent.render(); if (signups) signups.render(); if (intakeTasks) intakeTasks.render(); if (communications) communications.render(); if (followups) followups.render();
+    if (officeContent) officeContent.render(); if (signups) signups.render(); if (intakeTasks) intakeTasks.render(); if (communications) communications.render(); if(attention)attention.render(); if (followups) followups.render();
   }
 
+  function renderAttentionSummary(summary) {
+    var node=el("attention-count"),status=el("attention-dashboard-status");if(!node||!status)return;
+    var valid=!!session&&canEdit()&&summary&&Number.isSafeInteger(summary.known)&&summary.known>=0&&Number.isSafeInteger(summary.unavailable)&&summary.unavailable>=0&&summary.unavailable<=3&&(summary.count===null&&summary.unavailable>0||Number.isSafeInteger(summary.count)&&summary.count===summary.known&&summary.unavailable===0);
+    node.textContent=valid&&summary.count!==null?String(summary.count):"—";
+    status.textContent=!valid?"Refresh the Office to check intake, member care and your leader follow-ups.":summary.unavailable?summary.known+" known items; "+summary.unavailable+" source queues unavailable. Open the queue to review the gaps.":summary.count?"Open each source to review its owner, due date or notification issue.":"No attention items in these three queues. Other operating checks remain separate.";
+  }
   function renderCareSummary(summary) {
     var status = el("dashboard-care-status");
     if (!status) return;

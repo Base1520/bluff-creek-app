@@ -29,7 +29,7 @@
   }
   function create(options) {
     var host = options.root, doc = host.ownerDocument, rows = [], contacts = [];
-    var mounted = false, mountedEpoch = null, mountedOwner = null, ready = false, failed = false, request = 0, formToken = 0;
+    var mounted = false, mountedEpoch = null, mountedOwner = null, ready = false, loading = false, failed = false, request = 0, formToken = 0;
     var filter = 'due', role = '', search = '', dialog = null, draft = null, saving = false, returnFocus = null, unloadListening = false;
     function deadline(request) {
       var timer;
@@ -72,8 +72,22 @@
       var items = rows.filter(owns).map(function (row) { return Object.assign({}, row, {followup:dueFor(row)}); }).filter(function (row) { return !row.paused; }).sort(function (a,b) { return String(a.followup.due || '9999').localeCompare(String(b.followup.due || '9999')); });
       options.onSummary({due:items.filter(function(r){return r.followup.state==='due';}).length,overdue:items.filter(function(r){return r.followup.state==='overdue';}).length,upcoming:items.filter(function(r){return r.followup.state==='upcoming';}).length,items:items.map(function(row){return {id:row.id,display_name:row.display_name,leadership_role:row.leadership_role,team_name:row.team_name,due_on:row.followup.due,state:row.followup.state};})});
     }
+    function attentionReady() {
+      var c = context();
+      return current(c.epoch,c.userId) && c.workspaceReady === true && ready && !loading && !failed && !saving && !(draft && draft.requiresRefresh) && mountedEpoch === c.epoch && mountedOwner === c.userId;
+    }
+    function attentionSnapshot(date) {
+      if (!attentionReady()) return null;
+      var items = [];
+      rows.filter(owns).forEach(function (row) {
+        var due = dueFor(row, date), reason = {overdue:'leader_overdue',due:'leader_due_today',unscheduled:'leader_unscheduled'}[due.state];
+        if (!reason) return;
+        items.push({key:'leader:' + row.id,category:'leaders',source_type:'leader',source_id:row.id,contact_id:null,care_role:null,title:typeof row.display_name === 'string' ? row.display_name : 'Unnamed leader',owner_label:'You',due_on:validDate(due.due) ? due.due : null,reasons:[reason]});
+      });
+      return {items:items};
+    }
     function clear() {
-      request++; close(false); rows = []; contacts = []; ready = false; failed = false; mounted = false; mountedEpoch = null; mountedOwner = null;
+      request++; close(false); rows = []; contacts = []; ready = false; loading = false; failed = false; mounted = false; mountedEpoch = null; mountedOwner = null;
       filter = 'due'; role = ''; search = ''; host.replaceChildren(); summary();
     }
     function mount() {
@@ -145,12 +159,12 @@
       if (!identity(epoch,owner)) { clear(); return false; }
       if (mounted && (mountedEpoch !== epoch || mountedOwner !== owner)) clear();
       if (!current(epoch,owner)) { unavailable(); return false; }
-      mount(); var token=++request;
+      mount(); var token=++request; loading=true;
       try {
         var results=await Promise.all([fetchRows('leader_followups',epoch,owner,token),fetchRows('leader_followup_contacts',epoch,owner,token)]);
         if (!current(epoch,owner) || token !== request) { if(identity(epoch,owner) && token===request)unavailable(); return false; }
         if (!Array.isArray(results[0]) || !Array.isArray(results[1])) throw new Error('incomplete records');
-        rows=results[0]; contacts=results[1]; ready=true; failed=false;
+        rows=results[0]; contacts=results[1]; ready=true; loading=false; failed=false;
         if (draft && draft.requiresRefresh) {
           if (draft.newId && rows.some(function(row){return row.id === draft.newId && owns(row);})) { close(false); notify('This plan was saved. Open it to review the saved details.'); }
           else draft.requiresRefresh=false;
@@ -160,18 +174,20 @@
         if (!current(epoch,owner) || token !== request) { if(identity(epoch,owner) && token===request)unavailable(); return false; }
         if (authError(error)) { clear(); notify('Access to your personal follow-ups could not be confirmed. Sign in again before opening them.',true); return false; }
         if (draft && draft.kind === 'history') close(false);
-        rows=[]; contacts=[]; ready=false; failed=true; render(); return false;
+        rows=[]; contacts=[]; ready=false; loading=false; failed=true; render(); return false;
+      } finally {
+        if (token === request) loading=false;
       }
     }
     async function refresh() { try { return options.refresh ? await options.refresh() : await load(context().epoch); } catch (_) { if (current(context().epoch)) { rows=[]; contacts=[]; ready=false; failed=true; render(); } return false; } }
     function input(name,label,type,value,extra) { return '<label>'+safe(label)+'<input name="'+name+'" type="'+type+'" value="'+safe(value || '')+'" '+(extra || '')+'></label>'; }
     function select(name,label,choices,value) { return '<label>'+safe(label)+'<select name="'+name+'">'+Object.keys(choices).map(function(key){return '<option value="'+key+'"'+(key===value?' selected':'')+'>'+choices[key]+'</option>';}).join('')+'</select></label>'; }
     function notes(value) { return '<label class="followups-wide">Private notes<textarea name="notes" maxlength="2000">'+safe(value || '')+'</textarea></label>'; }
-    function open(kind,id,trigger) {
+    function open(kind,id,trigger,fromAttention) {
       var c=context(), epoch=c.epoch, owner=c.userId, row=id && rows.find(function(r){return r.id===id && owns(r);});
-      if (!current(c.epoch) || !ready || (id && !row) || saving) return;
-      if (!requestClose(false) || !current(epoch,owner) || !ready) return;
-      c=context();row=id && rows.find(function(r){return r.id===id && owns(r);});if(id && !row)return;
+      if (!current(c.epoch) || !ready || (id && !row) || saving || (fromAttention && !attentionReady())) return false;
+      if (!requestClose(false) || !current(epoch,owner) || !ready || (fromAttention && !attentionReady())) return false;
+      c=context();row=id && rows.find(function(r){return r.id===id && owns(r);});if(id && !row)return false;
       returnFocus=trigger || q('[data-followups-new]');
       draft={id:id || null,newId:!id && kind==='edit'?doc.defaultView.crypto.randomUUID():null,requiresRefresh:false,version:row?Number(row.version):null,epoch:c.epoch,owner:c.userId,kind:kind,lastContact:row?row.last_contact_on:null,conflict:false};
       var token=formToken, title=kind==='edit'?(row?'Edit follow-up plan':'Add a leader'):kind==='contact'?'Record a contact':kind==='history'?'Contact history':'Snooze a follow-up';
@@ -193,7 +209,9 @@
       }
       dialog.querySelectorAll('[data-followups-close]').forEach(function(button){button.onclick=function(){requestClose(true);};});
       dialog.addEventListener('cancel',function(event){event.preventDefault();requestClose(true);});doc.body.appendChild(dialog);dialog.showModal();
+      return true;
     }
+    function openFromAttention(id) { return typeof id === 'string' && !!id.trim() && attentionReady() ? open('contact',id,null,true) : false; }
     async function save(form,token) {
       var state=draft;if(!state || saving || token!==formToken || !current(state.epoch,state.owner))return;
       var error=form.querySelector('[data-followups-error]');
@@ -256,7 +274,7 @@
       filter=view; role=''; search=''; render();
       q('[data-followups-search]').value=''; q('[data-followups-role]').value='';
     }
-    return {load:load,render:render,clear:clear,openNew:function(){open('edit');},showView:showView};
+    return {load:load,render:render,clear:clear,openNew:function(){open('edit');},showView:showView,attentionSnapshot:attentionSnapshot,openFromAttention:openFromAttention};
   }
   return {create:create,dueFor:dueFor,today:today,validDate:validDate,addMonths:addMonths};
 }));

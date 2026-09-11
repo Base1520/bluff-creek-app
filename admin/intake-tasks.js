@@ -135,9 +135,9 @@
       var error=dialog.querySelector('[role=alert]');if(draft.conflict)error.textContent='This record changed. Your draft is retained; close and reopen the current record before editing.';else if(!ready||!current(draft.epoch,draft.owner))error.textContent='The intake workspace is unavailable. Your draft is retained; refresh before saving.';
     }
     function open(mode,id){
-      var c=context(),epoch=c.epoch,owner=c.userId;if(mounted&&(mountedOwner!==owner||mountedEpoch!==epoch)){clear();return;}if(!current(epoch,owner)||!ready||!modeAvailable(mode,id)||adminMode(mode)&&c.role!=='admin')return;
-      var item=findItem(mode,id);if(!item||!close())return;
-      if(!current(epoch,owner)||!ready||!modeAvailable(mode,id)||adminMode(mode)&&context().role!=='admin')return;item=findItem(mode,id);if(!item)return;
+      var c=context(),epoch=c.epoch,owner=c.userId;if(mounted&&(mountedOwner!==owner||mountedEpoch!==epoch)){clear();return false;}if(!current(epoch,owner)||!ready||!modeAvailable(mode,id)||adminMode(mode)&&c.role!=='admin')return false;
+      var item=findItem(mode,id);if(!item||!close())return false;
+      if(!current(epoch,owner)||!ready||!modeAvailable(mode,id)||adminMode(mode)&&context().role!=='admin')return false;item=findItem(mode,id);if(!item)return false;
       var token=formId,state=draft={mode:mode,id:id,kind:item.kind,rotation:rotationEnabled(),version:item.version,epoch:epoch,owner:owner,busy:false,pending:0,revision:0,payload:null,requiresRefresh:false,conflict:false};
       var slotTask=mode==='task'&&item.kind==='guest_followup'&&rotationEnabled();
       var title=mode==='deacon'?'Set up Deacon '+id:mode==='route'?'Default route · '+kinds[id]:'Update '+kinds[item.kind].toLowerCase();
@@ -171,7 +171,7 @@
         }catch(caught){if(identity(epoch,owner)&&draft===state&&token===formId){state.requiresRefresh=true;error.textContent=caught.message==='deacon_busy'?'An action in this slot is being updated or sent. Nothing changed. Keep this draft, refresh, then explicitly retry after it finishes.':'The save could not be confirmed. Keep this draft and refresh after the request settles before retrying.';}}
         finally{if(identity(epoch,owner)&&draft===state&&token===formId){state.busy=false;syncEditor();}}
       };
-      state.initial=fingerprint();doc.body.appendChild(dialog);dialog.showModal();syncEditor();
+      state.initial=fingerprint();doc.body.appendChild(dialog);dialog.showModal();syncEditor();return true;
     }
     function showFilter(value){if(!['open','new','due','completed','all'].includes(value))return;var c=context();if(!current(c.epoch,c.userId))return;filter=value;mount();host.querySelector('[data-intake-filter]').value=value;render();}
     function taskForSource(kind,id){
@@ -179,7 +179,7 @@
       var task=rows.find(function(r){return r.kind===kind&&sourceId(r)===id;});
       return task?{id:task.id,due_on:task.due_on,status:task.status,owner:ownerLabel(task),notification_status:task.notification_status}:null;
     }
-    return {load:load,render:render,clear:clear,showFilter:showFilter,taskForSource:taskForSource,openTask:function(id){open('task',id);},openRoute:function(kind){open('route',kind);},openDeacon:function(slot){open('deacon',slot);}};
+    return {load:load,render:render,clear:clear,showFilter:showFilter,taskForSource:taskForSource,openTask:function(id){return open('task',id);},openRoute:function(kind){open('route',kind);},openDeacon:function(slot){open('deacon',slot);}};
   }
   root.CreekIntakeTasks={create:create};
 }(typeof window!=='undefined'?window:globalThis));

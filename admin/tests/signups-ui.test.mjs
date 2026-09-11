@@ -332,3 +332,7 @@ test('explicit profile CSV preserves ISO dates and postal zeros, neutralizes add
 test('older guest rows with no optional profile stay reviewable and do not invent household or membership claims',async t=>{
  const f=fixture(t);await f.api.load(1);const details=f.host.querySelector('[data-signup-profile]');assert.match(details.textContent,/No family details supplied/);assert.equal(details.querySelector('ul'),null);assert.match(details.textContent,/Not supplied/);assert.equal(f.host.querySelector('input[name=birth_date]'),null);f.api.open(row.id);assert.ok(f.form());assert.equal(f.calls.some(c=>c.name),false);
 });
+
+test('attention registration handoff explicitly reports unavailable, absent and declined sources',async t=>{
+ const f=fixture(t);assert.equal(f.api.open(row.id),false);await f.api.load(1);assert.equal(f.api.open('newer-than-loaded-snapshot'),false);assert.equal(f.api.open(row.id),true);f.form().elements.staff_notes.value='Keep this fictional draft';f.w.confirm=()=>false;assert.equal(f.api.open(row.id),false);assert.equal(f.form().elements.staff_notes.value,'Keep this fictional draft');assert.equal(f.calls.some(c=>c.name),false);
+});

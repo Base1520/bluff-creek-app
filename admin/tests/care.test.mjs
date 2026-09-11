@@ -629,3 +629,70 @@ test('care stops paginating after account clear even when the held first page ha
   release({data:[{...visit(today()),id:'held-first-visit'}],count:2});await loading;
   assert.equal(f.calls.filter(q=>q.table==='care_visits').length,1);assert.equal(f.host.textContent,'');assert.equal(f.summaries.at(-1),null);
 });
+
+const attentionPlain = value => value === null ? null : JSON.parse(JSON.stringify(value));
+test('attention combines care plan reasons and coverage gaps without creating visitor or inactive coverage',async t=>{
+  const people=[{id:'active',first_name:'Fictional',last_name:'Active',status:'active',email:'PRIVATE_EMAIL_CANARY',notes:'PRIVATE_PERSON_NOTE'},{id:'visitor',first_name:'Fictional',last_name:'Visitor',status:'visitor'},{id:'inactive',first_name:'Fictional',last_name:'Inactive',status:'inactive'}];
+  const f=fixture(t,{people,assignments:[
+    {...assignment,id:'active-deacon',contact_id:'active',care_role:'deacon',first_due_on:'2026-09-10',assigned_to:' ',notes:'PRIVATE_CARE_NOTE'},
+    {...assignment,id:'active-teacher',contact_id:'active',care_role:'sunday_school',first_due_on:'2026-09-11',cadence_months:1,assigned_to:'Fictional teacher'},
+    {...assignment,id:'visitor-plan',contact_id:'visitor',care_role:'welcome',started_on:null,assigned_to:'Welcome label'},
+    {...assignment,id:'inactive-plan',contact_id:'inactive',care_role:'pastoral',first_due_on:'2026-09-10',assigned_to:'Pastoral label'},
+    {...assignment,id:'missing-person-plan',contact_id:'not-loaded',first_due_on:'2026-09-10'}
+  ]});assert.equal(f.module.attentionSnapshot('2026-09-11'),null);await f.module.load(1);
+  const snapshot=attentionPlain(f.module.attentionSnapshot('2026-09-11'));
+  assert.equal(snapshot.items.length,4);
+  const deacon=snapshot.items.find(row=>row.source_id==='active-deacon');assert.deepEqual(deacon,{key:'care_plan:active-deacon',category:'care',source_type:'care_plan',source_id:'active-deacon',contact_id:'active',care_role:'deacon',title:'Fictional Active',owner_label:'Unassigned care label',due_on:'2026-09-10',reasons:['care_overdue','care_unassigned','care_coverage_gap']});
+  assert.deepEqual(snapshot.items.find(row=>row.source_id==='active-teacher').reasons,['care_due_today']);assert.equal(snapshot.items.find(row=>row.source_id==='active-teacher').owner_label,'Care label: Fictional teacher');
+  assert.deepEqual(snapshot.items.find(row=>row.source_id==='visitor-plan').reasons,['care_unscheduled']);assert.deepEqual(snapshot.items.find(row=>row.source_id==='inactive-plan').reasons,['care_overdue']);
+  assert.doesNotMatch(JSON.stringify(snapshot),/PRIVATE_|notes|email|phone|address|household/);
+  snapshot.items[0].reasons.push('tampered');snapshot.items[0].title='tampered';assert.doesNotMatch(JSON.stringify(f.module.attentionSnapshot('2026-09-11')),/tampered/);assert.ok(f.calls.every(call=>call.op==='select'));
+});
+test('attention reuses calendar-month and role-isolated history rules and ignores every care view filter',async t=>{
+  const f=fixture(t,{assignments:[{...assignment,care_role:'sunday_school',started_on:'2024-01-01',cadence_months:1,assigned_to:'Teacher label'},{...assignment,id:'welcome-complete',care_role:'welcome',started_on:'2024-01-01',one_time:true,first_due_on:'2024-01-01'}],visits:[
+    {...visit('2024-01-31'),care_role:'sunday_school'},
+    {...visit('2024-02-20','attempted'),care_role:'sunday_school'},
+    {...visit('2024-02-20','attempted','2024-03-20'),id:'deacon-other-role-attempt',care_role:'deacon'},
+    {...visit('2024-02-01'),care_role:'welcome'},
+    {...visit('2024-03-01'),care_role:'sunday_school'}
+  ]});await f.module.load(1);
+  const feb=attentionPlain(f.module.attentionSnapshot('2024-02-29'));const due=feb.items.find(row=>row.source_id===assignment.id);assert.equal(due.due_on,'2024-02-29');assert.deepEqual(due.reasons,['care_due_today']);assert.equal(feb.items.some(row=>row.source_id==='welcome-complete'),false);
+  assert.equal(f.module.selectPerson(assignment.contact_id),true);const search=f.host.querySelector('[data-care-search]');search.value='nothing matches';search.dispatchEvent(new f.w.Event('input',{bubbles:true}));
+  for(const selector of ['[data-care-deacon]','[data-care-role-filter]','[data-care-plan-status]']){const node=f.host.querySelector(selector);node.value=selector.includes('deacon')?'__unassigned':selector.includes('role-filter')?'deacon':'unassigned';node.dispatchEvent(new f.w.Event('change',{bubbles:true}));}
+  assert.deepEqual(attentionPlain(f.module.attentionSnapshot('2024-02-29')),feb);
+  assert.equal(f.module.attentionSnapshot('2024-03-01').items.some(row=>row.source_id===assignment.id),false,'later actual success schedules the next calendar month');
+  f.rows.care_visits=f.rows.care_visits.filter(row=>row.contacted_on!=='2024-03-01');await f.module.load(1);const overdue=f.module.attentionSnapshot('2024-03-01').items.find(row=>row.source_id===assignment.id);assert.equal(overdue.due_on,'2024-02-29');assert.ok(overdue.reasons.includes('care_overdue'));
+});
+test('paused, completed one-time and long-interval care plans still produce only their existing coverage gaps',async t=>{
+  const people=['paused','completed','long','absent'].map(id=>({id,first_name:'Fictional '+id,status:'active'}));
+  const assignments=[{...assignment,id:'paused-deacon',contact_id:'paused',care_role:'deacon',paused:true,assigned_to:'Label'},{...assignment,id:'completed-deacon',contact_id:'completed',care_role:'deacon',started_on:'2026-09-01',one_time:true,assigned_to:'Label'},{...assignment,id:'long-deacon',contact_id:'long',care_role:'deacon',cadence_months:4,first_due_on:'2027-01-01',assigned_to:'Label'}];
+  for(const person of people)assignments.push({...assignment,id:person.id+'-teacher',contact_id:person.id,care_role:'sunday_school',cadence_months:1,first_due_on:'2027-01-01',assigned_to:'Teacher label'});
+  const f=fixture(t,{people,assignments,visits:[{...visit('2026-09-02'),contact_id:'completed',care_role:'deacon'}]});await f.module.load(1);
+  const items=attentionPlain(f.module.attentionSnapshot('2026-09-11')).items;assert.equal(items.length,4);assert.deepEqual(items.map(row=>row.key),people.map(person=>'care_coverage:'+person.id+':deacon'));assert.ok(items.every(row=>row.source_type==='care_coverage'&&row.source_id===row.contact_id&&row.due_on===null&&row.reasons.join(',')==='care_coverage_gap'));
+});
+test('care attention is unavailable during reads/failures or identity/readiness loss and source selection respects loading',async t=>{
+  const f=fixture(t,{assignments:[assignment]});await f.module.load(1);assert.ok(f.module.attentionSnapshot());let release;
+  f.controller.respond=(query,execute)=>query.table==='care_visits'?new Promise(resolve=>release=()=>resolve(execute())):execute();const pending=f.module.load(1);await tick();assert.equal(f.module.attentionSnapshot(),null);assert.equal(f.module.selectPerson(assignment.contact_id),false);release();await pending;assert.ok(f.module.attentionSnapshot());
+  for(const change of [{workspaceReady:false},{workspaceReady:undefined},{canEdit:false},{role:'viewer'},{userId:'replacement'},{epoch:2},{userId:null}]){f.setContext({...f.ctx,...change});assert.equal(f.module.attentionSnapshot(),null);}
+  f.setContext(f.ctx);f.controller.peopleReady=false;assert.equal(f.module.attentionSnapshot(),null);assert.equal(f.module.selectPerson(assignment.contact_id),false);f.controller.peopleReady=true;
+  f.controller.respond=null;f.controller.error='PRIVATE_FAILURE';assert.equal(await f.module.load(1),false);assert.equal(f.module.attentionSnapshot(),null);f.controller.error=null;await f.module.load(1);assert.ok(f.module.attentionSnapshot());f.module.clear();assert.equal(f.module.attentionSnapshot(),null);
+});
+test('a late care read cannot re-expose attention after an owner or epoch replacement',async t=>{
+  for(const replacement of [{userId:'replacement',epoch:1},{userId:'synthetic-user',epoch:2}]){
+    const f=fixture(t,{assignments:[assignment]});await f.module.load(1);let release;f.controller.respond=(query,execute)=>query.table==='care_visits'?new Promise(resolve=>release=()=>resolve(execute())):execute();const pending=f.module.load(1);await tick();f.setContext({...f.ctx,...replacement});assert.equal(f.module.attentionSnapshot(),null);release();await pending;assert.equal(f.module.attentionSnapshot(),null);
+  }
+});
+
+test('attention care actions select the exact person and role in the appropriate existing view without writes',async t=>{
+  const f=fixture(t,{assignments:[{...assignment,id:'teacher-plan',care_role:'sunday_school',cadence_months:1,first_due_on:today(),assigned_to:'Teacher label'}]});await f.module.load(1);const snapshot=attentionPlain(f.module.attentionSnapshot());const teacher=snapshot.items.find(row=>row.source_id==='teacher-plan'),coverage=snapshot.items.find(row=>row.source_type==='care_coverage');
+  assert.equal(f.module.openFromAttention({...teacher,care_role:'pastoral'}),false);assert.equal(f.module.openFromAttention({...coverage,source_id:'not-the-record'}),false);assert.equal(f.module.openFromAttention(null),false);
+  assert.equal(f.module.openFromAttention(teacher),true);assert.equal(f.host.querySelector('[data-care-view="followup"]').getAttribute('aria-pressed'),'true');assert.equal(f.host.querySelector('[data-care-role-filter]').value,'sunday_school');assert.equal(f.host.querySelectorAll('[data-care-list="assignments"] .care-row').length,1);
+  assert.equal(f.module.openFromAttention(coverage),true);assert.equal(f.host.querySelector('[data-care-view="coverage"]').getAttribute('aria-pressed'),'true');assert.equal(f.host.querySelector('[data-care-role-filter]').value,'deacon');assert.equal(f.host.querySelectorAll('[data-care-list="coverage"] .care-row').length,1);assert.equal(f.w.document.activeElement.dataset.careRole,'deacon');assert.ok(f.calls.every(call=>call.op==='select'));
+});
+test('care attention navigation preserves a declined draft and rechecks identity/data after an accepted discard',async t=>{
+  for(const decision of ['decline','owner','loading']){
+    const f=fixture(t,{assignments:[{...assignment,care_role:'deacon',first_due_on:today(),assigned_to:'Deacon label'}]});await f.module.load(1);const target=attentionPlain(f.module.attentionSnapshot()).items.find(row=>row.source_type==='care_coverage');f.click('[data-care-list="assignments"] [data-care-action="assignment"]');f.set('notes','Fictional retained draft');let pending,release;
+    f.w.confirm=()=>{if(decision==='owner')f.setContext({...f.ctx,userId:'replacement'});if(decision==='loading'){f.controller.respond=(q,execute)=>q.table==='care_visits'?new Promise(resolve=>release=()=>resolve(execute())):execute();pending=f.module.load(1);}return decision!=='decline';};
+    assert.equal(f.module.openFromAttention(target),false);assert.equal(f.host.querySelector('[data-care-view="followup"]').getAttribute('aria-pressed'),'true');assert.equal(f.host.querySelector('[name="notes"]').value,'Fictional retained draft');assert.ok(f.calls.every(call=>call.op==='select'));if(pending){await tick();release();await pending;}
+  }
+});
