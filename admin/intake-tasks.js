@@ -59,7 +59,7 @@
         if(cap.error && ['42501','PGRST301','PGRST302'].includes(cap.error.code)){clear();return false;}
         if(cap.error || !cap.data || cap.data.available!==true || cap.data.version!==1 || cap.data.tasks!==true || cap.data.routes!==true){unavailable();return false;}
         var results=await Promise.all([deadline(rpc('get_intake_settings',{})),taskRows(epoch,owner,token)]);if(!current(epoch,owner)||token!==loadId)return false;
-        if(results[0].error)throw results[0].error;if(!validSettings(results[0].data)||!Array.isArray(results[1]))throw new Error('incomplete');settings=results[0].data;rows=results[1];ready=true;
+        if(results[0].error)throw results[0].error;if(!validSettings(results[0].data)||!Array.isArray(results[1]))throw new Error('incomplete');settings=results[0].data;rows=results[1].filter(function(r){return !r.guest_removed_at;});ready=true;
         if(draft && !draft.busy){
           var latest=draft.mode==='route'?settings.routes.find(function(r){return r.kind===draft.id;}):rows.find(function(r){return r.id===draft.id;});
           if(draft!==state || draft.revision!==revision || draft.pending)draft.requiresRefresh=true;

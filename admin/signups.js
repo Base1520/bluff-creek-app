@@ -5,6 +5,8 @@
     var host = options.root, doc = host.ownerDocument, rows = [], request = 0, formVersion = 0;
     var review = null, directIntakeReady=false, taskWorkflowReady=false, expandedProfiles=new Set();
     var ready = false, failed = false, dialog = null, mounted = false, mountedEpoch = null, mountedOwner = null, filter = 'pending', term = '', sortKey = 'submitted_at', sortDirection = -1;
+    var guestTools=root.CreekGuestRegisterTools?root.CreekGuestRegisterTools.create(Object.assign({},options,{onChange:function(){if(mounted)render();},canOpen:close})):null;
+    function removed(row){return !!(row.guest_removed_at||row.status==='archived');}
     function deadline(request) {
       var timer;
       return Promise.race([Promise.resolve(request),new Promise(function(_resolve,reject){timer=doc.defaultView.setTimeout(function(){reject(new Error('The request timed out.'));},12000);})]).finally(function(){doc.defaultView.clearTimeout(timer);});
@@ -37,24 +39,24 @@
       var task=taskFor(row);if(!task)return null;
       return key==='follow_up_on'?task.due_on:key==='follow_up_status'?task.status:key==='welcome_owner'?task.owner:row[key];
     }
-    function statusLabel(row) { var value=followupField(row,'follow_up_status');return (taskWorkflowReady?taskStatusLabels:followupLabels)[value]||'Unavailable'; }
+    function statusLabel(row) { if(removed(row))return 'Removed'; var value=followupField(row,'follow_up_status');return (taskWorkflowReady?taskStatusLabels:followupLabels)[value]||'Unavailable'; }
     function filteredRows() {
-      return rows.filter(function(r){return (filter==='all' || (filter==='pending'?pending(r):!pending(r))) && (!term.trim() || [personName(r),r.email,r.phone,r.sunday_school,centralDay(r.submitted_at),r.first_visit_on,r.staff_visit_on,followupField(r,'follow_up_on'),followupField(r,'welcome_owner'),statusLabel(r),mailLabels[r.welcome_email_status],visitLabels[r.visit_status]].join(' ').toLowerCase().includes(term.trim().toLowerCase()));}).sort(function(a,b){
+      return rows.filter(function(r){return (filter==='removed'?removed(r):!removed(r)&&(filter==='all' || (filter==='pending'?pending(r):!pending(r)))) && (!term.trim() || [personName(r),r.email,r.phone,r.sunday_school,centralDay(r.submitted_at),r.first_visit_on,r.staff_visit_on,followupField(r,'follow_up_on'),followupField(r,'welcome_owner'),statusLabel(r),mailLabels[r.welcome_email_status],visitLabels[r.visit_status]].join(' ').toLowerCase().includes(term.trim().toLowerCase()));}).sort(function(a,b){
         var av=sortKey==='name'?personName(a):sortKey==='submitted_at'?Date.parse(a.submitted_at)||0:["follow_up_on","follow_up_status","welcome_owner"].includes(sortKey)?followupField(a,sortKey)||'':a[sortKey]||'', bv=sortKey==='name'?personName(b):sortKey==='submitted_at'?Date.parse(b.submitted_at)||0:["follow_up_on","follow_up_status","welcome_owner"].includes(sortKey)?followupField(b,sortKey)||'':b[sortKey]||'';
         return (typeof av==='number' ? av-bv : String(av).localeCompare(String(bv),undefined,{numeric:true,sensitivity:'base'}))*sortDirection || String(a.id).localeCompare(String(b.id));
       });
     }
     function csvCell(value) { var text=value==null?'':String(value); if(/^[\s\p{Cf}\x00-\x1f\x7f]*[=+@-]/u.test(text) || /^[\t\r\n]/.test(text))text="'"+text; return '"'+text.replace(/"/g,'""')+'"'; }
     function exportCSV() {
-      var c=context();if(!current(c.epoch,c.userId) || !ready || failed || mountedOwner!==c.userId || mountedEpoch!==c.epoch)return;
+      var c=context();if(filter==='removed' || !current(c.epoch,c.userId) || !ready || failed || mountedOwner!==c.userId || mountedEpoch!==c.epoch)return;
       var data=[['Registered date (Central)','First name (self-reported)','Last name (self-reported)','Email (self-reported; not verified)','Phone (self-reported)','Preferred contact','Follow-up permission','Sunday school (self-reported)','Visit status (self-reported)','First visit date (self-reported)','Visit date (staff recorded)',taskWorkflowReady?'Intake action due':'Follow-up due',taskWorkflowReady?'Intake action status':'Follow-up status',taskWorkflowReady?'Intake action owner':'Follow-up owner','Welcome email (sent means provider accepted)','Identity review','Birthday (self-reported)','Membership status (self-reported; not verified)','Address line 1 (self-reported)','Address line 2 (self-reported)','City (self-reported)','State / region (self-reported)','Postal code (self-reported)','Family members (self-reported; JSON)']];
-      filteredRows().forEach(function(r){data.push([centralDay(r.submitted_at),r.first_name,r.last_name,r.email,r.phone,r.preferred_contact,r.contact_permission?'Requested':'Not granted',r.sunday_school,visitLabels[r.visit_status]||'Not supplied',validDay(r.first_visit_on)?r.first_visit_on:'',validDay(r.staff_visit_on)?r.staff_visit_on:'',validDay(followupField(r,'follow_up_on'))?followupField(r,'follow_up_on'):(taskWorkflowReady?'Unavailable':''),statusLabel(r),followupField(r,'welcome_owner')||(taskWorkflowReady?'Unavailable':''),mailLabels[r.welcome_email_status]||'Unavailable',pending(r)?'Awaiting review':'Reviewed',validDay(r.birth_date)?r.birth_date:'',membershipLabels[r.membership_status]||(r.membership_status?'Unrecognized supplied status':''),r.address_line1,r.address_line2,r.city,r.state_region,r.postal_code,JSON.stringify(familyRows(r))]);});
+      filteredRows().filter(function(r){return !removed(r);}).forEach(function(r){data.push([centralDay(r.submitted_at),r.first_name,r.last_name,r.email,r.phone,r.preferred_contact,r.contact_permission?'Requested':'Not granted',r.sunday_school,visitLabels[r.visit_status]||'Not supplied',validDay(r.first_visit_on)?r.first_visit_on:'',validDay(r.staff_visit_on)?r.staff_visit_on:'',validDay(followupField(r,'follow_up_on'))?followupField(r,'follow_up_on'):(taskWorkflowReady?'Unavailable':''),statusLabel(r),followupField(r,'welcome_owner')||(taskWorkflowReady?'Unavailable':''),mailLabels[r.welcome_email_status]||'Unavailable',removed(r)?'Removed visit':pending(r)?'Awaiting review':'Reviewed',validDay(r.birth_date)?r.birth_date:'',membershipLabels[r.membership_status]||(r.membership_status?'Unrecognized supplied status':''),r.address_line1,r.address_line2,r.city,r.state_region,r.postal_code,JSON.stringify(familyRows(r))]);});
       try { var blob=new doc.defaultView.Blob(['\ufeff'+data.map(function(r){return r.map(csvCell).join(',');}).join('\r\n')+'\r\n'],{type:'text/csv;charset=utf-8'}),url=doc.defaultView.URL.createObjectURL(blob),link=doc.createElement('a');link.href=url;link.download='creek-guest-register.csv';link.hidden=true;doc.body.appendChild(link);link.click();link.remove();doc.defaultView.setTimeout(function(){doc.defaultView.URL.revokeObjectURL(url);},0); }
       catch(_){options.notice('The CSV could not be created. No records were sent or shared.');}
     }
     function peopleAvailable() { return !options.peopleReady || options.peopleReady(); }
     function refreshRecords() { return options.refresh ? options.refresh() : load(context().epoch); }
-    function pending(row) { return row.status === 'pending' || Number(row.version) > Number(row.reviewed_version || 0); }
+    function pending(row) { return !removed(row)&&(row.status === 'pending' || Number(row.version) > Number(row.reviewed_version || 0)); }
     function reviewFingerprint() { return dialog ? JSON.stringify(Array.from(dialog.querySelectorAll('form [name]')).filter(function(node){return node.name!=='person_search';}).map(function(node){return [node.name,node.type==='checkbox'?node.checked:node.value];})) : ''; }
     function reviewNeedsWarning() { return !!(review && dialog && dialog.querySelector('form') && (review.busy || review.pending || review.requiresRefresh || review.conflict || (review.initialForm !== undefined && reviewFingerprint() !== review.initialForm))); }
     function warnUnload(event) { if(reviewNeedsWarning()){event.preventDefault();event.returnValue=true;} }
@@ -66,13 +68,13 @@
       if(force!==true && (review!==state || formVersion!==token || review && review.busy))return false;
       review=null;syncUnload();formVersion++;if(dialog){if(dialog.open)dialog.close();dialog.remove();dialog=null;}return true;
     }
-    function clear() { request++; close(true); directIntakeReady=false; taskWorkflowReady=false; expandedProfiles.clear(); rows = []; ready = false; failed = false; mounted = false; mountedEpoch = null; mountedOwner = null; filter = 'pending'; term = ''; sortKey='submitted_at'; sortDirection=-1; host.replaceChildren(); if (options.onCount) options.onCount(null); }
+    function clear() { request++; close(true); if(guestTools)guestTools.clear(); directIntakeReady=false; taskWorkflowReady=false; expandedProfiles.clear(); rows = []; ready = false; failed = false; mounted = false; mountedEpoch = null; mountedOwner = null; filter = 'pending'; term = ''; sortKey='submitted_at'; sortDirection=-1; host.replaceChildren(); if (options.onCount) options.onCount(null); }
     function mount() {
       if (mounted) return;
       host.classList.add('signup-workspace');
       host.innerHTML = '<div class="signup-intro"><p class="eyebrow">From a first hello to lasting care</p><h2>Every connection has a next step.</h2><p>Find guest registrations, record follow-up, and review identities before linking a People record.</p></div>' +
         '<div class="signup-summary panel"><div><span class="eyebrow">Awaiting review</span><strong data-signup-count>—</strong></div><p>Welcome goal: within two days of the first submission. Monthly Sunday school and quarterly deacon care are separate plans.</p><button type="button" class="quiet" data-signup-refresh>Refresh guests</button><button type="button" class="quiet" data-signup-export>Export current view as CSV</button></div>' +
-        '<p class="signup-status" role="status" data-signup-status></p><div class="signup-filters"><label>Search guest register<input type="search" data-signup-search placeholder="Name, contact, date, status or owner"></label><label>Show<select data-signup-filter><option value="pending">Awaiting review</option><option value="reviewed">Reviewed</option><option value="all">All submissions</option></select></label></div>' +
+        '<div class="panel signup-sheet-tools" data-guest-tools></div><p class="signup-status" role="status" data-signup-status></p><div class="signup-filters"><label>Search guest register<input type="search" data-signup-search placeholder="Name, contact, date, status or owner"></label><label>Show<select data-signup-filter><option value="pending">Awaiting review</option><option value="reviewed">Reviewed</option><option value="all">All active submissions</option><option value="removed">Removed visits</option></select></label></div>' +
         '<p class="signup-note">A submitted profile is self-reported information, not church membership or permission for mass messaging. Installing the app alone creates no record. Email and visit details are self-reported, not verified. Welcome email “Provider accepted” does not prove delivery. Intake actions show the routed staff owner, due date and notification queue. Use Intake actions to assign approved staff; a free-text care-plan contact does not route an email. CSV downloads only the current filtered view to this device, including matches beyond the first 100; it does not update a Google Sheet or the membership ledger.</p><div data-signup-list class="signup-list"></div>';
       host.querySelector('[data-signup-export]').onclick=exportCSV;
       host.querySelector('[data-signup-refresh]').onclick = function () { refreshRecords(); };
@@ -91,6 +93,8 @@
         if(!current(epoch,owner)||id!==request)return false;
         directIntakeReady=!!(capability && !capability.error && capability.data && capability.data.available===true && capability.data.version===1);
         taskWorkflowReady=taskWorkflowReady || !!(directIntakeReady && capability.data.tasks===true && capability.data.routes===true);
+        if(guestTools)await guestTools.load(epoch);
+        if(!current(epoch,owner)||id!==request)return false;
         while (current(epoch, owner) && id === request) {
           var query = options.db.from('app_connections').select('*', {count:'exact'}).order('updated_at', {ascending:false}).order('id', {ascending:true});
           var ranged = typeof query.range === 'function';
@@ -116,11 +120,11 @@
             if(review!==startingReview || review.revision!==startingRevision || review.pending)review.requiresRefresh=true;
             else if(!directIntakeReady)review.requiresRefresh=true;
             else if(review.tasks!==taskWorkflowReady)review.conflict=true;
-            else if(!latest || !followupAvailable(latest))review.conflict=true;
+            else if(!latest || removed(latest) || !followupAvailable(latest))review.conflict=true;
             else if(review.payload && latest.staff_version>review.version && Object.keys(review.payload).every(function(k){return (latest[k]||null)===(review.payload[k]||null);})) {close(true);options.notice('The refreshed guest follow-up matches the submitted details.');}
             else if(latest.staff_version!==review.version)review.conflict=true;
             else review.requiresRefresh=false;
-          } else if(!latest || latest.version!==review.version)review.conflict=true;
+          } else if(!latest || removed(latest) || latest.version!==review.version)review.conflict=true;
           else if(review.requiresRefresh && !pending(latest)) { close(true); options.notice('This signup is now reviewed. Open the saved review to check its identity and welcome plan.'); }
           else review.requiresRefresh=false;
         }
@@ -144,6 +148,8 @@
       else if(error && (!current(review.epoch, review.owner) || !ready))error.textContent='The workspace connection is unavailable. Your draft is preserved. Refresh records before saving.';
     }
     function unavailable() {
+      if(guestTools)guestTools.unavailable();
+      if(mounted)host.querySelector('[data-guest-tools]').replaceChildren();
       rows=[];ready=false;failed=true;if(options.onCount)options.onCount(null);
       if(mounted){host.querySelector('[data-signup-export]').disabled=true;host.querySelector('[data-signup-list]').replaceChildren();host.querySelector('[data-signup-count]').textContent='—';host.querySelector('[data-signup-status]').textContent='The workspace connection is unavailable. Refresh to reconnect.';}
       syncReview();
@@ -154,10 +160,11 @@
       if (mounted && (mountedEpoch !== c.epoch || mountedOwner !== c.userId)) clear();
       if (!current(c.epoch, c.userId)) { unavailable(); return; }
       mount(); var count = rows.filter(pending).length;
+      if(guestTools)guestTools.toolbar(host.querySelector('[data-guest-tools]'));
       host.querySelector('[data-signup-count]').textContent = failed ? '—' : String(count);
       if (options.onCount) options.onCount(failed ? null : count);
       host.querySelector('[data-signup-status]').textContent = failed ? 'Signups could not load. Check the private connection and signup migration, then refresh.' : !peopleAvailable() ? 'People records are unavailable. Refresh records before reviewing identities or creating visitors.' : ready ? 'Showing the latest loaded submissions. Refreshes every minute while this tab is visible.' : 'Loading signups…';
-      host.querySelector('[data-signup-export]').disabled=!ready || failed;
+      host.querySelector('[data-signup-export]').disabled=!ready || failed || filter==='removed';
       var matches=filteredRows(),area=host.querySelector('[data-signup-list]');area.replaceChildren();
       if(!matches.length){var blank=doc.createElement('p');blank.className='signup-empty';blank.textContent=failed?'The guest register is unavailable.':'No submissions match this view.';area.appendChild(blank);return;}
       var table=doc.createElement('table');table.className='signup-table';table.innerHTML='<caption>Private guest register · '+matches.length+' matches'+(matches.length>100?' · Showing the first 100; search to narrow the view':'')+'</caption><thead><tr></tr></thead><tbody></tbody>';
@@ -170,14 +177,17 @@
         var isUpdate=!!r.contact_id || Number(r.reviewed_version)>0, task=taskFor(r), due=followupField(r,'follow_up_on'), followStatus=followupField(r,'follow_up_status'), owner=followupField(r,'welcome_owner'), overdue=validDay(due) && due<centralDay(new Date().toISOString()) && !(taskWorkflowReady?['completed']:['closed','connected']).includes(followStatus);
         tr.innerHTML='<td>'+safe(date(r.submitted_at))+'</td><td><strong>'+safe(personName(r))+'</strong><p>'+safe(r.email)+(r.phone?' · '+safe(r.phone):'')+'</p><p class="signup-note">'+safe(r.sunday_school||'No Sunday school supplied')+'</p></td><td>'+safe(visitLabels[r.visit_status]||'Not supplied')+'<p>'+safe(dayLabel(r.first_visit_on))+'</p></td><td>'+safe(dayLabel(r.staff_visit_on))+'</td><td>'+safe(taskWorkflowReady&&!task?'Unavailable':dayLabel(due))+(overdue?'<p>Overdue</p>':'')+'</td><td>'+safe(statusLabel(r))+'</td><td>'+safe(owner||(taskWorkflowReady?'Unavailable':'Unassigned'))+'</td><td>'+safe(mailLabels[r.welcome_email_status]||'Unavailable')+'</td><td><span class="signup-tag">'+(pending(r)?(isUpdate?'Profile update · review needed':'New guest'):'Reviewed')+'</span></td>';
         tr.children[1].appendChild(profileDetails(r));
-        var actions=tr.lastElementChild,b=doc.createElement('button');b.type='button';b.className='quiet';b.textContent=pending(r)?'Review identity & care plan':'View reviewed signup';b.disabled=!peopleAvailable();b.onclick=function(){open(r.id);};actions.appendChild(b);
+        var actions=tr.lastElementChild;
+        if(removed(r)){actions.replaceChildren();var removedLabel=doc.createElement('span');removedLabel.className='signup-tag';removedLabel.textContent='Removed visit';actions.appendChild(removedLabel);if(guestTools)guestTools.rowAction(actions,r);table.querySelector('tbody').appendChild(tr);return;}
+        if(guestTools)guestTools.rowAction(actions,r);
+        var b=doc.createElement('button');b.type='button';b.className='quiet';b.textContent=pending(r)?'Review identity & care plan':'View reviewed signup';b.disabled=!peopleAvailable();b.onclick=function(){open(r.id);};actions.appendChild(b);
         var edit=doc.createElement('button');edit.type='button';edit.className='quiet';edit.dataset.guestFollowup=r.id;edit.textContent=taskWorkflowReady?'Record visit':'Edit follow-up';edit.disabled=!followupAvailable(r);edit.onclick=function(){openFollowup(r.id);};actions.appendChild(edit);if(taskWorkflowReady){var action=doc.createElement('button');action.type='button';action.className='quiet';action.dataset.signupIntake=r.id;action.textContent='Open intake action';action.disabled=!task;action.onclick=function(){var c=context();if(current(c.epoch,c.userId)&&mountedOwner===c.userId&&mountedEpoch===c.epoch&&taskFor(r)&&options.openIntakeTask)options.openIntakeTask(r.id);};actions.appendChild(action);}table.querySelector('tbody').appendChild(tr);
       });area.appendChild(table);
     }
     function openFollowup(id) {
       var c=context(),epoch=c.epoch,owner=c.userId;
       if(mounted && (mountedEpoch!==epoch || mountedOwner!==owner)){clear();return;}
-      var row=rows.find(function(r){return r.id===id;});if(!current(epoch,owner) || !ready || !row || !followupAvailable(row) || !close())return;
+      var row=rows.find(function(r){return r.id===id;});if(!current(epoch,owner) || !ready || !row || removed(row) || !followupAvailable(row) || !close())return;
       row=rows.find(function(r){return r.id===id;});if(!current(epoch,owner) || !ready || !row || !followupAvailable(row))return;
       var version=formVersion,state=review={mode:'followup',tasks:taskWorkflowReady,epoch:epoch,owner:owner,version:row.staff_version,busy:false,pending:0,revision:0,requiresRefresh:false,conflict:false,payload:null};
       dialog=doc.createElement('dialog');dialog.className='signup-dialog';dialog.dataset.signupId=id;dialog.setAttribute('aria-labelledby','guest-followup-title');
@@ -209,7 +219,7 @@
       var epoch = context().epoch, owner = context().userId;
       if (mounted && (mountedEpoch !== epoch || mountedOwner !== owner)) { clear(); return; }
       var row = rows.find(function (r) { return r.id === id; });
-      if (!current(epoch, owner) || !ready || !peopleAvailable() || !row) return;
+      if (!current(epoch, owner) || !ready || !peopleAvailable() || !row || removed(row)) return;
       if(!close())return;
       row=rows.find(function(r){return r.id===id;});
       if(!current(epoch, owner) || !ready || !peopleAvailable() || !row)return;
