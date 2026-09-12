@@ -7,7 +7,7 @@ const require=createRequire(new URL('../../../admin/tests/package.json',import.m
 const {PGlite}=require('@electric-sql/pglite');
 const {pgcrypto}=require('@electric-sql/pglite/contrib/pgcrypto');
 const hash=x=>createHash('sha256').update(x).digest('hex');
-const baselineBytes=await readFile(new URL('../../office-preflight/manifest.json',import.meta.url));
+const baselineBytes=await readFile(new URL('../../office-preflight/history/manifest-ten-2026-09-10.json',import.meta.url));
 assert.equal(hash(baselineBytes),'0734cdc37022af4c946b2e4a8d93ad1b199093834f28373b1bf8c0c9497276ae');
 const manifest=JSON.parse(await readFile(new URL('./manifest.json',import.meta.url),'utf8'));
 const source=await readFile(new URL('../../../'+manifest.migration.path,import.meta.url),'utf8');

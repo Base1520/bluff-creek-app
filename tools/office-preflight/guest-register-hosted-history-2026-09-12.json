@@ -1,0 +1,48 @@
+{
+  "format_version": 1,
+  "purpose": "Exact local source alignment to the two already applied guest-register migrations; no hosted calls, replay or history repair",
+  "verified_on": "2026-09-12",
+  "verification_timestamp": "2026-09-12T12:58:21.647175Z",
+  "previous_history_map": "tools/office-preflight/direct-intake-hosted-history-2026-09-10.json",
+  "historical_ten_manifest": "tools/office-preflight/history/manifest-ten-2026-09-10.json",
+  "historical_ten_manifest_sha256": "0734cdc37022af4c946b2e4a8d93ad1b199093834f28373b1bf8c0c9497276ae",
+  "mappings": [
+    {
+      "reviewed_path": "tools/guest-sheet/migrations/20260911210428_guest_sheet_snapshot.sql",
+      "reviewed_version": "20260911210428",
+      "actual_version": "20260912125410",
+      "name": "guest_sheet_snapshot",
+      "sha256": "652332c1ad938c4db6bca95cf6b6560531a6e697cfb1e0c551f70e02819525d6",
+      "recommended_active_path": "supabase/migrations/20260912125410_guest_sheet_snapshot.sql",
+      "copy_exact_bytes": true,
+      "source_copy_performed": true
+    },
+    {
+      "reviewed_path": "tools/guest-lifecycle/migrations/20260911210521_guest_registration_lifecycle.sql",
+      "reviewed_version": "20260911210521",
+      "actual_version": "20260912125438",
+      "name": "guest_registration_lifecycle",
+      "sha256": "7ef37c000a7bbedacd7a275efa2dc973e73fdcbc067d6c8700445989a9966229",
+      "recommended_active_path": "supabase/migrations/20260912125438_guest_registration_lifecycle.sql",
+      "copy_exact_bytes": true,
+      "source_copy_performed": true
+    }
+  ],
+  "original_migration_hashes_unchanged": 10,
+  "recorded_versions_after_application": 12,
+  "read_only_activation_checks_passed": 17,
+  "read_only_activation_checks_total": 17,
+  "evidence_scope": "Recorded version/name/single-statement hash, private table/RLS/ACL and aggregate checks at the verification timestamp; not a fresh hosted check",
+  "source_alignment_performed_hosted_calls": false,
+  "remote_history_repair_performed": false,
+  "static_release_files_changed": false,
+  "sql_comments_preserved_as_historical_provenance": true,
+  "excluded_prepared_packages": [
+    "deacon-rotation",
+    "communication-preferences",
+    "office-attention",
+    "guest-lifecycle/compatibility",
+    "weekly-email",
+    "care-reminders"
+  ]
+}
