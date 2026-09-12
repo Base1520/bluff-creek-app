@@ -12,6 +12,12 @@ const PAUSE_SQL = 'begin; revoke execute on function public.save_app_connection(
 const STAFF_ACCOUNT_GUARD_SHA256 = '7530eb7cd955ec1522943a179aebc03088a3ebc8126a4f4300e08eb5695bdc7b';
 const DIRECT_INTAKE_SHA256 = '2d4a268bb6bb2c0d87ae7f4d2b238ee79180e862ea5ba026a9f625498955b405';
 const DISPATCH_EXTENSIONS_SHA256 = 'bfbd4b7e1410a2e80508866e0fbd2029130dce435e5cb7f9ca0c1d9ad0bce6d0';
+const HISTORICAL_TEN_PATH = 'tools/office-preflight/history/manifest-ten-2026-09-10.json';
+const HISTORICAL_TEN_SHA256 = '0734cdc37022af4c946b2e4a8d93ad1b199093834f28373b1bf8c0c9497276ae';
+const GUEST_SHEET_PATH = 'supabase/migrations/20260912125410_guest_sheet_snapshot.sql';
+const GUEST_LIFECYCLE_PATH = 'supabase/migrations/20260912125438_guest_registration_lifecycle.sql';
+const GUEST_SHEET_SHA256 = '652332c1ad938c4db6bca95cf6b6560531a6e697cfb1e0c551f70e02819525d6';
+const GUEST_LIFECYCLE_SHA256 = '7ef37c000a7bbedacd7a275efa2dc973e73fdcbc067d6c8700445989a9966229';
 const compactSQL = source => source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/--[^\n\r]*/g, '').replace(/\s+/g, '').toLowerCase();
 const allowedPath = value => typeof value === 'string' && /^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(value)
   && !value.split('/').some(part => part === '..' || part === '.' || part === '') && !isAbsolute(value);
@@ -90,8 +96,8 @@ export function configurationPresence(source) {
 }
 
 function validManifest(manifest) {
-  return manifest?.format_version === 4 && /^\d{14}$/.test(manifest.schema_revision || '')
-    && Array.isArray(manifest.sql_files) && manifest.sql_files.length === 10
+  return manifest?.format_version === 6 && /^\d{14}$/.test(manifest.schema_revision || '')
+    && Array.isArray(manifest.sql_files) && manifest.sql_files.length === 12
     && manifest.sql_files.every(row => row && allowedPath(row.path) && /^supabase\/migrations\/\d{14}_[a-z0-9_]+\.sql$/.test(row.path)
       && /^[a-f0-9]{64}$/.test(row.sha256 || '') && Array.isArray(row.depends_on) && row.depends_on.every(allowedPath))
     && new Set(manifest.sql_files.map(row => row.path)).size === manifest.sql_files.length
@@ -101,11 +107,13 @@ function validManifest(manifest) {
     && allowedPath(manifest.staff_account_guard_sql_file) && /_require_eligible_staff_auth_account\.sql$/.test(manifest.staff_account_guard_sql_file)
     && allowedPath(manifest.direct_intake_sql_file) && /_direct_app_intake\.sql$/.test(manifest.direct_intake_sql_file)
     && allowedPath(manifest.dispatch_extensions_sql_file) && /_direct_intake_dispatch_extensions\.sql$/.test(manifest.dispatch_extensions_sql_file)
-    && manifest.sql_files.at(-5)?.path === manifest.readiness_sql_file
-    && manifest.sql_files.at(-4)?.path === manifest.intake_pause_sql_file
-    && manifest.sql_files.at(-3)?.path === manifest.staff_account_guard_sql_file
-    && manifest.sql_files.at(-2)?.path === manifest.direct_intake_sql_file
-    && manifest.sql_files.at(-1)?.path === manifest.dispatch_extensions_sql_file
+    && manifest.sql_files[5]?.path === manifest.readiness_sql_file
+    && manifest.sql_files[6]?.path === manifest.intake_pause_sql_file
+    && manifest.sql_files[7]?.path === manifest.staff_account_guard_sql_file
+    && manifest.sql_files[8]?.path === manifest.direct_intake_sql_file
+    && manifest.sql_files[9]?.path === manifest.dispatch_extensions_sql_file
+    && manifest.guest_sheet_sql_file === GUEST_SHEET_PATH && manifest.sql_files[10]?.path === GUEST_SHEET_PATH
+    && manifest.guest_lifecycle_sql_file === GUEST_LIFECYCLE_PATH && manifest.sql_files[11]?.path === GUEST_LIFECYCLE_PATH
     && Array.isArray(manifest.required_files) && manifest.required_files.every(allowedPath)
     && [CONFIG_PATH, CLIENT_PATH, 'admin/index.html', 'admin/help.html'].every(path => manifest.required_files.includes(path))
     && Array.isArray(manifest.readiness_modules) && manifest.readiness_modules.length > 0
@@ -125,6 +133,17 @@ export async function runPreflight(rootPath) {
   catch (_) { check('manifest_readable', false); return report; }
   if (!validManifest(manifest)) { check('manifest_structure', false); return report; }
   check('manifest_structure', true);
+  let historicalTen;
+  try {
+    const bytes = await readLocal(root, HISTORICAL_TEN_PATH, null);
+    const exact = createHash('sha256').update(bytes).digest('hex') === HISTORICAL_TEN_SHA256;
+    check('historical_ten_manifest_matches', exact);
+    if (exact) historicalTen = JSON.parse(bytes.toString('utf8'));
+  } catch (_) { check('historical_ten_manifest_matches', false); }
+  check('recorded_ten_baseline_preserved', historicalTen
+    && JSON.stringify(manifest.sql_files.slice(0, 10)) === JSON.stringify(historicalTen.sql_files)
+    && Object.keys(historicalTen).filter(key => !['format_version', 'sql_files'].includes(key))
+      .every(key => JSON.stringify(manifest[key]) === JSON.stringify(historicalTen[key])));
   report.schema_revision = manifest.schema_revision;
   report.sql_apply_order = manifest.sql_files.map(row => row.path);
   const seen = new Set();
@@ -159,6 +178,8 @@ export async function runPreflight(rootPath) {
   check('eligible_staff_account_guard_declared', createHash('sha256').update(sources.get(manifest.staff_account_guard_sql_file) || '').digest('hex') === STAFF_ACCOUNT_GUARD_SHA256);
   check('reviewed_direct_intake_declared', createHash('sha256').update(sources.get(manifest.direct_intake_sql_file) || '').digest('hex') === DIRECT_INTAKE_SHA256);
   check('reviewed_dispatch_extensions_declared', createHash('sha256').update(sources.get(manifest.dispatch_extensions_sql_file) || '').digest('hex') === DISPATCH_EXTENSIONS_SHA256);
+  check('reviewed_guest_sheet_declared', createHash('sha256').update(sources.get(manifest.guest_sheet_sql_file) || '').digest('hex') === GUEST_SHEET_SHA256);
+  check('reviewed_guest_lifecycle_declared', createHash('sha256').update(sources.get(manifest.guest_lifecycle_sql_file) || '').digest('hex') === GUEST_LIFECYCLE_SHA256);
   const client = sources.get(CLIENT_PATH) || '';
   const sqlRevision = recovery.match(/'schema_revision'\s*,\s*'(\d{14})'/)?.[1];
   const clientRevision = client.match(/\bREQUIRED_REVISION\s*=\s*["'](\d{14})["']/)?.[1];
@@ -174,7 +195,7 @@ export async function runPreflight(rootPath) {
   if (report.configuration.status === 'not_configured') report.warnings.push('Office project URL and key are blank. This is a prepared local candidate, not an activated office.');
   else if (report.configuration.status === 'supplied_unverified') report.warnings.push('Office URL/key fields are nonempty. Their values, ownership, safety, validity and hosted behavior have not been verified.');
   else report.warnings.push('Office configuration is partial or uses unsupported syntax. Review it privately; no configuration values are included in this report.');
-  report.warnings.push('The seventh migration keeps the old save_app_connection signatures paused; the eighth checks current Auth eligibility for staff roles. The ninth adds authenticated direct guest/prayer intake and private follow-up/outbox RPCs; the tenth enables scheduler extensions only. Auth settings, scheduler/Edge activation, delivery, phone acceptance and hosted privileges are not assessed.');
+  report.warnings.push('The seventh migration keeps the old save_app_connection signatures paused; the eighth checks current Auth eligibility for staff roles. The ninth adds authenticated direct guest/prayer intake and private follow-up/outbox RPCs; the tenth enables scheduler extensions only. The eleventh adds the private guest-sheet projection/settings; the twelfth adds recoverable guest removal. Auth settings, scheduler/Edge activation, spreadsheet sync, delivery, phone acceptance and hosted privileges are not assessed.');
   if (/\b(?:src|href)=["']https?:\/\//i.test(sources.get('admin/index.html') || '')) report.warnings.push('The office page has external assets. Their availability was not checked.');
   report.status = report.checks.every(item => item.ok) ? 'passed' : 'failed';
   return report;

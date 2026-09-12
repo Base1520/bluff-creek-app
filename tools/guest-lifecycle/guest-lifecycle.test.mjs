@@ -6,7 +6,7 @@ import {createRequire} from 'node:module';
 const require=createRequire(new URL('../../admin/tests/package.json',import.meta.url));
 const {PGlite}=require('@electric-sql/pglite');
 const {pgcrypto}=require('@electric-sql/pglite/contrib/pgcrypto');
-const baselineBytes=await readFile(new URL('../office-preflight/manifest.json',import.meta.url));
+const baselineBytes=await readFile(new URL('../office-preflight/history/manifest-ten-2026-09-10.json',import.meta.url));
 assert.equal(createHash('sha256').update(baselineBytes).digest('hex'),'0734cdc37022af4c946b2e4a8d93ad1b199093834f28373b1bf8c0c9497276ae');
 const manifest=JSON.parse(baselineBytes);
 const sql=await readFile(new URL('./migrations/20260911210521_guest_registration_lifecycle.sql',import.meta.url),'utf8');

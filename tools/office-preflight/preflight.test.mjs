@@ -12,6 +12,9 @@ const repository = fileURLToPath(new URL('../../', import.meta.url));
 const cli = fileURLToPath(new URL('./cli.mjs', import.meta.url));
 const manifestPath = 'tools/office-preflight/manifest.json';
 const template = JSON.parse(await readFile(join(repository, manifestPath), 'utf8'));
+const historicalTenPath = 'tools/office-preflight/history/manifest-ten-2026-09-10.json';
+const historicalTenBytes = await readFile(join(repository, historicalTenPath));
+const sqlFixtures = new Map(await Promise.all(template.sql_files.map(async row => [row.path, await readFile(join(repository, row.path), 'utf8')])));
 const guardFixture = await readFile(join(repository, template.staff_account_guard_sql_file), 'utf8');
 const directFixture = await readFile(join(repository, template.direct_intake_sql_file), 'utf8');
 const extensionsFixture = await readFile(join(repository, template.dispatch_extensions_sql_file), 'utf8');
@@ -30,12 +33,12 @@ async function fixture(t) {
   }
   async function saveManifest() { await put(manifestPath, JSON.stringify(manifest)); }
   for (const path of manifest.required_files) await put(path, 'synthetic local asset\n');
+  await put(historicalTenPath, historicalTenBytes);
   await put('admin/config.js', blankConfig);
   await put('admin/index.html', '<script src="https://assets.invalid/sdk.js"></script>');
   await put('admin/app.js', `const REQUIRED_REVISION = "${manifest.schema_revision}";\ndb.rpc("office_readiness");\nconst modules = ${JSON.stringify(manifest.readiness_modules)};`);
-  for (const [index, row] of manifest.sql_files.entries()) {
-    const source = row.path === manifest.direct_intake_sql_file ? directFixture : row.path === manifest.dispatch_extensions_sql_file ? extensionsFixture : row.path === manifest.staff_account_guard_sql_file ? guardFixture : row.path === manifest.intake_pause_sql_file ? pauseFixture : row.path !== manifest.readiness_sql_file ? '-- synthetic ordered SQL fixture ' + index + '\n'
-      : `do $$ begin foreach v_table in array array[${manifest.prerequisite_tables.map(name => "'" + name + "'").join(',')}] loop\nif to_regclass('public.' || v_table) is null then raise exception 'missing dependency'; end if;\nend loop; end $$;\ncreate function public.office_readiness() returns jsonb language plpgsql stable security invoker as $$ begin return jsonb_build_object('schema_revision', '${manifest.schema_revision}', 'supported_modules', array[${manifest.readiness_modules.map(name => "'" + name + "'").join(',')}]); end $$;`;
+  for (const row of manifest.sql_files) {
+    const source = sqlFixtures.get(row.path);
     row.sha256 = digest(source);
     await put(row.path, source);
   }
@@ -56,7 +59,11 @@ test('the real local checkout matches the reviewed setup manifest without claimi
   const report = await runPreflight(repository);
   assert.equal(report.status, 'passed', textReport(report));
   assert.equal(report.schema_revision, '20260907174301');
-  assert.equal(report.sql_apply_order.length, 10);
+  assert.equal(report.sql_apply_order.length, 12);
+  assert.equal(check(report, 'historical_ten_manifest_matches'), true);
+  assert.equal(check(report, 'recorded_ten_baseline_preserved'), true);
+  assert.equal(check(report, 'reviewed_guest_sheet_declared'), true);
+  assert.equal(check(report, 'reviewed_guest_lifecycle_declared'), true);
   assert.equal(check(report, 'eligible_staff_account_guard_declared'), true);
   assert.equal(check(report, 'staff_first_intake_pause_declared'), true);
   assert.ok(['not_configured', 'supplied_unverified'].includes(report.configuration.status));
@@ -343,7 +350,7 @@ test('the retained optional preparation copy cannot also enter the active invent
   assert.equal(check(await runPreflight(f.root), 'migration_inventory_matches'), false);
 });
 
-test('active ten preserves the exact frozen eight baseline and both reviewed SQL copies',async()=>{
+test('active twelve preserves the exact frozen eight baseline and both reviewed intake SQL copies',async()=>{
  const frozenBytes=await readFile(join(repository,'tools/office-preflight/history/manifest-eight-2026-09-09.json'));
  assert.equal(digest(frozenBytes),'572c8a631c293c1c2d322670b8f295de95e3baeb2fa59a82f2ae641e28812c68');
  const frozen=JSON.parse(frozenBytes);assert.equal(frozen.format_version,3);assert.equal(frozen.sql_files.length,8);assert.deepEqual(template.sql_files.slice(0,8),frozen.sql_files);
@@ -377,4 +384,66 @@ test('refreshing editable digests cannot weaken direct intake or add an unreview
 test('retained review filenames cannot also appear as active migrations',async t=>{
  const f=await fixture(t);await f.put('supabase/migrations/20260909212646_direct_app_intake.sql',directFixture);await f.put('supabase/migrations/20260909215330_direct_intake_dispatch_extensions.sql',extensionsFixture);
  assert.equal(check(await runPreflight(f.root),'migration_inventory_matches'),false);
+});
+
+test('active twelve preserves the frozen ten and exact server-named guest migration copies',async()=>{
+ assert.equal(digest(historicalTenBytes),'0734cdc37022af4c946b2e4a8d93ad1b199093834f28373b1bf8c0c9497276ae');
+ const frozen=JSON.parse(historicalTenBytes);
+ assert.equal(frozen.format_version,4);assert.equal(frozen.sql_files.length,10);
+ assert.deepEqual(template.sql_files.slice(0,10),frozen.sql_files);
+ for(const [key,value] of Object.entries(frozen))if(!['format_version','sql_files'].includes(key))assert.deepEqual(template[key],value);
+ const map=JSON.parse(await readFile(join(repository,'tools/office-preflight/guest-register-hosted-history-2026-09-12.json'),'utf8'));
+ assert.deepEqual(map.mappings.map(row=>row.actual_version),['20260912125410','20260912125438']);
+ assert.deepEqual(map.mappings.map(row=>row.sha256),['652332c1ad938c4db6bca95cf6b6560531a6e697cfb1e0c551f70e02819525d6','7ef37c000a7bbedacd7a275efa2dc973e73fdcbc067d6c8700445989a9966229']);
+ for(const row of map.mappings){const active=await readFile(join(repository,row.recommended_active_path));assert.deepEqual(active,await readFile(join(repository,row.reviewed_path)));assert.equal(digest(active),row.sha256);}
+});
+
+test('twelve-file format refuses omitted guest migrations and both older active and prepared formats',async t=>{
+ for(const key of ['guest_sheet_sql_file','guest_lifecycle_sql_file']){
+  const f=await fixture(t);await rm(join(f.root,f.manifest[key]));f.manifest.sql_files=f.manifest.sql_files.filter(row=>row.path!==f.manifest[key]);await f.saveManifest();
+  assert.equal(check(await runPreflight(f.root),'manifest_structure'),false);
+ }
+ for(const format of [4,5]){const f=await fixture(t);f.manifest.format_version=format;await f.saveManifest();assert.equal(check(await runPreflight(f.root),'manifest_structure'),false);}
+});
+
+test('guest migration identities and order must match their recorded production versions',async t=>{
+ const f=await fixture(t);
+ [f.manifest.sql_files[10],f.manifest.sql_files[11]]=[f.manifest.sql_files[11],f.manifest.sql_files[10]];await f.saveManifest();
+ assert.equal(check(await runPreflight(f.root),'manifest_structure'),false);
+ [f.manifest.sql_files[10],f.manifest.sql_files[11]]=[f.manifest.sql_files[11],f.manifest.sql_files[10]];
+ const original=f.manifest.guest_sheet_sql_file;
+ for(const path of [f.manifest.guest_lifecycle_sql_file,original.replace('20260912125410','20260911210428')]){
+  f.manifest.guest_sheet_sql_file=path;f.manifest.sql_files[10].path=path;await f.saveManifest();assert.equal(check(await runPreflight(f.root),'manifest_structure'),false);
+ }
+});
+
+test('editable digests cannot weaken guest projection or recoverable removal guards',async t=>{
+ for(const [key,gate,change] of [
+  ['guest_sheet_sql_file','reviewed_guest_sheet_declared',source=>source+'\ngrant execute on function public.get_guest_sheet_snapshot() to authenticated;\n'],
+  ['guest_lifecycle_sql_file','reviewed_guest_lifecycle_declared',source=>source.replace('t.guest_removed_at is null and','true and')]
+ ]){
+  const f=await fixture(t);const original=await readFile(join(f.root,f.manifest[key]),'utf8');assert.notEqual(change(original),original);
+  await f.alterSql(change,f.manifest[key]);const report=await runPreflight(f.root);
+  assert.equal(report.checks.filter(row=>row.name==='sql_digest_matches').every(row=>row.ok),true);
+  assert.equal(check(report,gate),false);assert.equal(report.status,'failed');
+ }
+});
+
+test('frozen baseline prevents digest, dependency and metadata laundering of the first ten',async t=>{
+ const f=await fixture(t);await f.alterSql(source=>source+'\n-- changed historical SQL\n',f.manifest.sql_files[0].path);
+ let report=await runPreflight(f.root);assert.equal(report.checks.filter(row=>row.name==='sql_digest_matches').every(row=>row.ok),true);assert.equal(check(report,'recorded_ten_baseline_preserved'),false);
+ const g=await fixture(t);g.manifest.required_files=g.manifest.required_files.filter(path=>path!=='admin/care.js');await g.saveManifest();
+ assert.equal(check(await runPreflight(g.root),'recorded_ten_baseline_preserved'),false);
+ const h=await fixture(t);await h.put(historicalTenPath,JSON.stringify({...JSON.parse(historicalTenBytes),schema_revision:'20990101000000'}));
+ report=await runPreflight(h.root);assert.equal(check(report,'historical_ten_manifest_matches'),false);assert.equal(check(report,'recorded_ten_baseline_preserved'),false);
+ await rm(join(h.root,historicalTenPath));assert.equal(check(await runPreflight(h.root),'historical_ten_manifest_matches'),false);
+});
+
+test('pending packages remain outside the active twelve and draft duplicate copies fail inventory',async t=>{
+ const f=await fixture(t);
+ for(const path of ['tools/deacon-rotation/migrations/20260910213024_deacon_guest_rotation.sql','tools/office-attention/migrations/20260911132539_office_attention.sql','tools/guest-lifecycle/compatibility/migrations/20260911211949_removed_guest_projection_compatibility.sql'])await f.put(path,'-- fictional prepared package, not active\n');
+ assert.equal((await runPreflight(f.root)).status,'passed');
+ for(const path of ['supabase/migrations/20260911210428_guest_sheet_snapshot.sql','supabase/migrations/20260911210521_guest_registration_lifecycle.sql','supabase/migrations/20260910213024_deacon_guest_rotation.sql']){
+  await f.put(path,'-- unlisted active file\n');assert.equal(check(await runPreflight(f.root),'migration_inventory_matches'),false);await rm(join(f.root,path));
+ }
 });

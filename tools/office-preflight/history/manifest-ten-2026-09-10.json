@@ -1,5 +1,5 @@
 {
-  "format_version": 6,
+  "format_version": 4,
   "schema_revision": "20260907174301",
   "sql_files": [
     {
@@ -69,20 +69,6 @@
       "depends_on": [
         "supabase/migrations/20260910152017_direct_app_intake.sql"
       ]
-    },
-    {
-      "path": "supabase/migrations/20260912125410_guest_sheet_snapshot.sql",
-      "sha256": "652332c1ad938c4db6bca95cf6b6560531a6e697cfb1e0c551f70e02819525d6",
-      "depends_on": [
-        "supabase/migrations/20260910152030_direct_intake_dispatch_extensions.sql"
-      ]
-    },
-    {
-      "path": "supabase/migrations/20260912125438_guest_registration_lifecycle.sql",
-      "sha256": "7ef37c000a7bbedacd7a275efa2dc973e73fdcbc067d6c8700445989a9966229",
-      "depends_on": [
-        "supabase/migrations/20260912125410_guest_sheet_snapshot.sql"
-      ]
     }
   ],
   "required_files": [
@@ -146,7 +132,5 @@
   "intake_pause_sql_file": "supabase/migrations/20260908220718_pause_public_app_intake.sql",
   "staff_account_guard_sql_file": "supabase/migrations/20260909124122_require_eligible_staff_auth_account.sql",
   "direct_intake_sql_file": "supabase/migrations/20260910152017_direct_app_intake.sql",
-  "dispatch_extensions_sql_file": "supabase/migrations/20260910152030_direct_intake_dispatch_extensions.sql",
-  "guest_sheet_sql_file": "supabase/migrations/20260912125410_guest_sheet_snapshot.sql",
-  "guest_lifecycle_sql_file": "supabase/migrations/20260912125438_guest_registration_lifecycle.sql"
+  "dispatch_extensions_sql_file": "supabase/migrations/20260910152030_direct_intake_dispatch_extensions.sql"
 }
