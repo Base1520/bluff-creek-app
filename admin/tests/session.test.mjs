@@ -31,6 +31,9 @@ async function newDocumentUpload(f) {
 function fixture(t,options={}) {
   const dom = new JSDOM(html,{url:options.url||'https://office.example.invalid/admin/',runScripts:'outside-only'}),w=dom.window;
   t.after(()=>w.close());
+  if(options.periodic){const original=w.setInterval.bind(w);w.setInterval=(fn,ms,...args)=>{if(ms===60000){options.periodic.tick=fn;return 0;}return original(fn,ms,...args);};}
+  if(options.online!==undefined)Object.defineProperty(w.navigator,'onLine',{configurable:true,get:()=>options.online});
+  if(options.visible!==undefined)Object.defineProperty(w.document,'visibilityState',{configurable:true,get:()=>options.visible?'visible':'hidden'});
   w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};
   w.HTMLDialogElement.prototype.close=function(){this.open=false;this.dispatchEvent(new w.Event('close'));};
   const calls=[], delayed=[], pending=[]; let callback, current=options.initial===undefined?session('a'):options.initial, insideCallback=false;
@@ -821,4 +824,90 @@ test('missing weekly-email backend leaves the real Office usable and exposes no 
  assert.equal(f.el('workspace').dataset.connection,'ready');assert.ok(f.el('people-list').querySelector('button'));
  assert.equal(f.calls.filter(q=>q.op==='rpc'&&/save_weekly_email|review_weekly_email/.test(q.name)).length,0);
  f.emit(null);assert.equal(f.el('weekly-email-view').textContent,'');
+});
+
+
+test('automatic refresh recovers an initial role check failure without another sign-in',async t=>{
+  let broken=true;const periodic={},f=fixture(t,{periodic,visible:true,onQuery:q=>broken&&q.table==='staff_roles'?{error:{code:'NETWORK'}}:undefined});
+  await until(()=>f.el('workspace').dataset.connection==='blocked','initial staff check failed');
+  assert.equal(f.el('role-label').textContent,'');broken=false;periodic.tick();
+  await until(()=>f.el('workspace').dataset.connection==='ready','periodic refresh retries before role is known');
+  assert.ok(f.el('people-list').textContent.includes('Synthetic'));
+});
+test('returning online restores a blocked workspace once and preserves an unsaved draft',async t=>{
+  const options={online:true,visible:true},f=fixture(t,options);await until(()=>f.el('people-list').querySelector('button'),'ready');
+  f.el('people-list').querySelector('button').click();field(f,'notes').value='Keep this unsaved draft';
+  options.online=false;const before=f.calls.length;f.el('workspace-refresh').click();
+  await until(()=>f.el('workspace').dataset.connection==='blocked','offline pause');
+  assert.equal(f.calls.length,before,'known offline stops before a database call');assert.equal(f.el('save').disabled,true);
+  assert.match(f.el('workspace-health-message').textContent,/offline/i);assert.equal(f.el('workspace-setup-help').hidden,false);
+  options.online=true;f.w.dispatchEvent(new f.w.Event('online'));f.w.dispatchEvent(new f.w.Event('online'));
+  await until(()=>f.el('workspace').dataset.connection==='ready'&&!f.el('workspace-refresh').disabled,'online recovery');
+  assert.equal(f.calls.slice(before).filter(q=>q.table==='staff_roles').length,1,'one recovery at a time');
+  assert.equal(field(f,'notes').value,'Keep this unsaved draft');assert.equal(f.el('save').disabled,false);
+  assert.equal(f.calls.some(q=>['insert','update','delete','upload'].includes(q.op)),false,'reconnect never submits a draft');
+});
+test('online events never load a signed-out or hidden workspace',async t=>{
+  const periodic={},options={initial:null,visible:true,periodic},f=fixture(t,options);await pause();
+  f.w.dispatchEvent(new f.w.Event('online'));periodic.tick();await pause();assert.equal(f.calls.length,0);
+  options.visible=false;f.emit(session('a'));await until(()=>f.el('workspace').dataset.connection==='ready','initial session ready');
+  const before=f.calls.length;f.w.dispatchEvent(new f.w.Event('online'));periodic.tick();await pause();assert.equal(f.calls.length,before);
+});
+test('connection report contains only fixed labels and check times and clears across accounts',async t=>{
+  let broken=false;const held=deferred(),options={onQuery:q=>broken&&q.table==='documents'?held.promise:undefined},f=fixture(t,options);
+  await until(()=>f.el('people-list').querySelector('button'),'ready');broken=true;f.el('workspace-refresh').click();
+  await until(()=>f.calls.filter(q=>q.table==='documents').length===2,'held refresh');
+  assert.equal(f.el('workspace-refresh').textContent,'Checking…');assert.equal(f.el('workspace-connection-details').hidden,true);
+  held.resolve({error:{code:'NETWORK',message:'PRIVATE_CANARY staff-a@example.invalid synthetic-token'}});
+  await until(()=>f.el('workspace').dataset.connection==='blocked'&&!f.el('workspace-refresh').disabled,'failure settled');
+  const report=f.el('workspace-connection-report').textContent;
+  assert.match(report,/office records/);assert.match(report,/Last core record read: \d{4}-/);assert.match(report,/Checked: \d{4}-/);
+  assert.doesNotMatch(report,/PRIVATE_CANARY|staff-a|synthetic-token|example.invalid|person-a/);
+  assert.equal(f.el('workspace-refresh').textContent,'Refresh workspace');assert.equal(f.el('workspace-connection-details').hidden,false);
+  f.emit(null);assert.equal(f.el('workspace-connection-report').textContent,'');assert.equal(f.el('workspace-connection-details').hidden,true);
+});
+
+test('role-change readiness retains the refresh lock across repeated reconnect events',async t=>{
+  const roles={a:'admin'},options={roles,visible:true},f=fixture(t,options);await until(()=>f.el('people-list').querySelector('button'),'admin ready');
+  const held=deferred();let readinessCalls=0;roles.a='editor';options.onRpc=name=>{if(name==='office_readiness'){readinessCalls++;return held.promise;}};
+  f.el('workspace-refresh').click();await until(()=>readinessCalls===1,'role-change readiness held');
+  f.w.dispatchEvent(new f.w.Event('online'));f.w.document.dispatchEvent(new f.w.Event('visibilitychange'));f.w.dispatchEvent(new f.w.Event('online'));await pause();
+  assert.equal(readinessCalls,1);assert.equal(f.el('workspace-refresh').disabled,true);assert.equal(f.el('workspace-refresh').textContent,'Checking…');
+  assert.equal(f.el('people-list').textContent,'');assert.equal(f.el('primary-action').disabled,true);
+  held.resolve({data:{schema_revision:'20260907174301',staff_role:'editor',supported_modules:['events','contacts','documents','activity','membership','care','office_content','app_signups','leader_followups']}});
+  await until(()=>f.el('workspace').dataset.connection==='ready'&&!f.el('workspace-refresh').disabled,'new role finished');
+  assert.equal(f.el('role-label').textContent,'editor');assert.ok(f.el('people-list').textContent.includes('Synthetic'));
+});
+test('late old-account failure cannot unlock the replacement refresh or restore its report',async t=>{
+  const heldOld=deferred(),heldNew=deferred();let phase='ready';const f=fixture(t,{onQuery:q=>phase==='old'&&q.owner==='a'&&q.table==='documents'?heldOld.promise:phase==='new'&&q.owner==='b'&&q.table==='staff_roles'?heldNew.promise:undefined});
+  await until(()=>f.el('people-list').querySelector('button'),'first account ready');phase='old';f.el('workspace-refresh').click();
+  await until(()=>f.calls.filter(q=>q.table==='documents').length===2,'old read waiting');phase='new';f.emit(session('b'));
+  await until(()=>f.calls.some(q=>q.owner==='b'&&q.table==='staff_roles'),'new access waiting');
+  heldOld.resolve({error:{message:'PRIVATE_OLD_ACCOUNT',code:'NETWORK'}});await pause();
+  assert.equal(f.el('workspace-refresh').disabled,true);assert.equal(f.el('workspace-refresh').textContent,'Checking…');assert.equal(f.el('workspace-connection-report').textContent,'');
+  heldNew.resolve({data:{role:'editor'}});await until(()=>f.el('people-list').textContent.includes('Record b')&&!f.el('workspace-refresh').disabled,'replacement ready');
+  assert.doesNotMatch(f.el('people-list').textContent,/Record a/);assert.equal(f.el('workspace-connection-report').textContent,'');
+});
+
+test('HTTP status outside the PostgREST error sends unauthenticated requests to sign-in',async t=>{
+  for(const phase of ['role','readiness','events','contacts','documents','audit_log']) {
+    const error=Object.freeze({code:'42501',message:'PRIVATE_BACKEND_CANARY'}),response=Object.freeze({status:401,error,data:null});
+    const options=phase==='readiness'?{readiness:response}:{onQuery:q=>q.table===(phase==='role'?'staff_roles':phase)?response:undefined};
+    const f=fixture(t,options);
+    await until(()=>f.el('login-error').textContent.includes('Sign in again'),'401 at '+phase+' asks for sign-in');
+    assert.equal(f.el('workspace').classList.contains('hidden'),true);assert.equal(f.el('people-list').textContent,'');
+    assert.equal(f.el('workspace-connection-report').textContent,'');assert.doesNotMatch(f.el('login-error').textContent,/PRIVATE_BACKEND_CANARY/);
+    assert.deepEqual(error,{code:'42501',message:'PRIVATE_BACKEND_CANARY'},'the provider error object is not mutated');
+  }
+});
+test('HTTP 403 access refusals retain the session and fail closed with recovery help',async t=>{
+  for(const phase of ['role','readiness','records']) {
+    const response={status:403,error:{code:'42501',message:'PRIVATE_PERMISSION_CANARY'},data:null};
+    const options=phase==='readiness'?{readiness:response}:{onQuery:q=>q.table===(phase==='role'?'staff_roles':'documents')?response:undefined};
+    const f=fixture(t,options);await until(()=>f.el('workspace').dataset.connection==='blocked'&&!f.el('workspace-refresh').disabled,'403 is blocked');
+    assert.equal(f.el('login').classList.contains('hidden'),true);assert.equal(f.el('primary-action').disabled,true);
+    assert.equal(f.el('workspace-setup-help').hidden,false);assert.match(f.el('workspace-connection-report').textContent,/access could not be confirmed/);
+    assert.doesNotMatch(f.el('workspace-connection-report').textContent,/PRIVATE_PERMISSION_CANARY/);
+    assert.equal(f.calls.some(q=>['insert','update','delete'].includes(q.op)),false);
+  }
 });

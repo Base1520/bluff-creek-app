@@ -12,7 +12,7 @@
   var AUTH_STORAGE_KEY = "creek-office-auth", signedOut = false, manualSignInPending = false;
   var documentExpiryTimer;
   var peopleReady = false, workspaceReady = false, readinessOK = false, refreshing = false;
-  var draft = null, readinessEpoch = 0;
+  var draft = null, readinessEpoch = 0, refreshOwner = 0, lastCoreRead = null;
   var REQUIRED_REVISION = "20260907174301";
   var state = { events: [], people: [], documents: [], activity: [] };
   var titles = { dashboard: "Overview", week: "This week", followups: "My follow-ups", calendar: "Staff calendar", announcements: "Announcements", committees: "Committee contacts", slides: "Sunday slides", prayers: "Prayer requests", people: "People & membership", history: "Member history", care: "Guests & care", signups: "Guest register", intake: "Intake actions", communications: "Communications", "weekly-email": "Weekly email", attention: "Needs attention", documents: "Documents", activity: "Activity" };
@@ -81,14 +81,17 @@
     if (el("event-delete")) el("event-delete").hidden = true; if (el("editor-refresh")) el("editor-refresh").hidden = true;
     el("editor-title").textContent = ""; el("editor-kicker").textContent = ""; el("editor-error").textContent = ""; el("save").disabled = false; return true;
   }
-  function clearPrivate() {
+  function clearPrivate(preserveRefresh) {
     window.clearTimeout(documentExpiryTimer);
     if (membership) membership.clear(); if (care) care.clear();
     if (officeContent) officeContent.clear(); if (signups) signups.clear(); if (intakeTasks) intakeTasks.clear(); if (communications) communications.clear(); if (weeklyEmail) weeklyEmail.clear(); if (attention) attention.clear(); if (week) week.clear();
     if (followups) followups.clear(); if (reminderCalendar) reminderCalendar.clear();
     el("dashboard-followup-list").replaceChildren(); el("dashboard-followup-status").textContent = ""; el("followup-badge").textContent = ""; el("followup-badge").removeAttribute("aria-label");
     loadEpoch++; documentEpoch++; peopleReady = false; state = { events: [], people: [], documents: [], activity: [] };
-    workspaceReady = false; readinessOK = false; refreshing = false; readinessEpoch++;
+    workspaceReady = false; readinessOK = false; readinessEpoch++;
+    if (preserveRefresh !== true) { refreshing = false; refreshOwner++; }
+    lastCoreRead = null; clearConnectionReport();
+    el("primary-action").disabled = true;
     syncMembershipSheet(); renderCareSummary(null); renderIntakeSummary(null);
     clearEditor(true); if (el("document-dialog").open) el("document-dialog").close(); el("document-result").replaceChildren();
     ["dashboard-events", "events-list", "people-list", "documents-list", "activity-list", "user-label", "role-label"].forEach(function (id) { el(id).replaceChildren(); });
@@ -192,11 +195,12 @@
     if (window.CreekReminderCalendar) reminderCalendar = window.CreekReminderCalendar.create({ button: el("weekly-reminder"), allowed: function () { return !!session && canEdit(); } });
     // Refresh these queues without replacing unsaved editors elsewhere.
     function refreshPersonalQueues() {
-      if (!session || !role || refreshing || (draft && draft.busy) || document.visibilityState !== "visible") return;
+      if (!session || refreshing || (draft && draft.busy) || document.visibilityState !== "visible") return;
       loadAll(authEpoch);
     }
     window.setInterval(refreshPersonalQueues, 60000);
     document.addEventListener("visibilitychange", refreshPersonalQueues);
+    window.addEventListener("online", refreshPersonalQueues);
     db.auth.onAuthStateChange(function (_event, nextSession) { queueSession(nextSession); });
     var initialEpoch = authEpoch, result = await db.auth.getSession();
     if (initialEpoch !== authEpoch) return;
@@ -266,8 +270,9 @@
     var box = el("workspace-health"), text = el("workspace-health-message"), help = el("workspace-setup-help");
     if (box) { box.hidden = !message; box.classList.toggle("hidden", !message); }
     if (text) text.textContent = message || "";
-    hidden(help, !setup);
-    ["workspace-refresh", "editor-refresh"].forEach(function (id) { if (el(id)) el(id).disabled = refreshing || !!(draft && draft.busy); });
+    hidden(help, !message || refreshing);
+    hidden(el("workspace-connection-details"), !message || refreshing || !el("workspace-connection-report").textContent);
+    ["workspace-refresh", "editor-refresh"].forEach(function (id) { if (el(id)) { el(id).disabled = refreshing || !!(draft && draft.busy); el(id).textContent = refreshing ? "Checking…" : "Refresh workspace"; } });
   }
   function freezeOtherDialogs(blocked) {
     document.querySelectorAll("dialog[open]").forEach(function (dialog) {
@@ -301,30 +306,50 @@
     privateViews.forEach(function (name) { var view = el(name + "-view"); if (view) view.classList.add("hidden"); });
     syncMembershipSheet(); renderCareSummary(null); renderIntakeSummary(null); if(attention)attention.clear(); if(week)week.clear(); if(weeklyEmail)weeklyEmail.pause(); renderAttentionSummary(null); freezeOtherDialogs(true); syncEditor(); health(message, setup);
   }
+  function clearConnectionReport() {
+    el("workspace-connection-report").textContent = "";
+    el("workspace-connection-details").open = false;
+    hidden(el("workspace-connection-details"), true);
+  }
+  function recordConnectionFailure(phase, error) {
+    // Only our fixed labels and timestamps belong in a support report.
+    el("workspace-connection-report").textContent = "Creek Office connection check\n" + connectionDiagnostic(phase, error).trim()
+      + "\nChecked: " + new Date().toISOString()
+      + "\nLast core record read: " + (lastCoreRead || "Not completed in this session")
+      + "\nEditing is paused. This report does not confirm current access or saved work.";
+  }
   function connectionDiagnostic(phase,error) {
     var labels={role:"staff access",readiness:"workspace setup",records:"office records"};
-    var reason=error&&error.code==="OFFICE_TIMEOUT"?"request timed out":error&&(error.code==="42501"||error.status===403)?"access could not be confirmed":error&&["PGRST202","PGRST204","42P01","42703","42883","OFFICE_SETUP"].includes(error.code)?"setup needs review":"connection unavailable";
+    var reason=error&&error.code==="OFFICE_OFFLINE"?"browser reports offline":error&&error.code==="OFFICE_TIMEOUT"?"request timed out":error&&(error.code==="42501"||error.status===403)?"access could not be confirmed":error&&["PGRST202","PGRST204","42P01","42703","42883","OFFICE_SETUP"].includes(error.code)?"setup needs review":"connection unavailable";
     return " Connection check: "+labels[phase]+" · "+reason+".";
+  }
+  function responseError(result) {
+    if (!result || !result.error) return null;
+    // PostgREST puts the HTTP status beside error, not inside it.
+    // Retain it so 401 and 403 do not become the same connection failure.
+    return Number.isInteger(result.status) ? Object.assign({}, result.error, { status: result.status }) : result.error;
   }
   function authFailure(error) { return error && (error.status === 401 || ["PGRST301", "PGRST302", "PGRST303"].includes(error.code)); }
   async function verifyReadiness(epoch) {
     if (epoch !== authEpoch || !session) return false;
     var request = ++readinessEpoch, userId = session.user.id, phase = "role";
     try {
+      if (navigator.onLine === false) throw { code: "OFFICE_OFFLINE" };
+      if (refreshing) health("Checking your staff access…", false);
       var staff = await deadline(db.from("staff_roles").select("role").eq("user_id", userId).maybeSingle());
       if (epoch !== authEpoch || request !== readinessEpoch) return false;
-      if (staff.error) throw staff.error;
+      if (staff.error) throw responseError(staff);
       if (!staff.data || !["admin", "editor", "viewer"].includes(staff.data.role)) {
         queueSession(null); el("login-error").textContent = "This account no longer has approved Creek Office access."; return false;
       }
       if (role && role !== staff.data.role) {
         // A real role change invalidates module drafts and all previously loaded private data.
-        clearPrivate(); request = readinessEpoch;
+        clearPrivate(true); request = readinessEpoch;
       }
       role = staff.data.role; el("role-label").textContent = role;
-      phase="readiness"; var result = await deadline(db.rpc("office_readiness"));
+      phase="readiness"; if (refreshing) health("Checking the office setup…", false); var result = await deadline(db.rpc("office_readiness"));
       if (epoch !== authEpoch || request !== readinessEpoch || !session || session.user.id !== userId) return false;
-      if (result.error) throw result.error;
+      if (result.error) throw responseError(result);
       var ready = result.data;
       if (!ready || ready.staff_role !== role || String(ready.schema_revision || "") < REQUIRED_REVISION || !Array.isArray(ready.supported_modules) || (hasEditRole() ? ["events", "contacts", "documents", "activity", "membership", "care", "office_content", "app_signups", "leader_followups"] : ["events", "contacts", "documents", "activity"]).some(function (name) { return !ready.supported_modules.includes(name); })) {
         throw { code: "OFFICE_SETUP" };
@@ -335,7 +360,8 @@
       readinessOK = false;
       if (authFailure(error)) { queueSession(null); el("login-error").textContent = "Your session could not be verified. Sign in again."; return false; }
       var setup = ["PGRST202", "PGRST204", "42P01", "42703", "42883", "OFFICE_SETUP"].includes(error.code) || typeof db.rpc !== "function";
-      blockWorkspace(setup ? "Office setup is incomplete or out of date. Editing is paused until the required database update is installed. Your open draft stays in this tab." : "The office connection could not be verified. Editing is paused. Refresh to reconnect; your open draft stays in this tab."+connectionDiagnostic(phase,error), setup);
+      recordConnectionFailure(phase, error);
+      blockWorkspace(setup ? "Office setup is incomplete or out of date. Editing is paused until the required database update is installed. Your open draft stays in this tab." : error.code === "OFFICE_OFFLINE" ? "This browser reports that it is offline. Editing is paused. Keep this tab open; your draft stays here. We will check again when the connection returns." : "The office connection could not be verified. Editing is paused. Refresh to reconnect; your open draft stays in this tab."+connectionDiagnostic(phase,error), setup);
       return false;
     }
   }
@@ -376,38 +402,42 @@
   async function loadAll(epoch) {
     epoch = epoch === undefined ? authEpoch : epoch;
     if (epoch !== authEpoch || !session || refreshing || (draft && draft.busy)) return;
-    var request = ++loadEpoch; refreshing = true; if(attention)attention.beginRefresh(); var weekRefresh = week ? week.beginRefresh() : null;
+    var request = ++loadEpoch, owner = ++refreshOwner; refreshing = true; if(attention)attention.beginRefresh(); var weekRefresh = week ? week.beginRefresh() : null;
     health("Checking the office connection and refreshing records…", false);
     try {
       if (!await verifyReadiness(epoch)) return;
       request = loadEpoch;
       var readDraft = { item: draft, revision: draft ? draft.writeRevision || 0 : 0 };
+      health("Refreshing the office records…", false);
       var results = await Promise.all([
         fetchRecords("events", "starts_at", true, epoch, request), fetchRecords("contacts", "last_name", true, epoch, request),
         fetchRecords("documents", "updated_at", false, epoch, request), deadline(db.from("audit_log").select("*").order("created_at", { ascending: false }).limit(100))
       ]);
       if (!current(epoch) || request !== loadEpoch) return;
       var failed = results.find(function (result) { return result.error || !Array.isArray(result.data); });
-      if (failed) throw failed.error || new Error("Incomplete record response");
+      if (failed) throw responseError(failed) || new Error("Incomplete record response");
       var invalid = results.slice(0, 3).some(function (result) { return result.data.some(function (row) { return !row.id || !Number.isInteger(row.version) || row.version < 1; }); });
       if (invalid) throw { code: "OFFICE_SETUP" };
       ["events", "people", "documents", "activity"].forEach(function (name, index) { state[name] = results[index].data; });
+      lastCoreRead = new Date().toISOString();
       workspaceReady = true; peopleReady = true; el("workspace").dataset.connection = "ready";
       if (week) weekRefresh = week.beginRefresh();
       await reconcileDraft(epoch, readDraft);
       if (!current(epoch) || request !== loadEpoch) return;
       freezeOtherDialogs(false);
+      health("Loading the office tools…", false);
       if (canEdit()) await Promise.all([membership ? membership.load(epoch) : null, care ? care.load(epoch) : null, officeContent ? officeContent.load(epoch) : null, signups ? signups.load(epoch) : null, intakeTasks ? intakeTasks.load(epoch) : null, communications ? communications.load(epoch) : null, weeklyEmail ? weeklyEmail.load(epoch) : null, followups ? followups.load(epoch) : null]);
       if (!current(epoch) || request !== loadEpoch) return;
       if(canEdit()&&attention)await attention.load(epoch);
       if(!current(epoch)||request!==loadEpoch)return;
-      health("", false); route(); syncEditor();
+      clearConnectionReport(); health("", false); route(); syncEditor();
     } catch (error) {
       if (epoch !== authEpoch) return;
       if (authFailure(error)) { queueSession(null); el("login-error").textContent = "Your session could not be verified. Sign in again."; return; }
       var setup = ["OFFICE_SETUP", "42P01", "42703", "PGRST204"].includes(error.code);
+      recordConnectionFailure("records", error);
       blockWorkspace(setup ? "Office setup is incomplete or out of date. Editing is paused until the required database update is installed." : "Some office records could not be refreshed. Editing is paused and stale lists have been cleared. Your draft is preserved; refresh to try again."+connectionDiagnostic("records",error), setup);
-    } finally { if (epoch === authEpoch) { refreshing = false; if(week && request === loadEpoch && workspaceReady && canEdit())week.endRefresh(weekRefresh); syncEditor(); ["workspace-refresh", "editor-refresh"].forEach(function (id) { if (el(id)) el(id).disabled = !!(draft && draft.busy); }); } }
+    } finally { if (epoch === authEpoch && owner === refreshOwner) { refreshing = false; health(el("workspace-health-message").textContent, false); if(week && request === loadEpoch && workspaceReady && canEdit())week.endRefresh(weekRefresh); syncEditor(); ["workspace-refresh", "editor-refresh"].forEach(function (id) { if (el(id)) el(id).disabled = !!(draft && draft.busy); }); } }
   }
 
   function route() {
