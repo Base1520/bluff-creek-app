@@ -1,6 +1,6 @@
 /* Cache only the public Creek app. Private and unrelated routes use the network. */
 const CACHE_PREFIX = 'creek-';
-const CACHE = 'creek-v19';
+const CACHE = 'creek-v20';
 const SCOPE = new URL(self.registration.scope);
 importScripts(new URL('./js/calendar-feed.js', SCOPE).href);
 importScripts(new URL('./js/calendar-config.js', SCOPE).href);
