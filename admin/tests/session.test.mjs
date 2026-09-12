@@ -93,6 +93,12 @@ function fixture(t,options={}) {
     pause(){state.pauses=(state.pauses||0)+1;moduleOptions.root.replaceChildren();},
     clear(){state.clears=(state.clears||0)+1;moduleOptions.root.replaceChildren();}
   };}};
+  if(options.careReminders)w.CreekCareReminders={create(moduleOptions){const state=options.careReminders;state.options=moduleOptions;return {
+    async load(epoch){(state.loads||=[]).push(epoch);state.readyAtLoad=moduleOptions.getContext().workspaceReady;state.roleAtLoad=moduleOptions.getContext().role;moduleOptions.root.textContent='Fictional private reminder setup';moduleOptions.onSummary(state.summary||null);},
+    render(){state.renders=(state.renders||0)+1;},
+    pause(){state.pauses=(state.pauses||0)+1;moduleOptions.root.replaceChildren();moduleOptions.onSummary(null);},
+    clear(){state.clears=(state.clears||0)+1;moduleOptions.root.replaceChildren();moduleOptions.onSummary(null);}
+  };}};
   if(options.realWeeklyEmail)w.eval(weeklyEmailSource);
   if(options.realWeek)w.eval(weekSource);
   let created=0; w.CREEK_OFFICE_CONFIG=options.config||{supabaseUrl:'https://testproject.supabase.co',publishableKey:'sb_publishable_synthetic'};
@@ -127,7 +133,7 @@ test('late table fetch after logout cannot repopulate private DOM',async t=>{
 test('same-account token events preserve unsaved edits; viewer cannot open editor',async t=>{
   const f=fixture(t);await until(()=>f.el('people-list').querySelector('button'),'editable records loaded');f.el('people-list').querySelector('button').click();f.el('editor-fields').querySelector('[name=notes]').value='Synthetic unsaved edit';f.emit(session('a'));await pause();assert.equal(f.el('editor').open,true);assert.equal(f.el('editor-fields').querySelector('[name=notes]').value,'Synthetic unsaved edit');
   const v=fixture(t,{roles:{a:'viewer'}});await pause();v.w.location.hash='#people';await pause();assert.equal(v.el('primary-action').classList.contains('hidden'),true);v.el('primary-action').click();assert.equal(v.el('editor').open,false);assert.equal(v.el('people-list').querySelector('button'),null);
-  for(const view of ['week','history','care','signups','intake','communications','weekly-email','attention','followups','announcements','committees','slides','prayers']) {
+  for(const view of ['week','history','care','signups','intake','communications','weekly-email','care-reminders','attention','followups','announcements','committees','slides','prayers']) {
     v.w.location.hash='#'+view;await pause();
     assert.equal(v.el(view+'-view').classList.contains('hidden'),true);
     assert.equal(v.w.document.querySelector('[data-view="'+view+'"]').classList.contains('hidden'),true);
@@ -824,6 +830,98 @@ test('missing weekly-email backend leaves the real Office usable and exposes no 
  assert.equal(f.el('workspace').dataset.connection,'ready');assert.ok(f.el('people-list').querySelector('button'));
  assert.equal(f.calls.filter(q=>q.op==='rpc'&&/save_weekly_email|review_weekly_email/.test(q.name)).length,0);
  f.emit(null);assert.equal(f.el('weekly-email-view').textContent,'');
+});
+
+test('care reminders load only for a ready admin, expose the admin route and dashboard, and clear on logout',async t=>{
+  const summary={enabled:false,unbound:3,held:2,queued:1,checked_at:'2026-09-12T15:00:00Z'};
+  const careReminders={summary},f=fixture(t,{roles:{a:'admin'},careReminders,url:'https://office.example.invalid/admin/#care-reminders'});
+  await until(()=>careReminders.loads?.length,'admin reminder module loaded');
+  await until(()=>f.el('page-title').textContent==='Care reminders','admin reminder route opened');
+  assert.equal(careReminders.readyAtLoad,true);assert.equal(careReminders.roleAtLoad,'admin');
+  assert.equal(f.el('care-reminders-view').classList.contains('hidden'),false);
+  assert.equal(f.w.document.querySelector('[data-view="care-reminders"]').classList.contains('hidden'),false);
+  assert.equal(f.w.document.querySelector('.reminder-dashboard').classList.contains('hidden'),false);
+  assert.match(f.el('care-reminders-view').textContent,/Fictional private reminder setup/);
+  assert.equal(f.el('reminder-held-count').textContent,'2');
+  assert.match(f.el('dashboard-reminder-status').textContent,/paused.*3 care sources.*1 deliveries/i);
+  careReminders.options.onSummary({...summary,held:-1});assert.equal(f.el('reminder-held-count').textContent,'—');
+  assert.match(f.el('dashboard-reminder-status').textContent,/unavailable/i);
+  careReminders.options.onSummary(summary);f.emit(null);
+  assert.equal(f.el('care-reminders-view').textContent,'');assert.ok(careReminders.clears>=2);
+  assert.equal(f.el('reminder-held-count').textContent,'—');
+  careReminders.options.onSummary(summary);
+  assert.equal(f.el('reminder-held-count').textContent,'—');
+  assert.doesNotMatch(f.el('dashboard-reminder-status').textContent,/3 care sources|1 deliveries/);
+});
+
+test('editors and viewers cannot load or navigate to care reminders or invoke its source handoff',async t=>{
+  for(const role of ['editor','viewer']) {
+    const careReminders={},care={},intake={},f=fixture(t,{roles:{a:role},careReminders,care,intake,url:'https://office.example.invalid/admin/#care-reminders'});
+    await until(()=>f.el('workspace').dataset.connection==='ready','nonadmin workspace ready');
+    await until(()=>!f.el('workspace-refresh').disabled,'nonadmin refresh settled');
+    assert.equal(careReminders.loads,undefined);assert.equal(f.el('page-title').textContent,'Overview');
+    assert.equal(f.el('care-reminders-view').classList.contains('hidden'),true);
+    assert.equal(f.w.document.querySelector('[data-view="care-reminders"]').classList.contains('hidden'),true);
+    assert.equal(f.w.document.querySelector('.reminder-dashboard').classList.contains('hidden'),true);
+    assert.equal(careReminders.options.openSource({source_type:'guest_task',source_id:'fictional-task'}),false);
+    assert.equal(careReminders.options.openSource({source_type:'care_plan',source_id:'fictional-plan',contact_id:'person-a'}),false);
+    assert.equal(intake.opened,undefined);assert.equal(care.selected,undefined);
+    assert.equal(f.el('care-reminders-view').textContent,'');
+  }
+});
+
+test('care reminders pause on core connection failure and resume the same session without discarding its private intent',async t=>{
+  const careReminders={summary:{enabled:true,unbound:1,held:2,queued:3}},care={},intake={};let fail=false;
+  const f=fixture(t,{roles:{a:'admin'},careReminders,care,intake,onQuery(q){if(fail&&q.table==='contacts')return {error:{code:'OFFICE_TIMEOUT'}};}});
+  await until(()=>careReminders.loads?.length,'initial reminder module loaded');
+  await until(()=>!f.el('workspace-refresh').disabled,'initial reminder refresh settled');
+  const clears=careReminders.clears,epoch=careReminders.loads[0];
+  fail=true;f.el('workspace-refresh').click();await until(()=>careReminders.pauses===1,'reminders paused after failure');
+  assert.equal(f.el('care-reminders-view').textContent,'');assert.equal(careReminders.clears,clears);
+  assert.equal(careReminders.options.getContext().workspaceReady,false);assert.equal(f.el('reminder-held-count').textContent,'—');
+  assert.equal(careReminders.options.openSource({source_type:'guest_task',source_id:'fictional-task'}),false);
+  assert.equal(careReminders.options.openSource({source_type:'care_plan',source_id:'fictional-plan',contact_id:'person-a'}),false);
+  assert.equal(intake.opened,undefined);assert.equal(care.selected,undefined);
+  await until(()=>!f.el('workspace-refresh').disabled,'failed refresh settled');
+  fail=false;f.el('workspace-refresh').click();await until(()=>careReminders.loads.length===2,'same-session reminders resumed');
+  assert.deepEqual(careReminders.loads,[epoch,epoch]);assert.equal(careReminders.clears,clears);
+  assert.equal(careReminders.options.getContext().workspaceReady,true);assert.equal(f.el('reminder-held-count').textContent,'2');
+});
+
+test('admin role downgrade clears care reminders and prevents another load even for an editor',async t=>{
+  for(const nextRole of ['editor','viewer']) {
+    const roles={a:'admin'},careReminders={summary:{enabled:false,unbound:1,held:2,queued:0}};
+    const f=fixture(t,{roles,careReminders,url:'https://office.example.invalid/admin/#care-reminders'});
+    await until(()=>careReminders.loads?.length,'admin reminder module loaded');
+    await until(()=>!f.el('workspace-refresh').disabled,'initial refresh settled');
+    const clears=careReminders.clears;
+    roles.a=nextRole;f.el('workspace-refresh').click();
+    await until(()=>f.el('role-label').textContent===nextRole&&!f.el('workspace-refresh').disabled,'downgraded refresh settled');
+    assert.ok(careReminders.clears>clears);assert.equal(careReminders.loads.length,1);
+    assert.equal(f.el('care-reminders-view').textContent,'');assert.equal(f.el('care-reminders-view').classList.contains('hidden'),true);
+    assert.equal(f.el('page-title').textContent,'Overview');assert.equal(f.el('reminder-held-count').textContent,'—');
+    careReminders.options.onSummary({enabled:true,unbound:0,held:99,queued:0});
+    assert.equal(f.el('reminder-held-count').textContent,'—');
+  }
+});
+
+test('care reminder source handoff navigates only after the intake or care module explicitly accepts',async t=>{
+  const careReminders={},care={accepted:false},intake={accepted:false};
+  const f=fixture(t,{roles:{a:'admin'},careReminders,care,intake,url:'https://office.example.invalid/admin/#care-reminders'});
+  await until(()=>careReminders.loads?.length&&!f.el('workspace-refresh').disabled,'admin modules ready');
+  const guest={source_type:'guest_task',source_id:'fictional-task'},plan={source_type:'care_plan',source_id:'fictional-plan',contact_id:'person-a'};
+  assert.equal(careReminders.options.openSource(guest),false);assert.equal(intake.opened,'fictional-task');
+  assert.equal(f.w.location.hash,'#care-reminders');assert.match(f.el('notice').textContent,/could not be opened/i);
+  assert.equal(careReminders.options.openSource(plan),false);assert.deepEqual(care.selected,['person-a']);
+  assert.equal(f.w.location.hash,'#care-reminders');
+  intake.accepted=true;assert.equal(careReminders.options.openSource(guest),true);
+  assert.equal(f.w.location.hash,'#intake');assert.equal(f.el('page-title').textContent,'Intake actions');
+  care.accepted=true;assert.equal(careReminders.options.openSource(plan),true);
+  assert.equal(f.w.location.hash,'#care');assert.equal(f.el('page-title').textContent,'Guests & care');
+  const missing={},g=fixture(t,{roles:{a:'admin'},careReminders:missing,url:'https://office.example.invalid/admin/#care-reminders'});
+  await until(()=>missing.loads?.length&&!g.el('workspace-refresh').disabled,'admin without source modules ready');
+  assert.equal(missing.options.openSource(guest),false);assert.equal(missing.options.openSource(plan),false);
+  assert.equal(g.w.location.hash,'#care-reminders');
 });
 
 

@@ -4,7 +4,7 @@
   "baseline_manifest": "tools/office-preflight/manifest.json",
   "baseline_manifest_sha256": "ce29bd07a46ceab3698ee11f572e64d5f76b7c5a5f790f0a7e4eaf333a130ea7",
   "baseline_migration_count": 12,
-  "proposed_migration_count": 2,
+  "proposed_migration_count": 3,
   "settings_enabled_by_default": false,
   "pastor_recipients_by_default": 0,
   "files": [
@@ -15,6 +15,10 @@
     {
       "path": "tools/care-reminders/migrations/20260912183934_care_reminder_queue.sql",
       "sha256": "7751c0cfc72dc48e93f126a41cb58d3af69c1f01e1e4083f5c9678749d05b488"
+    },
+    {
+      "path": "tools/care-reminders/migrations/20260912224640_care_reminder_controls.sql",
+      "sha256": "56123ef6f8ace3896b644920254ff02c2209466a3c758ba28c8e4ad1d3cc5899"
     },
     {
       "path": "supabase/functions/care-reminder-dispatch/handler.mjs",
@@ -36,5 +40,12 @@
   "schema_applied": false,
   "function_deployed": false,
   "schedule_installed": false,
-  "messages_sent": 0
+  "messages_sent": 0,
+  "office_controls": {
+    "status": "implemented_locally_not_published",
+    "read_migration": "tools/care-reminders/migrations/20260912224640_care_reminder_controls.sql",
+    "view": "admin/#care-reminders",
+    "role": "admin",
+    "browser_email_dispatch": false
+  }
 }

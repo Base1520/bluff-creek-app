@@ -25,7 +25,7 @@ for(const row of manifest.sql_files){
  baselineSql.push({...row,sql:source.toString(),execute:row.path!=='supabase/migrations/20260910152030_direct_intake_dispatch_extensions.sql'});
 }
 export const denied=(fn,code='42501',message)=>assert.rejects(fn,e=>e.code===code&&(!message||e.message===message));
-export async function setup(t,{queue=false}={}){
+export async function setup(t,{queue=false,controls=false}={}){
  const db=new PGlite({extensions:{pgcrypto}});t.after(()=>db.close());
  await db.exec(bootstrapSql);
  for(const row of baselineSql)if(row.execute)await db.exec(row.sql);
@@ -65,6 +65,7 @@ export async function setup(t,{queue=false}={}){
  const functionState=()=>rows("select n.nspname,p.proname,pg_get_function_identity_arguments(p.oid) args,pg_get_functiondef(p.oid) definition,p.proowner,p.prosecdef,p.provolatile,p.proconfig,p.proacl::text from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in('public','private') order by 1,2,3");
  const oldFunctions=await functionState(),oldPolicies=await rows('select * from pg_policies order by schemaname,tablename,policyname');
  await db.exec(await readFile(new URL('./migrations/20260912183930_care_reminder_bindings.sql',import.meta.url),'utf8'));
- if(queue)await db.exec(await readFile(new URL('./migrations/20260912183934_care_reminder_queue.sql',import.meta.url),'utf8'));
+ if(queue||controls)await db.exec(await readFile(new URL('./migrations/20260912183934_care_reminder_queue.sql',import.meta.url),'utf8'));
+ if(controls)await db.exec(await readFile(new URL('./migrations/20260912224640_care_reminder_controls.sql',import.meta.url),'utf8'));
  return {db,rows,as,rpc,ids,reg,get,taskFor,getTask:taskFor,change,makeCare,addVisit,insert,bind,bindingFor,configure,sourceRows,functionState,oldFunctions,oldPolicies};
 }
