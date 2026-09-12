@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="admin.css">
   <link rel="stylesheet" href="membership.css">
   <link rel="stylesheet" href="care.css">
+  <link rel="stylesheet" href="care-reminders.css?v=care-reminders-1">
   <link rel="stylesheet" href="office-content.css">
   <link rel="stylesheet" href="signups.css">
   <link rel="stylesheet" href="intake-tasks.css?v=deacon-rotation-1">
@@ -68,6 +69,7 @@
         <a href="#people" data-view="people">People &amp; membership</a>
         <a href="#history" data-view="history" data-private-module>Member history</a>
         <a href="#care" data-view="care" data-private-module>Guests &amp; care</a>
+        <a href="#care-reminders" data-view="care-reminders" data-admin-module>Care reminders</a>
         <a href="#documents" data-view="documents">Documents</a>
         <a href="#activity" data-view="activity">Activity</a>
       </nav>
@@ -101,6 +103,7 @@
             <button type="button" data-care-queue="coverage" disabled><span>Coverage gaps</span><b id="care-gaps-count">—</b><small>Review monthly &amp; quarterly care →</small></button>
           </div>
         </section>
+        <section class="panel reminder-dashboard" data-admin-module aria-labelledby="reminder-dashboard-title"><div><p class="eyebrow">Care follow-through</p><h2 id="reminder-dashboard-title"><span id="reminder-held-count">—</span> deliveries need review</h2><p id="dashboard-reminder-status">Reminder setup and delivery status are not loaded.</p></div><a href="#care-reminders">Review care reminders →</a></section>
         <section class="panel personal-dashboard" data-private-module aria-labelledby="personal-dashboard-title">
           <div class="panel-head"><div><p class="eyebrow">Your people. Your next step.</p><h2 id="personal-dashboard-title">Make room to reach out.</h2></div><a href="#followups">My follow-ups →</a></div>
           <p id="dashboard-followup-status" role="status">Loading your personal reminders…</p>
@@ -121,6 +124,8 @@
         <div class="panel"><div class="panel-head"><div><p class="eyebrow">Coming up</p><h2>Next events</h2></div><a href="#calendar">Open calendar →</a></div><div id="dashboard-events" class="rows"></div></div>
         <section class="panel office-help-card"><div><p class="eyebrow">A little help, right here</p><h2>Know what happens next.</h2><p>Find help with saving, recovering an interrupted task, and keeping church information current.</p></div><a href="help.html">Open the office guide →</a></section>
       </section>
+
+      <section id="care-reminders-view" class="view hidden" data-admin-module></section>
 
       <section id="week-view" class="view hidden" data-private-module></section>
 
@@ -172,6 +177,7 @@
   <script src="config.js"></script>
   <script src="membership.js"></script>
   <script src="care.js?v=attention-1"></script>
+  <script src="care-reminders.js?v=care-reminders-1"></script>
   <script src="office-content.js?v=week-1"></script>
   <script src="guest-register-tools.js?v=guest-tools-1"></script>
   <script src="signups.js?v=guest-tools-1"></script>
@@ -182,6 +188,6 @@
   <script src="reminder-calendar.js"></script>
   <script src="attention.js?v=attention-1"></script>
   <script src="week.js?v=week-1"></script>
-  <script src="app.js?v=weekly-email-1"></script>
+  <script src="app.js?v=care-reminders-1"></script>
 </body>
 </html>

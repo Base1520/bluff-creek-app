@@ -4,7 +4,7 @@
   var els = {};
   var db = null;
   var localDevelopment = false, backendOrigin = null;
-  var membership = null, care = null, officeContent = null, signups = null, intakeTasks = null, communications = null, weeklyEmail = null, attention = null, week = null, followups = null, reminderCalendar = null;
+  var membership = null, care = null, officeContent = null, signups = null, intakeTasks = null, communications = null, weeklyEmail = null, careReminders = null, attention = null, week = null, followups = null, reminderCalendar = null;
   var session = null;
   var role = null;
   var authEpoch = 0, loadEpoch = 0, documentEpoch = 0, editorEpoch = 0;
@@ -15,9 +15,9 @@
   var draft = null, readinessEpoch = 0, refreshOwner = 0, lastCoreRead = null;
   var REQUIRED_REVISION = "20260907174301";
   var state = { events: [], people: [], documents: [], activity: [] };
-  var titles = { dashboard: "Overview", week: "This week", followups: "My follow-ups", calendar: "Staff calendar", announcements: "Announcements", committees: "Committee contacts", slides: "Sunday slides", prayers: "Prayer requests", people: "People & membership", history: "Member history", care: "Guests & care", signups: "Guest register", intake: "Intake actions", communications: "Communications", "weekly-email": "Weekly email", attention: "Needs attention", documents: "Documents", activity: "Activity" };
+  var titles = { dashboard: "Overview", week: "This week", followups: "My follow-ups", calendar: "Staff calendar", announcements: "Announcements", committees: "Committee contacts", slides: "Sunday slides", prayers: "Prayer requests", people: "People & membership", history: "Member history", care: "Guests & care", signups: "Guest register", intake: "Intake actions", communications: "Communications", "weekly-email": "Weekly email", "care-reminders": "Care reminders", attention: "Needs attention", documents: "Documents", activity: "Activity" };
   var contentViews = ["announcements", "committees", "slides", "prayers"];
-  var privateViews = ["week", "history", "care", "signups", "intake", "communications", "weekly-email", "attention", "followups"].concat(contentViews);
+  var privateViews = ["week", "history", "care", "signups", "intake", "communications", "weekly-email", "care-reminders", "attention", "followups"].concat(contentViews);
 
   function deadline(request) {
     var timer;
@@ -84,7 +84,7 @@
   function clearPrivate(preserveRefresh) {
     window.clearTimeout(documentExpiryTimer);
     if (membership) membership.clear(); if (care) care.clear();
-    if (officeContent) officeContent.clear(); if (signups) signups.clear(); if (intakeTasks) intakeTasks.clear(); if (communications) communications.clear(); if (weeklyEmail) weeklyEmail.clear(); if (attention) attention.clear(); if (week) week.clear();
+    if (officeContent) officeContent.clear(); if (signups) signups.clear(); if (intakeTasks) intakeTasks.clear(); if (communications) communications.clear(); if (weeklyEmail) weeklyEmail.clear(); if (careReminders) careReminders.clear(); if (attention) attention.clear(); if (week) week.clear();
     if (followups) followups.clear(); if (reminderCalendar) reminderCalendar.clear();
     el("dashboard-followup-list").replaceChildren(); el("dashboard-followup-status").textContent = ""; el("followup-badge").textContent = ""; el("followup-badge").removeAttribute("aria-label");
     loadEpoch++; documentEpoch++; peopleReady = false; state = { events: [], people: [], documents: [], activity: [] };
@@ -163,6 +163,15 @@
     document.querySelectorAll("button[data-intake-filter]").forEach(function(button){button.onclick=function(){if(!canEdit() || button.disabled || !intakeTasks)return;location.hash="intake";route();intakeTasks.showFilter(button.dataset.intakeFilter);};});
     if (window.CreekCommunications && el("communications-view")) communications = window.CreekCommunications.create(Object.assign({}, moduleOptions, { root: el("communications-view") }));
     if (window.CreekWeeklyEmail && el("weekly-email-view")) weeklyEmail = window.CreekWeeklyEmail.create(Object.assign({}, moduleOptions, { root: el("weekly-email-view") }));
+    if (window.CreekCareReminders && el("care-reminders-view")) careReminders = window.CreekCareReminders.create(Object.assign({}, moduleOptions, {
+      root: el("care-reminders-view"), onSummary: renderCareReminderSummary,
+      openSource: function(item) {
+        if (role !== "admin" || !workspaceReady) return false;
+        if (item.source_type === "guest_task" && intakeTasks && intakeTasks.openTask(item.source_id) === true) { location.hash = "intake"; route(); return true; }
+        if (item.source_type === "care_plan" && item.contact_id && care && care.selectPerson(item.contact_id) === true) { location.hash = "care"; route(); return true; }
+        notice("The original record could not be opened. Refresh the Office and try again."); return false;
+      }
+    }));
     if (window.CreekFollowups) followups = window.CreekFollowups.create(Object.assign({}, moduleOptions, { root: el("followups-module"), onSummary: renderFollowupSummary }));
     if (window.CreekAttention && el("attention-view")) attention = window.CreekAttention.create(Object.assign({}, moduleOptions, {
       root:el("attention-view"), onSummary:renderAttentionSummary,
@@ -304,7 +313,7 @@
     el("followup-badge").textContent = ""; el("followup-badge").removeAttribute("aria-label"); el("dashboard-followup-status").textContent = "Follow-ups are unavailable until the workspace refreshes.";
     el("primary-action").disabled = true;
     privateViews.forEach(function (name) { var view = el(name + "-view"); if (view) view.classList.add("hidden"); });
-    syncMembershipSheet(); renderCareSummary(null); renderIntakeSummary(null); if(attention)attention.clear(); if(week)week.clear(); if(weeklyEmail)weeklyEmail.pause(); renderAttentionSummary(null); freezeOtherDialogs(true); syncEditor(); health(message, setup);
+    syncMembershipSheet(); renderCareSummary(null); renderIntakeSummary(null); if(attention)attention.clear(); if(week)week.clear(); if(weeklyEmail)weeklyEmail.pause(); if(careReminders)careReminders.pause(); renderAttentionSummary(null); freezeOtherDialogs(true); syncEditor(); health(message, setup);
   }
   function clearConnectionReport() {
     el("workspace-connection-report").textContent = "";
@@ -426,7 +435,7 @@
       if (!current(epoch) || request !== loadEpoch) return;
       freezeOtherDialogs(false);
       health("Loading the office tools…", false);
-      if (canEdit()) await Promise.all([membership ? membership.load(epoch) : null, care ? care.load(epoch) : null, officeContent ? officeContent.load(epoch) : null, signups ? signups.load(epoch) : null, intakeTasks ? intakeTasks.load(epoch) : null, communications ? communications.load(epoch) : null, weeklyEmail ? weeklyEmail.load(epoch) : null, followups ? followups.load(epoch) : null]);
+      if (canEdit()) await Promise.all([membership ? membership.load(epoch) : null, care ? care.load(epoch) : null, officeContent ? officeContent.load(epoch) : null, signups ? signups.load(epoch) : null, intakeTasks ? intakeTasks.load(epoch) : null, communications ? communications.load(epoch) : null, weeklyEmail ? weeklyEmail.load(epoch) : null, careReminders && role === "admin" ? careReminders.load(epoch) : null, followups ? followups.load(epoch) : null]);
       if (!current(epoch) || request !== loadEpoch) return;
       if(canEdit()&&attention)await attention.load(epoch);
       if(!current(epoch)||request!==loadEpoch)return;
@@ -443,8 +452,9 @@
   function route() {
     if (!session || !role) return;
     var view = (location.hash || "#dashboard").slice(1);
-    if (!titles[view] || (privateViews.includes(view) && !canEdit())) view = "dashboard";
+    if (!titles[view] || (privateViews.includes(view) && !canEdit()) || (view === "care-reminders" && role !== "admin")) view = "dashboard";
     document.querySelectorAll("[data-private-module]").forEach(function (node) { node.classList.toggle("hidden", !canEdit()); });
+    document.querySelectorAll("[data-admin-module]").forEach(function (node) { node.classList.toggle("hidden", role !== "admin"); });
     document.querySelectorAll(".view").forEach(function (node) { node.classList.toggle("hidden", node.id !== view + "-view"); });
     document.querySelectorAll("aside nav a").forEach(function (node) { node.classList.toggle("active", node.dataset.view === view); });
     el("page-title").textContent = titles[view];
@@ -473,7 +483,14 @@
     el("activity-list").innerHTML = state.activity.map(activityRow).join("");
     bindRowActions();
     if (membership) membership.render(); if (care) care.render();
-    if (officeContent) officeContent.render(); if (signups) signups.render(); if (intakeTasks) intakeTasks.render(); if (communications) communications.render(); if (weeklyEmail) weeklyEmail.render(); if(attention)attention.render(); if(week)week.render(); if (followups) followups.render();
+    if (officeContent) officeContent.render(); if (signups) signups.render(); if (intakeTasks) intakeTasks.render(); if (communications) communications.render(); if (weeklyEmail) weeklyEmail.render(); if(careReminders)careReminders.render(); if(attention)attention.render(); if(week)week.render(); if (followups) followups.render();
+  }
+
+  function renderCareReminderSummary(summary) {
+    var status = el("dashboard-reminder-status"), count = el("reminder-held-count"); if (!status || !count) return;
+    var valid = !!session && role === "admin" && workspaceReady && summary && typeof summary.enabled === "boolean" && [summary.unbound, summary.held, summary.queued].every(function (v) { return Number.isSafeInteger(v) && v >= 0; });
+    count.textContent = valid ? String(summary.held) : "—";
+    status.textContent = valid ? (summary.enabled ? "Reminder service enabled. " : "Reminder service paused. ") + summary.unbound + " care sources need recipient setup; " + summary.queued + " deliveries are waiting." : "Reminder setup and delivery status are unavailable until checked. Open Care reminders to review the connection.";
   }
 
   function renderAttentionSummary(summary) {
