@@ -323,6 +323,12 @@
     var reason=error&&error.code==="OFFICE_OFFLINE"?"browser reports offline":error&&error.code==="OFFICE_TIMEOUT"?"request timed out":error&&(error.code==="42501"||error.status===403)?"access could not be confirmed":error&&["PGRST202","PGRST204","42P01","42703","42883","OFFICE_SETUP"].includes(error.code)?"setup needs review":"connection unavailable";
     return " Connection check: "+labels[phase]+" · "+reason+".";
   }
+  function responseError(result) {
+    if (!result || !result.error) return null;
+    // PostgREST puts the HTTP status beside error, not inside it.
+    // Retain it so 401 and 403 do not become the same connection failure.
+    return Number.isInteger(result.status) ? Object.assign({}, result.error, { status: result.status }) : result.error;
+  }
   function authFailure(error) { return error && (error.status === 401 || ["PGRST301", "PGRST302", "PGRST303"].includes(error.code)); }
   async function verifyReadiness(epoch) {
     if (epoch !== authEpoch || !session) return false;
@@ -332,7 +338,7 @@
       if (refreshing) health("Checking your staff access…", false);
       var staff = await deadline(db.from("staff_roles").select("role").eq("user_id", userId).maybeSingle());
       if (epoch !== authEpoch || request !== readinessEpoch) return false;
-      if (staff.error) throw staff.error;
+      if (staff.error) throw responseError(staff);
       if (!staff.data || !["admin", "editor", "viewer"].includes(staff.data.role)) {
         queueSession(null); el("login-error").textContent = "This account no longer has approved Creek Office access."; return false;
       }
@@ -343,7 +349,7 @@
       role = staff.data.role; el("role-label").textContent = role;
       phase="readiness"; if (refreshing) health("Checking the office setup…", false); var result = await deadline(db.rpc("office_readiness"));
       if (epoch !== authEpoch || request !== readinessEpoch || !session || session.user.id !== userId) return false;
-      if (result.error) throw result.error;
+      if (result.error) throw responseError(result);
       var ready = result.data;
       if (!ready || ready.staff_role !== role || String(ready.schema_revision || "") < REQUIRED_REVISION || !Array.isArray(ready.supported_modules) || (hasEditRole() ? ["events", "contacts", "documents", "activity", "membership", "care", "office_content", "app_signups", "leader_followups"] : ["events", "contacts", "documents", "activity"]).some(function (name) { return !ready.supported_modules.includes(name); })) {
         throw { code: "OFFICE_SETUP" };
@@ -409,7 +415,7 @@
       ]);
       if (!current(epoch) || request !== loadEpoch) return;
       var failed = results.find(function (result) { return result.error || !Array.isArray(result.data); });
-      if (failed) throw failed.error || new Error("Incomplete record response");
+      if (failed) throw responseError(failed) || new Error("Incomplete record response");
       var invalid = results.slice(0, 3).some(function (result) { return result.data.some(function (row) { return !row.id || !Number.isInteger(row.version) || row.version < 1; }); });
       if (invalid) throw { code: "OFFICE_SETUP" };
       ["events", "people", "documents", "activity"].forEach(function (name, index) { state[name] = results[index].data; });

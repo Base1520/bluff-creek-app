@@ -888,3 +888,26 @@ test('late old-account failure cannot unlock the replacement refresh or restore 
   heldNew.resolve({data:{role:'editor'}});await until(()=>f.el('people-list').textContent.includes('Record b')&&!f.el('workspace-refresh').disabled,'replacement ready');
   assert.doesNotMatch(f.el('people-list').textContent,/Record a/);assert.equal(f.el('workspace-connection-report').textContent,'');
 });
+
+test('HTTP status outside the PostgREST error sends unauthenticated requests to sign-in',async t=>{
+  for(const phase of ['role','readiness','events','contacts','documents','audit_log']) {
+    const error=Object.freeze({code:'42501',message:'PRIVATE_BACKEND_CANARY'}),response=Object.freeze({status:401,error,data:null});
+    const options=phase==='readiness'?{readiness:response}:{onQuery:q=>q.table===(phase==='role'?'staff_roles':phase)?response:undefined};
+    const f=fixture(t,options);
+    await until(()=>f.el('login-error').textContent.includes('Sign in again'),'401 at '+phase+' asks for sign-in');
+    assert.equal(f.el('workspace').classList.contains('hidden'),true);assert.equal(f.el('people-list').textContent,'');
+    assert.equal(f.el('workspace-connection-report').textContent,'');assert.doesNotMatch(f.el('login-error').textContent,/PRIVATE_BACKEND_CANARY/);
+    assert.deepEqual(error,{code:'42501',message:'PRIVATE_BACKEND_CANARY'},'the provider error object is not mutated');
+  }
+});
+test('HTTP 403 access refusals retain the session and fail closed with recovery help',async t=>{
+  for(const phase of ['role','readiness','records']) {
+    const response={status:403,error:{code:'42501',message:'PRIVATE_PERMISSION_CANARY'},data:null};
+    const options=phase==='readiness'?{readiness:response}:{onQuery:q=>q.table===(phase==='role'?'staff_roles':'documents')?response:undefined};
+    const f=fixture(t,options);await until(()=>f.el('workspace').dataset.connection==='blocked'&&!f.el('workspace-refresh').disabled,'403 is blocked');
+    assert.equal(f.el('login').classList.contains('hidden'),true);assert.equal(f.el('primary-action').disabled,true);
+    assert.equal(f.el('workspace-setup-help').hidden,false);assert.match(f.el('workspace-connection-report').textContent,/access could not be confirmed/);
+    assert.doesNotMatch(f.el('workspace-connection-report').textContent,/PRIVATE_PERMISSION_CANARY/);
+    assert.equal(f.calls.some(q=>['insert','update','delete'].includes(q.op)),false);
+  }
+});
