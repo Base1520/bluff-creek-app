@@ -8,7 +8,7 @@ The standard is a warm, consistent experience for church families and an Office 
 
 First finish explicit staff ownership, due-contact summaries, pastor escalation and notification-failure review. Make recording a call or visit quick on a phone. Preserve the distinction between an attempted contact and a successful one, and between initial guest follow-up and ongoing member care.
 
-The local care-reminder planning foundation is the first implementation step. Actual server bindings, queue, dispatcher and acceptance remain ahead. Measure completed first contacts against the chosen due date, active-member care coverage and unresolved overdue items. Always show the eligible population and missing data; exclude inactive historical records from current-care goals.
+The care-reminder planner and the next server layer are implemented and locally tested: explicit ownership bindings, authoritative scheduling, a durable queue and a generic email worker. They remain source-only and disabled; Office controls, actual recipient selection and delivery activation/acceptance are next. Measure completed first contacts against the chosen due date, active-member care coverage and unresolved overdue items. Always show the eligible population and missing data; exclude inactive historical records from current-care goals.
 
 ## 2. A clear daily Office start page
 
