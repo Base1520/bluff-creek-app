@@ -1,0 +1,40 @@
+{
+  "format_version": 1,
+  "status": "prepared_disabled_not_applied",
+  "baseline_manifest": "tools/office-preflight/manifest.json",
+  "baseline_manifest_sha256": "ce29bd07a46ceab3698ee11f572e64d5f76b7c5a5f790f0a7e4eaf333a130ea7",
+  "baseline_migration_count": 12,
+  "proposed_migration_count": 2,
+  "settings_enabled_by_default": false,
+  "pastor_recipients_by_default": 0,
+  "files": [
+    {
+      "path": "tools/care-reminders/migrations/20260912183930_care_reminder_bindings.sql",
+      "sha256": "0cb3338ecfd93f5b5c0b16e9b4177ea715b509f866691e437d0a4fe6a60778ab"
+    },
+    {
+      "path": "tools/care-reminders/migrations/20260912183934_care_reminder_queue.sql",
+      "sha256": "7751c0cfc72dc48e93f126a41cb58d3af69c1f01e1e4083f5c9678749d05b488"
+    },
+    {
+      "path": "supabase/functions/care-reminder-dispatch/handler.mjs",
+      "sha256": "2a5d94e7a449a7804df15647dcf7a1da7dc725730bf350742311114e39e10d5f"
+    },
+    {
+      "path": "supabase/functions/care-reminder-dispatch/index.ts",
+      "sha256": "f920fcd0f1ba90741b268858318e1951abceed723fd61fcb7603442ef2142375"
+    },
+    {
+      "path": "supabase/functions/care-reminder-dispatch/deno.json",
+      "sha256": "9e74638c3713f1b0596589b0d007535a1f32e010e26fef92ef72315f6faa7f17"
+    },
+    {
+      "path": "supabase/functions/care-reminder-dispatch/config.example.toml",
+      "sha256": "291dad27b9b18be66d34c6f3ea419c6ad237bb3cd9d8e5d92744494019816206"
+    }
+  ],
+  "schema_applied": false,
+  "function_deployed": false,
+  "schedule_installed": false,
+  "messages_sent": 0
+}
