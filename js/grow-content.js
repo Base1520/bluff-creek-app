@@ -7,7 +7,7 @@ var CREEK_GROW_CONTENT = {
     subtitle: 'Bringing our questions before God.',
     introduction: 'Over the coming months, we’re walking through Habakkuk—bringing honest questions to God and learning to trust Him as we wait.',
     currentPassage: { reference: 'Habakkuk 1:2–4', date: '2026-09-20' },
-    nextPassage: { reference: 'Habakkuk 1:5–17', date: '2026-09-27' },
+    nextPassage: { reference: 'Habakkuk 1:5–11', date: '2026-09-27' },
     pause: null
   },
   spotify: {
