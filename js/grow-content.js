@@ -1,7 +1,7 @@
 /* Public, pastor-reviewed selections only. See docs/grow-maintenance.md.
    Leave unconfirmed links, books and weekly passages empty. No credentials here. */
 var CREEK_GROW_CONTENT = {
-  updated: '2026-09-07',
+  updated: '2026-09-23',
   series: {
     title: 'Habakkuk',
     subtitle: 'Bringing our questions before God.',
@@ -202,9 +202,22 @@ var CREEK_GROW_CONTENT = {
       "category": "Bible study and teaching",
       "note": "Teaches a repeatable process for interpreting Scripture faithfully and shaping Christ-centered lessons, preaching, and everyday application.",
       "reader": "Bible teachers, small-group leaders, pastors, and serious Bible readers",
-      "context": "A method guide for studying and teaching Scripture. The linked author page offers the digital edition; check formats there.",
+      "context": "A method guide for studying and teaching Scripture, written by our pastor. Now available in paperback and Kindle on Amazon, with a digital edition on the author page.",
       "url": "https://www.base1520.com/spiritual-operators-manual/",
-      "edition": "Digital edition; author page checked September 7, 2026"
+      "edition": "Paperback and Kindle on Amazon, plus a digital edition; all three checked September 23, 2026"
+    },
+    {
+      "id": "roethlingshoefer-holy-health",
+      "approved": true,
+      "title": "Holy Health",
+      "subtitle": "Habits and Rhythms to Heal Your Body and Transform Your Life",
+      "author": "Justin Roethlingshoefer",
+      "category": "Stewarding the body",
+      "note": "Treats physical health as stewardship rather than vanity, offering habits of rest, movement, nutrition, and rhythm for the whole person\u2014body, mind, and spirit.",
+      "reader": "Adults who want to care for their health as part of following Christ",
+      "context": "Practical health writing from a performance coach, not a work of theology or a medical guide. Take health changes to your own doctor first, especially with existing conditions, and weigh its claims against Scripture as you would any popular-level book.",
+      "url": "https://holyhealthbook.com/",
+      "edition": "Released August 11, 2026; publisher page checked September 23, 2026"
     },
     {
       "id": "gallaty-growing-up",
