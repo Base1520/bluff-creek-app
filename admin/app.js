@@ -49,6 +49,7 @@
     return address;
   }
   function el(id) { return document.getElementById(id); }
+  function hidePassword() { el("password").type = "password"; el("show-password").checked = false; }
   function show(id) { ["setup", "login", "loading", "workspace"].forEach(function (name) { el(name).classList.toggle("hidden", name !== id); }); }
   function safe(value) { var node = document.createElement("span"); node.textContent = value == null ? "" : String(value); return node.innerHTML.replace(/"/g, "&quot;"); }
   function dateLabel(value) { if (!value) return ""; return new Date(value + (value.length === 10 ? "T12:00:00" : "")).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); }
@@ -97,6 +98,7 @@
     ["dashboard-events", "events-list", "people-list", "documents-list", "activity-list", "user-label", "role-label"].forEach(function (id) { el(id).replaceChildren(); });
     ["event-count", "people-count", "document-count", "signup-count"].forEach(function (id) { el(id).textContent = "—"; });
     ["event-search", "people-search", "document-search", "event-filter", "people-filter", "document-filter", "email", "password"].forEach(function (id) { el(id).value = ""; });
+    hidePassword();
     window.clearTimeout(notice.timer); els.notice.textContent = ""; els.notice.classList.add("hidden");
     if (el("event-status-filter")) el("event-status-filter").value = "active";
     document.querySelector("aside").classList.remove("open"); el("menu").setAttribute("aria-expanded", "false");
@@ -181,6 +183,9 @@
   function bind() {
     els.notice = el("notice");
     el("login-form").addEventListener("submit", login);
+    el("show-password").addEventListener("change", function () { el("password").type = this.checked && !this.disabled ? "text" : "password"; });
+    el("login-form").addEventListener("reset", hidePassword);
+    window.addEventListener("pageshow", hidePassword);
     el("logout").addEventListener("click", logout);
     el("menu").addEventListener("click", function () { var open = document.querySelector("aside").classList.toggle("open"); el("menu").setAttribute("aria-expanded", String(open)); if (open) document.querySelector("aside nav a").focus(); });
     document.addEventListener("keydown", function (event) { if (event.key === "Escape" && document.querySelector("aside").classList.contains("open")) { document.querySelector("aside").classList.remove("open"); el("menu").setAttribute("aria-expanded", "false"); el("menu").focus(); } });
@@ -215,14 +220,14 @@
 
   async function login(event) {
     event.preventDefault(); if (el("login-submit").disabled) return; el("login-error").textContent = "";
-    el("login-submit").disabled = true;
+    hidePassword(); el("show-password").disabled = true; el("login-submit").disabled = true;
     manualSignInPending = true;
     try {
     var result = await db.auth.signInWithPassword({ email: el("email").value.trim(), password: el("password").value });
     if (result.error) el("login-error").textContent = result.error.message;
     else if (result.data && result.data.session) { signedOut = false; queueSession(result.data.session); await db.auth.startAutoRefresh(); }
     } catch (error) { el("login-error").textContent = error.message || "Sign-in is unavailable. Please try again."; }
-    finally { manualSignInPending = false; if (signedOut) clearAuthStorage(); el("password").value = ""; el("login-submit").disabled = false; }
+    finally { manualSignInPending = false; if (signedOut) clearAuthStorage(); el("password").value = ""; hidePassword(); el("show-password").disabled = false; el("login-submit").disabled = false; }
   }
 
   function clearAuthStorage() {
