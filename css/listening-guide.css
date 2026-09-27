@@ -1,0 +1,42 @@
+.listening-entry{position:relative;overflow:hidden;display:block;padding:20px;border-radius:18px;background:var(--pine-deep);color:var(--ivory);text-decoration:none;border:1px solid var(--pine);box-shadow:var(--shadow)}
+.listening-entry .eye{display:block;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#e4ce9a}
+.listening-entry strong{display:block;font:600 24px/1.2 Bitter,serif;margin:8px 0}
+.listening-entry p{margin:0 0 12px;font-size:14px;line-height:1.5;color:#f1e9d8}
+.listening-entry .entry-action{display:block;font-weight:800;font-size:14px;color:var(--ivory)}
+.listening-entry img{position:absolute;right:-9px;top:5px;width:115px;opacity:.08;pointer-events:none}
+.listening-entry>*:not(img){position:relative}
+.listening-entry:focus-visible{outline:3px solid var(--wheat);outline-offset:4px}
+.listening-guide{line-height:1.75;font-size:16px}
+.listening-cover{position:relative;isolation:isolate;overflow:hidden;background:var(--pine-deep);color:var(--ivory);border-radius:20px;padding:26px 22px 24px;margin:2px 0 20px}
+.listening-cover .road-sign{position:absolute;z-index:-1;width:156px;right:-16px;top:-8px;opacity:.08;pointer-events:none}
+.listening-cover .guide-eyebrow{font-weight:800;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#e4ce9a}
+.listening-cover h2{font:600 clamp(26px,7vw,34px)/1.2 Bitter,serif;margin:12px 0 10px;letter-spacing:-.02em}
+.listening-cover p{font-size:15px;line-height:1.6;margin:0;color:#f1e9d8}
+.guide-meta{font-size:12px;font-weight:700;color:#e4ce9a;margin-top:20px}
+.guide-tools{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.guide-tools a,.guide-tools button,.guide-clear{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 14px;border:1px solid var(--line);border-radius:11px;background:white;color:var(--pine-deep);font:800 14px/1.35 'Nunito Sans',sans-serif;text-decoration:none;cursor:pointer}
+.guide-tools a:first-child{background:var(--pine);color:white;border-color:var(--pine)}
+.guide-save-status{font-size:12.5px;line-height:1.5;color:var(--ink2);margin:8px 0 22px;min-height:38px}
+.guide-section{background:#fffdfa;border:1px solid var(--line);border-radius:16px;padding:21px 18px;margin:16px 0}
+.guide-section .section-kicker{color:var(--wheat-ink);font-weight:800;letter-spacing:.1em;font-size:11px;text-transform:uppercase}
+.guide-section h3{font:600 22px/1.35 Bitter,serif;color:var(--pine-deep);margin:5px 0 17px}
+.guide-section ul{padding-left:19px;margin:0}
+.guide-section li{margin:0 0 15px;padding-left:3px}
+.guide-section li:last-child{margin-bottom:0}
+.guide-section li::marker{color:var(--wheat-ink)}
+.guide-section .reference{font-weight:800;color:var(--pine-deep)}
+.guide-blank{display:inline-flex;align-items:baseline;gap:3px;max-width:100%;vertical-align:baseline}
+.guide-blank sup{font-size:10px;color:var(--wheat-ink);font-weight:800}
+.guide-blank input{display:inline-block;width:13ch;max-width:100%;min-height:44px;margin:2px 0;padding:5px 7px;border:0;border-bottom:2px solid var(--wheat);border-radius:5px 5px 0 0;background:#f4efdf;color:var(--pine-deep);font:700 16px/1.4 'Nunito Sans',sans-serif}
+.guide-blank input::placeholder{color:#716c5c;font-size:13px;font-weight:400}
+.guide-section label[for="guide-reflection"]{display:block;font-weight:800;margin-bottom:9px}
+#guide-reflection{display:block;width:100%;min-height:180px;resize:vertical;padding:14px;border:1px solid var(--line);border-radius:10px;color:var(--ink);background:white;font:400 16px/1.7 'Nunito Sans',sans-serif}
+.guide-key{background:var(--pine-tint);border:1px solid #cad6c9;border-radius:14px;margin:22px 0}
+.guide-key summary{cursor:pointer;min-height:48px;padding:16px;font-weight:800;color:var(--pine-deep)}
+.guide-key p{font-size:13px;margin:0 18px 10px;color:var(--ink2)}
+.guide-key ol{columns:2;column-gap:26px;margin:0 18px 18px;padding-left:25px;font-size:15px;line-height:1.9}
+.guide-key li{break-inside:avoid}
+.guide-clear{background:transparent;font-size:13px}
+.listening-guide :is(a,button,input,textarea,summary):focus-visible{outline:3px solid var(--pine);outline-offset:3px}
+.guide-footer{font:italic 500 18px/1.5 Bitter,serif;color:var(--pine-deep);text-align:center;margin:28px 0}
+@media(max-width:360px){.guide-section{padding:18px 14px}.guide-key ol{columns:1}.listening-cover{padding:22px 18px}}
