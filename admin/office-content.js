@@ -9,7 +9,7 @@
     slides: { table: 'sunday_slides', singular: 'slide record', title: 'Get Sunday’s slides in place.',
       description: 'Organize an existing Google Slides, Canva, or other HTTPS deck link, or attach a file from Documents. This workspace does not generate a presentation.', statuses: ['draft', 'ready', 'archived'], initial: 'draft' },
     prayers: { table: 'office_prayer_requests', singular: 'prayer request', title: 'Keep praying. Keep caring.',
-      description: 'Maintain the staff prayer list by hand. The public prayer form opens an email draft; it does not automatically add requests here.', statuses: ['active', 'answered', 'archived'], initial: 'active' }
+      description: 'When direct app intake is enabled, requests arrive here privately for staff. You can also enter a request by hand. No request is published or emailed by this workspace.', statuses: ['active', 'answered', 'archived'], initial: 'active' }
   };
   function validDate(value) {
     return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && !isNaN(Date.parse(value + 'T12:00:00Z')) &&
@@ -32,6 +32,7 @@
     var roots = options.roots, first = Object.keys(views).map(function (view) { return roots[view]; }).find(Boolean);
     if (!first) throw new Error('Office content needs a root section.');
     var doc = first.ownerDocument, state = {}, filters = {}, ready = {}, failed = {}, mounted = {}, loadId = 0, mountedEpoch = null, mountedOwner = null;
+    var directIntakeReady=false;
     var dialog = null, formVersion = 0, dialogEpoch = null, dialogOwner = null, dialogView = null, dialogRecord = null, returnFocus = null, saving = false, draft = null;
     Object.keys(views).forEach(function (view) { state[view] = []; filters[view] = { search: '', status: 'current' }; ready[view] = false; failed[view] = false; });
     function deadline(promise) {
@@ -45,7 +46,7 @@
     async function ensure(epoch, owner) { return (!options.ensureReady || await options.ensureReady(epoch)) && current(epoch, owner) && allowed(context()); }
     function freezeDialog() {
       if (!dialog) return;
-      var locked = saving || (draft && (draft.uncertain || draft.conflict)) || !current(dialogEpoch, dialogOwner) || !allowed(context()) || !ready[dialogView];
+      var locked = saving || (draft && (draft.uncertain || draft.conflict)) || !current(dialogEpoch, dialogOwner) || !allowed(context()) || !ready[dialogView] || (dialogView==='prayers' && dialog.querySelector('[name=contact_text]') && !directIntakeReady);
       dialog.querySelectorAll('input, select, textarea').forEach(function (node) { node.disabled = locked; });
       if (!locked) updatePrayerApproval();
       dialog.querySelector('[type="submit"]').disabled = locked;
@@ -102,6 +103,8 @@
       } else if (view === 'prayers') {
         body = textBlock(row.request_text, 'Read the full prayer request') + '<p class="office-content-meta">Scope recorded: ' + safe(capitalize(row.share_scope)) +
           (row.share_scope !== 'staff_only' ? (row.sharing_approved ? ' · Sharing approval recorded' : ' · Approval not recorded') : '') + '</p>';
+        if (row.contact_text) body += '<p class="office-content-meta">Optional contact · self-reported: ' + safe(row.contact_text) + '</p>';
+        if(row.source==='app')body += '<p class="office-content-meta">Submitted directly from the app · private staff intake</p>';
         if (row.care_notes) body += '<details><summary>Staff care notes</summary><p class="office-content-text">' + safe(row.care_notes) + '</p></details>';
       }
       actions += button('Edit', 'data-office-edit', row.id);
@@ -114,7 +117,7 @@
       var filter = filters[view], config = views[view];
       var rows = state[view].filter(function (row) {
         var statusMatch = filter.status === 'all' || (filter.status === 'current' ? ['archived', 'inactive'].indexOf(row.status) === -1 : row.status === filter.status);
-        var haystack = [row.title, row.body, row.committee_name, row.contact_name, row.role_label, row.email, row.phone, row.notes, row.display_name, row.request_text, row.care_notes, row.service_date].filter(Boolean).join(' ').toLowerCase();
+        var haystack = [row.title, row.body, row.committee_name, row.contact_name, row.role_label, row.email, row.phone, row.notes, row.display_name, row.request_text, row.contact_text, row.care_notes, row.service_date].filter(Boolean).join(' ').toLowerCase();
         return statusMatch && (!filter.search || haystack.includes(filter.search.toLowerCase()));
       });
       rows.sort(function (a, b) { return view === 'slides' ? String(b.service_date || '').localeCompare(String(a.service_date || '')) : String(b.updated_at || b.created_at || '').localeCompare(String(a.updated_at || a.created_at || '')); });
@@ -163,8 +166,10 @@
       if (!allowed(context())) { freezeDialog(); return false; }
       mountedEpoch = epoch; mountedOwner = owner;
       var token = ++loadId, names = Object.keys(views);
-      var results = await Promise.all(names.map(function (view) { return roots[view] ? rowsFor(view, epoch, owner, token) : Promise.resolve({ rows: [], failed: false }); }));
+      var capability=options.db.rpc ? deadline(Promise.resolve().then(function(){return options.db.rpc('direct_intake_readiness',{});})).then(function(r){return !!(r && !r.error && r.data && r.data.available===true && r.data.version===1);},function(){return false;}) : Promise.resolve(false);
+      var results = await Promise.all(names.map(function (view) { return roots[view] ? rowsFor(view, epoch, owner, token) : Promise.resolve({ rows: [], failed: false }); }).concat([capability]));
       if (!current(epoch, owner) || token !== loadId) return false;
+      directIntakeReady=results[names.length]===true;
       names.forEach(function (view, i) { state[view] = results[i] ? results[i].rows : []; failed[view] = !results[i] || results[i].failed; ready[view] = !failed[view]; });
       mountedEpoch = epoch; mountedOwner = owner; render(); return names.every(function (view) { return !failed[view]; });
     }
@@ -216,7 +221,7 @@
         if (row.document_id && !documents().some(function (item) { return item.id === row.document_id; })) fields += '<option value="' + safe(row.document_id) + '" selected>Previously attached file (not in the current list)</option>';
         fields += '</select><small>A ready record needs a deck link or attached file. To upload a new file, save a draft first, choose Upload slides, then edit this record to attach it.</small></label>' + textarea('notes', 'Slide preparation notes', row.notes);
       }
-      if (view === 'prayers') fields = input('display_name', 'Display name for this staff record', row.display_name, 'text', true, 160, true) + textarea('request_text', 'Prayer request', row.request_text, true, 10000) + textarea('care_notes', 'Staff care notes', row.care_notes) + select('share_scope', 'Recorded sharing scope', ['staff_only', 'prayer_team', 'church'], row.share_scope || 'staff_only') + '<label class="office-content-check"><input type="checkbox" name="sharing_approved"' + (row.sharing_approved ? ' checked' : '') + '>Approval for this sharing scope has been recorded</label><p class="office-content-wide office-content-note" data-office-sharing-help></p>';
+      if (view === 'prayers') fields = input('display_name', 'Display name for this staff record', row.display_name, 'text', true, 160, true) + textarea('request_text', 'Prayer request', row.request_text, true, 10000) + (directIntakeReady ? input('contact_text', 'Optional contact details · self-reported', row.contact_text, 'text', false, 320, true) : '') + textarea('care_notes', 'Staff care notes', row.care_notes) + select('share_scope', 'Recorded sharing scope', ['staff_only', 'prayer_team', 'church'], row.share_scope || 'staff_only') + '<label class="office-content-check"><input type="checkbox" name="sharing_approved"' + (row.sharing_approved ? ' checked' : '') + '>Approval for this sharing scope has been recorded</label><p class="office-content-wide office-content-note" data-office-sharing-help></p>';
       fields += select('status', 'Status', config.statuses, row.status || config.initial);
       dialog = doc.createElement('dialog'); dialog.className = 'office-content-dialog'; dialog.setAttribute('aria-labelledby', 'office-content-form-title'); dialog.setAttribute('aria-describedby', 'office-content-form-help');
       dialog.innerHTML = '<form data-office-form><header><div><p class="eyebrow">Private staff record</p><h2 id="office-content-form-title">' + (record ? 'Edit ' : 'Add ') + config.singular + '</h2></div><button type="button" class="quiet" data-office-close>Close</button></header><div class="office-content-form-body"><p id="office-content-form-help" class="office-content-note">' + config.description + '</p><div class="office-content-form-grid">' + fields + '</div><p class="office-content-error error" role="alert"></p></div><footer><button type="button" class="quiet" data-office-reconcile hidden>Check saved progress</button><button type="button" class="quiet" data-office-close>Cancel</button><button type="submit">Save ' + config.singular + '</button></footer></form>';
@@ -248,6 +253,7 @@
         if (values.status === 'ready' && !values.deck_url && !values.document_id) return 'Attach a file or add a deck link before marking slides ready.';
       }
       if (view === 'prayers') {
+        if(values.contact_text !== undefined && (!directIntakeReady || values.contact_text.length>320))return 'Refresh direct-intake readiness and keep optional contact details within 320 characters.';
         if (['staff_only', 'prayer_team', 'church'].indexOf(values.share_scope) === -1) return 'Choose a valid sharing scope.';
         if (values.share_scope !== 'staff_only' && !values.sharing_approved) return 'Record approval before choosing a wider sharing scope.';
       }
@@ -255,6 +261,7 @@
     }
     function payloadFor(view, values) {
       var fields = view === 'announcements' ? ['title', 'body', 'status', 'starts_on', 'ends_on'] : view === 'committees' ? ['committee_name', 'contact_name', 'role_label', 'email', 'phone', 'term_start', 'term_end', 'notes', 'status'] : view === 'slides' ? ['title', 'service_date', 'status', 'deck_url', 'document_id', 'notes'] : ['display_name', 'request_text', 'care_notes', 'status', 'share_scope', 'sharing_approved'];
+      if(view==='prayers' && values.contact_text!==undefined && directIntakeReady)fields.push('contact_text');
       var payload = {};
       fields.forEach(function (field) { payload[field] = values[field] === '' ? null : values[field]; });
       if (view === 'slides' && payload.deck_url) payload.deck_url = deckLink(payload.deck_url);
@@ -329,6 +336,7 @@
       } finally { if (current(epoch, owner) && version === formVersion && dialog) { saving = false; freezeDialog(); } }
     }
     function clear() {
+      directIntakeReady=false;
       loadId++; closeDialog(false, true); mountedEpoch = null; mountedOwner = null;
       Object.keys(views).forEach(function (view) { state[view] = []; filters[view] = { search: '', status: 'current' }; ready[view] = false; failed[view] = false; mounted[view] = false; if (roots[view]) roots[view].replaceChildren(); });
     }
@@ -347,7 +355,7 @@
       });
     });
     root.addEventListener('beforeunload', function (event) { if (dirty() || saving || (draft && draft.uncertain)) { event.preventDefault(); event.returnValue = ''; } });
-    return { load: load, render: render, clear: clear, open: function (view) { openEditor(view, null, doc.activeElement); } };
+    return { load: load, render: render, clear: clear, open: function (view) { openEditor(view, null, doc.activeElement); }, labelFor: function(view,id) { var c=context();if(!allowed(c)||!ready[view]||mountedOwner!==c.userId||mountedEpoch!==c.epoch)return '';var row=(state[view]||[]).find(function(item){return item.id===id;});return row?row.display_name||'Prayer request':''; }, openRecord: function(view,id) { var row=(state[view]||[]).find(function(item){return item.id===id;}); if(row)openEditor(view,row,doc.activeElement); } };
   }
   root.CreekOfficeContent = { create: create };
 }(typeof window !== 'undefined' ? window : globalThis));

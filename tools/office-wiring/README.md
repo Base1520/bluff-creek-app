@@ -1,5 +1,7 @@
 # Offline office wiring preparation
 
+This is the historical staff-first wiring generator for the frozen eight-migration baseline. It does not configure the later direct-intake feature or dispatcher. See [current source history](../office-preflight/direct-intake-hosted-history-2026-09-10.json) and [direct intake](../direct-intake/README.md) before any current activation.
+
 This tool validates a small private JSON input and optionally stages browser configuration for review. It never contacts Supabase, changes source configuration, applies SQL, creates accounts, sends messages or deploys anything. Use the existing church project; this tool does not create or verify one.
 
 The example input deliberately contains rejected placeholders. Prepare a private copy outside the checkout and replace those values locally. Do not paste keys into command arguments, output logs or screenshots. A browser publishable key belongs in the generated browser configurations; secret/service-role keys and legacy JWT keys are rejected.

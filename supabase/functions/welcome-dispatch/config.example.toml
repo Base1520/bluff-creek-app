@@ -1,0 +1,5 @@
+# Merge this single function stanza only after the exact activation review.
+# The handler independently verifies real user JWTs with Auth getUser, or the
+# distinct server-only scheduler secret. No public anonymous work is allowed.
+[functions.welcome-dispatch]
+verify_jwt = false

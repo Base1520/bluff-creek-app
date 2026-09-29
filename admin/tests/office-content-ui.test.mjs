@@ -13,7 +13,7 @@ function fixture(t, options={}) {
   let context={epoch:1,userId:'sample-user',canEdit:true,role:options.role||'editor'}, refreshes=0, uploads=0, nextId=1;
   const calls=[],notices=[],opened=[],control={hold:null,error:null,noRows:false};
   const roots=Object.fromEntries(names.map(n=>[n,w.document.getElementById(n)]));
-  const db={from(table){
+  const db={rpc:async()=>control.capability?control.capability():({data:{available:options.directIntake===true,version:1}}),from(table){
     const q={table,op:'select',filters:[]};
     const chain={select(fields,opts){q.fields=fields;q.count=opts?.count;return chain;},order(){return chain;},range(a,b){q.range=[a,b];return chain;},eq(k,v){q.filters.push([k,v]);return chain;},single(){q.single=true;return chain;},maybeSingle(){q.single=true;return chain;},insert(data){q.op='insert';q.data=data;return chain;},update(data){q.op='update';q.data=data;return chain;},then(resolve,reject){
       calls.push(q);
@@ -249,4 +249,18 @@ test('same-epoch owner change during readiness never submits the former content 
   const saving=f.submit();await tick();f.setContext({epoch:1,userId:'replacement-user',role:'editor',canEdit:true,workspaceReady:true});finish(true);await saving;
   assert.equal(f.calls.some(q=>q.op!=='select'),false);assert.equal(f.refreshes(),0);assert.equal(f.notices.length,0);
   f.api.render();assert.equal(f.form(),null);assert.doesNotMatch(f.w.document.body.textContent,/OLD_SUBMISSION_CANARY/);
+});
+
+test('direct prayer contact stays text-only, private, searchable and metadata-preserving',async t=>{
+ const f=fixture(t,{directIntake:true,rows:{office_prayer_requests:[{id:'app-prayer',source:'app',submitted_auth_user_id:'private-user-id',display_name:'Fictional request',request_text:'Synthetic prayer',contact_text:'<img src=x onerror=alert(1)>',status:'active',share_scope:'staff_only',sharing_approved:false}]}});await f.api.load(1);
+ assert.match(f.roots.prayers.textContent,/Submitted directly from the app/);assert.match(f.roots.prayers.textContent,/Every approved office editor/);assert.equal(f.roots.prayers.querySelector('img'),null);assert.doesNotMatch(f.roots.prayers.textContent,/opens an email draft|private-user-id/);
+ f.roots.prayers.querySelector('[data-office-edit]').click();f.set('contact_text','Fictional contact note');await f.submit();const write=f.calls.find(q=>q.op==='update');assert.equal(write.data.contact_text,'Fictional contact note');assert.equal('source' in write.data,false);assert.equal('submitted_auth_user_id' in write.data,false);assert.equal(write.data.share_scope,'staff_only');assert.equal(write.data.sharing_approved,false);
+});
+test('new prayer contact fields require positive capability and stop safely if it becomes unavailable',async t=>{
+ const old=fixture(t);await old.api.load(1);old.api.open('prayers');assert.equal(old.form().elements.contact_text,undefined);old.set('display_name','Fictional request');old.set('request_text','Manual legacy prayer');await old.submit();assert.equal('contact_text' in old.calls.find(q=>q.op==='insert').data,false);
+ const f=fixture(t,{directIntake:true});await f.api.load(1);f.api.open('prayers');f.set('display_name','Fictional request');f.set('request_text','Synthetic prayer');f.set('contact_text','x'.repeat(321));await f.submit(true);assert.equal(f.calls.some(q=>q.op==='insert'),false);assert.match(f.form().textContent,/320 characters/);f.set('contact_text','Retained contact');f.control.capability=async()=>({error:{code:'PGRST202'}});await f.api.load(1);assert.equal(f.form().elements.contact_text.value,'Retained contact');assert.equal(f.form().querySelector('[type=submit]').disabled,true);await f.submit(true);assert.equal(f.calls.some(q=>q.op==='insert'),false);f.api.clear();assert.equal(f.form(),null);
+});
+
+test('intake source label and record handoff cannot reuse prayer data after an account replacement',async t=>{
+ const f=fixture(t,{rows:{office_prayer_requests:[{id:'prayer-fixture',display_name:'Fictional private request',request_text:'Synthetic prayer',status:'active',share_scope:'staff_only',sharing_approved:false}]}});await f.api.load(1);assert.equal(f.api.labelFor('prayers','prayer-fixture'),'Fictional private request');f.setContext({epoch:1,userId:'replacement-user',role:'editor',canEdit:true});assert.equal(f.api.labelFor('prayers','prayer-fixture'),'');f.api.openRecord('prayers','prayer-fixture');assert.equal(f.form(),null);
 });

@@ -106,7 +106,8 @@ for (const scope of ['https://app.example.test/', 'http://localhost:8080/church/
     await worker.lifecycle('install');
     assert(worker.installed.includes(new URL('index.html', scope).href));
     assert(worker.installed.includes(new URL('js/calendar-feed.js', scope).href));
-    assert(worker.installed.includes(new URL('js/app-forms.js', scope).href));
+    assert(worker.installed.includes(new URL('css/connection.css', scope).href));
+    assert(!worker.installed.includes(new URL('js/connection.js', scope).href));
     assert(worker.installed.includes(new URL('css/fonts.css', scope).href));
     assert(worker.installed.includes(new URL('js/app-status.js', scope).href));
     assert(worker.installed.includes(new URL('css/app-status.css', scope).href));
@@ -259,7 +260,7 @@ test('the response lifetime awaits cache writes, and storage failure preserves f
 test('activation only deletes old Creek caches and does not claim open clients', async () => {
   const worker = harness();
   await worker.seed('index.html', html('Old'), 'creek-v3');
-  await worker.seed('js/grow.js', new Response('Previous Grow script'), 'creek-v13');
+  await worker.seed('js/grow.js', new Response('Previous Grow script'), 'creek-v14');
   await worker.seed('index.html', html('New'));
   await worker.seed('unrelated', new Response('Keep'), 'other-application');
   await worker.lifecycle('activate');
@@ -278,4 +279,22 @@ test('cached assets are isolated to the current app cache and exact allowlist', 
   assert.equal(worker.calls.length, 1);
   assert.equal(worker.dispatch('assets/not-public.json').handled, false);
   assert.equal(worker.dispatch('assets/logo.png?different=1').handled, false);
+});
+
+
+test('authenticated requests and sensitive URL credentials bypass every public cache route', async () => {
+  const endpoint='https://church.example.test/functions/v1/public-calendar';
+  const worker=harness('https://app.example.test/',endpoint);
+  for(const pathname of ['index.html','events.json','js/grow.js',endpoint,worker.calendarURL]){
+    for(const name of ['Authorization','apikey'])assert.equal(worker.dispatch(pathname,{headers:new Headers({[name]:'synthetic'})}).handled,false);
+  }
+  for(const key of ['access_token','refresh_token','token_hash','code'])assert.equal(worker.dispatch('index.html?'+key+'=synthetic',{mode:'navigate'}).handled,false);
+  for(const path of ['connection.html','js/connection.js','js/connection-config.js','https://sample.supabase.co/rest/v1/rpc/register_app_guest','https://sample.supabase.co/functions/v1/welcome-dispatch'])assert.equal(worker.dispatch(path).handled,false);
+});
+test('private or no-store network responses are returned without public-cache writes', async () => {
+  for(const control of ['private, max-age=0','no-store']){
+    const worker=harness();worker.fetch=async()=>new Response('Private synthetic HTML',{headers:{'Content-Type':'text/html','Cache-Control':control}});
+    const response=await worker.dispatch('index.html',{mode:'navigate'}).response;assert.equal(await response.text(),'Private synthetic HTML');assert.equal(await worker.read('index.html'),undefined);
+    worker.fetch=async()=>new Response('Private synthetic script',{headers:{'Cache-Control':control}});await worker.dispatch('js/grow.js').response;assert.equal(await worker.read('js/grow.js'),undefined);
+  }
 });

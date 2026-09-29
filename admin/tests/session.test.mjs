@@ -67,6 +67,7 @@ function fixture(t,options={}) {
   if (options.sheetControls) { w.eval(membershipSource); const sheetLink=w.CreekMembership.sheetLink; w.CreekMembership={sheetLink,create(){return {load:async()=>{},render(){},clear(){}}}}; }
   if (options.care) w.CreekCare = { create(moduleOptions) { options.care.options=moduleOptions; return { load: async () => { moduleOptions.onSummary(options.care.summary || null); }, render() {}, clear() { moduleOptions.onSummary(null); }, selectPerson(id) { (options.care.selected ||= []).push(id); return options.care.accepted !== false; }, openQueue(kind) { (options.care.queues ||= []).push(kind); return options.care.queueAccepted !== false; } }; } };
   if (options.followups) w.CreekFollowups = { create(moduleOptions) { options.followups.options = moduleOptions; return { load: async () => moduleOptions.onSummary(options.followups.summary), render() {}, clear() { moduleOptions.onSummary({ due:null, overdue:null, upcoming:null, items:[] }); }, openNew() {} }; } };
+  if (options.intake) w.CreekIntakeTasks={create(moduleOptions){options.intake.options=moduleOptions;return{load:async()=>moduleOptions.onSummary(options.intake.summary||null),render(){},clear(){moduleOptions.onSummary(null);},showFilter(value){(options.intake.filters??=[]).push(value);},taskForSource(){return null;}};}};
   let created=0; w.CREEK_OFFICE_CONFIG=options.config||{supabaseUrl:'https://testproject.supabase.co',publishableKey:'sb_publishable_synthetic'};
   w.supabase={createClient(){created++;return client;}};w.eval(app);
   const el=id=>w.document.getElementById(id);
@@ -99,7 +100,7 @@ test('late table fetch after logout cannot repopulate private DOM',async t=>{
 test('same-account token events preserve unsaved edits; viewer cannot open editor',async t=>{
   const f=fixture(t);await pause();f.el('people-list').querySelector('button').click();f.el('editor-fields').querySelector('[name=notes]').value='Synthetic unsaved edit';f.emit(session('a'));await pause();assert.equal(f.el('editor').open,true);assert.equal(f.el('editor-fields').querySelector('[name=notes]').value,'Synthetic unsaved edit');
   const v=fixture(t,{roles:{a:'viewer'}});await pause();v.w.location.hash='#people';await pause();assert.equal(v.el('primary-action').classList.contains('hidden'),true);v.el('primary-action').click();assert.equal(v.el('editor').open,false);assert.equal(v.el('people-list').querySelector('button'),null);
-  for(const view of ['history','care','signups','followups','announcements','committees','slides','prayers']) {
+  for(const view of ['history','care','signups','intake','followups','announcements','committees','slides','prayers']) {
     v.w.location.hash='#'+view;await pause();
     assert.equal(v.el(view+'-view').classList.contains('hidden'),true);
     assert.equal(v.w.document.querySelector('[data-view="'+view+'"]').classList.contains('hidden'),true);
@@ -654,4 +655,12 @@ test('a late first page cannot start the next page after sign-out',async t=>{
   await until(()=>f.calls.some(q=>q.table==='contacts'),'first page started');f.emit(null);
   held.resolve({data:Array.from({length:500},(_,i)=>({id:'synthetic-old-'+i,version:1})),count:600});await pause();
   assert.equal(f.calls.filter(q=>q.table==='contacts').length,1);assert.equal(f.el('people-list').textContent,'');assert.equal(f.el('workspace').classList.contains('hidden'),true);
+});
+
+test('intake dashboard accepts counted actions, opens an explicit filter, and clears immediately on sign-out',async t=>{
+ const intake={summary:{new:2,due:3,open:4}},f=fixture(t,{intake});await until(()=>f.el('intake-new-count').textContent==='2','intake summary loaded');assert.equal(f.el('intake-due-count').textContent,'3');const button=f.w.document.querySelector('button[data-intake-filter="due"]');assert.equal(button.disabled,false);button.click();assert.equal(f.w.location.hash,'#intake');assert.deepEqual(intake.filters,['due']);assert.equal(f.el('page-title').textContent,'Intake actions');f.emit(null);assert.equal(f.el('intake-new-count').textContent,'—');assert.equal(f.el('intake-due-count').textContent,'—');assert.equal(button.disabled,true);assert.equal(f.el('workspace').classList.contains('hidden'),true);
+});
+
+test('intake dashboard refuses malformed totals rather than inventing a complete queue',async t=>{
+ const intake={summary:{new:4,due:2,open:1}},f=fixture(t,{intake});await until(()=>f.el('people-list').querySelector('button'),'workspace ready');assert.equal(f.el('intake-new-count').textContent,'—');assert.equal(f.w.document.querySelector('button[data-intake-filter="new"]').disabled,true);assert.match(f.el('dashboard-intake-status').textContent,/unavailable/);
 });

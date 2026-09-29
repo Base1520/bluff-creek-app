@@ -1,4 +1,4 @@
-/* Optional member/guest connection. No form drafts or auth session are persisted. */
+/* Direct public intake. Drafts are memory-only; the optional public Auth session is isolated from Office. */
 (function (root, factory) {
   'use strict';
   var api = factory();
@@ -7,6 +7,8 @@
 })(typeof window !== 'undefined' ? window : globalThis, function () {
   'use strict';
   var SDK = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.4/dist/umd/supabase.min.js';
+  var SESSION_KEY = 'creek-public-intake-v1', REMEMBER_KEY = 'creek-public-intake-remember-v1';
+  var UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   function loopback(address) {
     return ['http:', 'https:'].includes(address.protocol) && ['127.0.0.1', '[::1]', 'localhost'].includes(address.hostname) && !!address.port && !address.username && !address.password;
   }
@@ -15,6 +17,7 @@
   }
   function settings(config, location) {
     try {
+      if (config.enabled !== true) return null;
       var project = new URL(config.supabaseUrl), page = new URL(location.href);
       var local = config.localDevelopment === true && loopback(project) && loopback(page);
       if (config.localDevelopment === true && !local) return null;
@@ -24,175 +27,416 @@
       if (!/^sb_publishable_[A-Za-z0-9_-]+$/.test(config.publishableKey) && !(local && localAnonKey(config.publishableKey || ''))) return null;
       if (!Array.isArray(config.allowedOrigins) || !config.allowedOrigins.includes(page.origin)) return null;
       if (page.username || page.password || (!local && page.protocol !== 'https:')) return null;
-      if (page.pathname !== '/connection.html') return null;
+      if (!['/', '/index.html', '/connection.html'].includes(page.pathname)) return null;
       return { url: project.origin, key: config.publishableKey, redirect: page.origin + '/connection.html' };
     } catch (_) { return null; }
   }
   function consumeRedirect(win) {
-    var hash = new URLSearchParams(win.location.hash.slice(1));
-    var query = new URLSearchParams(win.location.search);
-    var relevant = ['access_token', 'refresh_token', 'error', 'error_description', 'token_hash', 'code'].some(function (key) { return hash.has(key) || query.has(key); });
-    if (!relevant) return null;
+    var keys = ['access_token','refresh_token','error','error_code','error_description','token_hash','code'];
+    var hash = new URLSearchParams(win.location.hash.slice(1)), query = new URLSearchParams(win.location.search);
+    if (!keys.some(function (key) { return hash.has(key) || query.has(key); }) && !hash.has('type')) return null;
     var result = { error: true };
-    if (hash.get('access_token') && hash.get('refresh_token') && hash.get('token_type') === 'bearer' && !hash.has('error') && !query.has('code') && ['', 'magiclink', 'signup', 'email'].includes(hash.get('type') || '')) {
+    if (win.location.pathname === '/connection.html' && !query.size && hash.get('type') === 'recovery' && hash.get('token_type') === 'bearer' && hash.get('access_token') && hash.get('refresh_token') && !['error','error_code','error_description','code','token_hash'].some(function (key) { return hash.has(key); }) && ['type','token_type','access_token','refresh_token'].every(function (key) { return hash.getAll(key).length === 1; })) {
       result = { access_token: hash.get('access_token'), refresh_token: hash.get('refresh_token') };
     }
-    // Remove credentials and provider errors before loading the SDK or rendering UI.
-    win.history.replaceState(null, '', win.location.pathname);
-    return result;
+    // Scrub even invalid links before loading the SDK. Invite/signup links never enter public recovery.
+    win.history.replaceState(null, '', win.location.pathname); return result;
+  }
+  function sessionStore(win) {
+    var memory = null, remember = false, blocked = false;
+    try { remember = win.localStorage.getItem(REMEMBER_KEY) === 'yes'; } catch (_) {}
+    function remove() { try { win.localStorage.removeItem(SESSION_KEY); win.localStorage.removeItem(REMEMBER_KEY); } catch (_) {} }
+    return {
+      get remembered() { return remember; },
+      choose: function (value) { blocked = false; remember = value === true; if (!remember) remove(); },
+      clear: function () { blocked = true; memory = null; remember = false; remove(); },
+      storage: {
+        getItem: function (key) { if (key !== SESSION_KEY) return null; if (remember) { try { return win.localStorage.getItem(key); } catch (_) {} } return memory; },
+        setItem: function (key, value) { if (key !== SESSION_KEY || blocked) return; memory = value; if (remember) { try { win.localStorage.setItem(key, value); win.localStorage.setItem(REMEMBER_KEY, 'yes'); } catch (_) { remove(); remember = false; } } },
+        removeItem: function (key) { if (key === SESSION_KEY) { memory = null; remove(); } }
+      }
+    };
   }
   function loadSdk(doc) {
     if (doc.defaultView.supabase && typeof doc.defaultView.supabase.createClient === 'function') return Promise.resolve(doc.defaultView.supabase.createClient);
     return new Promise(function (resolve, reject) {
-      var timeout = doc.defaultView.setTimeout(function () { script.remove(); reject(new Error('sdk timeout')); }, 15000);
-      var script = doc.createElement('script'); script.src = SDK; script.crossOrigin = 'anonymous'; script.referrerPolicy = 'no-referrer';
-      script.onload = function () { doc.defaultView.clearTimeout(timeout); var sdk = doc.defaultView.supabase; if (sdk && typeof sdk.createClient === 'function') resolve(sdk.createClient); else reject(new Error('sdk')); };
-      script.onerror = function () { doc.defaultView.clearTimeout(timeout); script.remove(); reject(new Error('sdk')); };
+      var script = doc.createElement('script');
+      var timer = doc.defaultView.setTimeout(function () { script.remove(); reject(new Error('sdk')); }, 15000);
+      script.src = SDK; script.crossOrigin = 'anonymous'; script.referrerPolicy = 'no-referrer';
+      script.onload = function () { doc.defaultView.clearTimeout(timer); var sdk = doc.defaultView.supabase; if (sdk && typeof sdk.createClient === 'function') resolve(sdk.createClient); else reject(new Error('sdk')); };
+      script.onerror = function () { doc.defaultView.clearTimeout(timer); script.remove(); reject(new Error('sdk')); };
       doc.head.appendChild(script);
     });
   }
-  function verified(user) { return !!(user && user.id && user.email && user.email_confirmed_at && user.is_anonymous !== true); }
-  function returnedRow(data) { return Array.isArray(data) ? (data.length === 1 ? data[0] : null) : data; }
+  function eligible(user) { return !!(user && UUID.test(user.id || '') && typeof user.email === 'string' && user.email.trim() && user.is_anonymous !== true); }
+  function row(data) { return Array.isArray(data) ? (data.length === 1 ? data[0] : null) : data; }
+  function receipt(data, kind) {
+    var value = row(data);
+    return value && UUID.test(value.id || '') && typeof value.submitted_at === 'string' && Number.isFinite(Date.parse(value.submitted_at)) && (kind === 'prayer' || (Number.isSafeInteger(value.version) && value.version > 0 && ['queued','sending','sent','attention'].includes(value.welcome_email_status))) ? value : null;
+  }
+  function recover(doc, options, config, callback) {
+    var win = doc.defaultView, el = function (id) { return doc.getElementById('connection-' + id); };
+    // Returning from password recovery must not restore another remembered public account.
+    sessionStore(win).clear();
+    var client = null, subscription = null, owner = null, epoch = 0, phase = 'verifying', busy = false, destroyed = false;
+    function current(token) { return !destroyed && phase !== 'closed' && token === epoch; }
+    function status(message) { el('recovery-status').textContent = message; }
+    function timed(promise) { var timer; return Promise.race([promise, new Promise(function (_, reject) { timer = win.setTimeout(function () { reject(new Error('deadline')); }, options.timeoutMs || 15000); })]).finally(function () { win.clearTimeout(timer); }); }
+    function cleanClient() { if (subscription) subscription.unsubscribe(); var retired = client; client = null; if (retired) win.setTimeout(function () { Promise.resolve().then(function () { return retired.auth.signOut({scope:'local'}); }).catch(function () {}); if (retired.auth.stopAutoRefresh) retired.auth.stopAutoRefresh(); }, 0); }
+    function close(message) { epoch++; phase = 'closed'; owner = null; callback = null; busy = false; el('recovery-form').reset(); el('recovery-fields').hidden = true; el('recovery-cancel').hidden = true; el('recovery-return').hidden = false; status(message); cleanClient(); }
+    async function identity(token) { var result = await timed(client.auth.getUser()); if (!current(token)) return null; var found = result && !result.error && result.data && result.data.user; if (!eligible(found) || found.id !== owner) throw new Error('identity'); return found; }
+    var appShell = doc.querySelector('.connection-app, .app'); if (appShell) appShell.hidden = true;
+    el('recovery').hidden = false; el('recovery-fields').hidden = true; el('recovery-return').hidden = true;
+    el('recovery-form').addEventListener('submit', async function (event) {
+      event.preventDefault(); if (!client || phase !== 'password' || busy || !el('recovery-form').reportValidity()) return;
+      var password = el('new-password').value;
+      if (password.length < 12 || password !== el('confirm-password').value) { status('Use at least 12 characters and enter the same password in both fields.'); return; }
+      busy = true; el('recovery-fields').disabled = true; var token = epoch;
+      try { if (!await identity(token)) return; var operation = client.auth.updateUser({password:password}); password = ''; el('recovery-form').reset(); var result = await timed(operation); if (!current(token)) return; if (!result || result.error || !result.data || !result.data.user || result.data.user.id !== owner) throw new Error('password'); close('Your password was saved. Return to the app and sign in with your email and new password.'); }
+      catch (_) { if (current(token)) close('We could not confirm the password change. Try signing in with your new password, or request a fresh reset link.'); }
+      finally { password = ''; el('recovery-form').reset(); }
+    });
+    el('recovery-cancel').addEventListener('click', function () { close(busy ? 'Password setup is closed. A submitted password change may still finish. Try signing in before requesting another link.' : 'Password setup is closed. Request a fresh link when you are ready.'); });
+    function destroy() { if (destroyed) return; close('Password setup is closed.'); destroyed = true; }
+    win.addEventListener('pagehide', destroy); win.addEventListener('pageshow', function (event) { if (event.persisted) win.location.reload(); });
+    var ready = (async function () {
+      if (!config || callback.error) { close('This password link is invalid or password help is not connected. Return to the app to request a fresh reset link.'); return; }
+      try {
+        var create = options.createClient || await loadSdk(doc); if (destroyed) return;
+        client = create(config.url, config.key, {auth:{storageKey:'creek-public-recovery-v1',persistSession:false,autoRefreshToken:false,detectSessionInUrl:false,flowType:'implicit'}});
+        subscription = client.auth.onAuthStateChange(function (event, next) { if (phase !== 'closed' && (event === 'SIGNED_OUT' || (owner && next && (!next.user || next.user.id !== owner)))) close('Your account changed. Request a fresh reset link.'); }).data.subscription;
+        var token = epoch, tokens = callback; callback = null; var operation = client.auth.setSession(tokens); tokens = null;
+        var result = await timed(operation); if (!current(token)) return;
+        if (!result || result.error || !result.data || !result.data.session || !eligible(result.data.session.user)) throw new Error('session');
+        owner = result.data.session.user.id; if (!await identity(token)) return;
+        phase = 'password'; el('recovery-fields').hidden = false; status('Choose a new password for your app account.'); el('new-password').focus();
+      } catch (_) { if (current(epoch)) close('This password link could not be verified. It may be expired or already used. Request a fresh link.'); }
+    })();
+    return {ready:ready,destroy:destroy};
+  }
   function initialize(doc, options) {
     options = options || {};
     var win = doc.defaultView, el = function (id) { return doc.getElementById('connection-' + id); };
-    if (!el('profile-form')) return null;
-    var redirect = consumeRedirect(win), config = settings(options.config || win.CREEK_CONNECTION_CONFIG || {}, win.location);
-    var client = null, subscription = null, epoch = 0, activeToken = null, user = null, loaded = false, busy = false, destroyed = false, signingOut = false;
-    var profile = el('profile-form'), emailForm = el('email-form');
-    function field(name) { return profile.elements.namedItem(name); }
-    function current(token) { return !destroyed && token === epoch; }
-    function status(message, bad) { el('status').textContent = message || ''; el('status').hidden = !message; el('status').classList.toggle('error', !!bad); }
+    if (!el('guest-form') || !el('auth-form')) return null;
+    var autoOnboard = win.CREEK_PROFILE_ENTRY === true || (win.CREEK_PROFILE_ENTRY === undefined && ['/', '/index.html'].includes(win.location.pathname) && !win.location.hash);
+    var stripped = consumeRedirect(win), config = settings(options.config || win.CREEK_CONNECTION_CONFIG || {}, win.location);
+    if (stripped) return recover(doc, options, config, stripped);
+    var store = sessionStore(win), client = null, subscription = null, user = null, epoch = 0, destroyed = false, authBusy = false, authUncertain = false, authPending = false, signingOut = false, reading = false, loaded = false;
+    el('remember').checked = store.remembered;
+    var resetBusy = false, pendingSubmit = null, pendingOnboarding = null, waitingForDocument = false;
+    var authForm = el('auth-form'), dialog = el('dialog'), modes = { guest: makeMode('guest'), prayer: makeMode('prayer') };
+    function makeMode(kind) { var form = el(kind + '-form'); return { kind: kind, form: form, fields: form.querySelector('fieldset'), dirty: false, busy: false, attempt: null, saved: null, serial: 0, extraTouched: new Set() }; }
+    function field(form, key) { return form.elements.namedItem(key); }
+    var extraKeys = ['birth_date','membership_status','address_line1','address_line2','city','state_region','postal_code','family_members'];
+    var memberships = ['member','regular_attender','guest','exploring','unsure'];
+    var relationships = ['spouse','child','parent','guardian','other'];
+    function today() {
+      var parts = new Intl.DateTimeFormat('en-US',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(options.now ? options.now() : new Date());
+      var part = function (type) { return parts.find(function (item) { return item.type === type; }).value; };
+      return part('year') + '-' + part('month') + '-' + part('day');
+    }
+    function validBirth(value) { return !value || (/^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value + 'T12:00:00Z')) && new Date(value + 'T12:00:00Z').toISOString().slice(0,10) === value && value <= today()); }
+    function familyRows() { return Array.from(el('family-rows').querySelectorAll('[data-family-row]')); }
+    function resetExtras() { modes.guest.extraTouched.clear(); el('family-rows').replaceChildren(); field(modes.guest.form,'phone').required = false; }
+    function dirtyExtra(key) { modes.guest.extraTouched.add(key); modes.guest.dirty = true; modes.guest.saved = null; modes.guest.serial++; draw(); }
+    function addFamily(value, touched) {
+      if (familyRows().length >= 20) return;
+      var group = doc.createElement('fieldset'); group.className = 'connection-family-row'; group.dataset.familyRow = '';
+      var legend = doc.createElement('legend'); legend.textContent = 'Family member'; group.appendChild(legend);
+      function input(label, key, type, required, max, autocomplete) {
+        var wrapper = doc.createElement('label'); wrapper.textContent = label;
+        var node = doc.createElement(type === 'select' ? 'select' : 'input'); node.dataset.familyField = key;
+        if (type !== 'select') node.type = type; node.required = !!required;
+        if (max) node.maxLength = max; node.autocomplete = autocomplete || 'off';
+        if (type === 'date') node.max = today();
+        if (type === 'select') [{value:'',label:'Choose a relationship'}].concat(relationships.map(function (item) { return {value:item,label:item.charAt(0).toUpperCase()+item.slice(1)}; })).forEach(function (item) { var option = doc.createElement('option'); option.value = item.value; option.textContent = item.label; node.appendChild(option); });
+        node.value = value && typeof value[key] === 'string' ? value[key] : ''; wrapper.appendChild(node); group.appendChild(wrapper);
+      }
+      input('First name','first_name','text',true,100); input('Last name (optional)','last_name','text',false,100);
+      input('Relationship to you','relationship','select',true); input('Birthday (optional)','birth_date','date',false);
+      var remove = doc.createElement('button'); remove.type = 'button'; remove.className = 'connection-quiet'; remove.textContent = 'Remove family member';
+      remove.addEventListener('click', function () { if (modes.guest.attempt || modes.guest.busy || reading) return; group.remove(); dirtyExtra('family_members'); });
+      group.appendChild(remove); el('family-rows').appendChild(group); if (touched) dirtyExtra('family_members');
+    }
+    function extendedProfile(data) {
+      extraKeys.forEach(function (key) {
+        if (modes.guest.extraTouched.has(key) || !Object.prototype.hasOwnProperty.call(data,key)) return;
+        var value = data[key];
+        if (key === 'family_members') {
+          if (!Array.isArray(value) || value.length > 20 || value.some(function (member) { return !member || typeof member.first_name !== 'string' || !member.first_name.trim() || member.first_name.length > 100 || !relationships.includes(member.relationship) || (member.last_name != null && (typeof member.last_name !== 'string' || member.last_name.length > 100)) || (member.birth_date != null && (typeof member.birth_date !== 'string' || !validBirth(member.birth_date))); })) throw new Error('profile');
+          el('family-rows').replaceChildren(); value.forEach(function (member) { addFamily(member, false); }); return;
+        }
+        if (value !== null && typeof value !== 'string') throw new Error('profile');
+        if (key === 'membership_status' && !memberships.includes(value)) throw new Error('profile');
+        if (key === 'birth_date' && !validBirth(value)) throw new Error('profile');
+        field(modes.guest.form,key).value = value || '';
+      });
+    }
+    function extraPayload() {
+      var values = {}, touched = modes.guest.extraTouched;
+      for (var key of extraKeys) {
+        if (!touched.has(key)) continue;
+        if (key === 'family_members') {
+          var members = familyRows(); if (members.length > 20) throw new Error('family');
+          values[key] = members.map(function (group) {
+            var read = function (name) { return group.querySelector('[data-family-field="' + name + '"]').value.trim(); };
+            var member = {first_name:read('first_name'),last_name:read('last_name'),relationship:read('relationship'),birth_date:read('birth_date') || null};
+            if (!member.first_name || member.first_name.length > 100 || member.last_name.length > 100 || !relationships.includes(member.relationship) || !validBirth(member.birth_date)) throw new Error('family'); return member;
+          });
+        } else {
+          var value = field(modes.guest.form,key).value.trim();
+          if (key === 'birth_date' && !validBirth(value)) throw new Error('birthday');
+          if (key === 'membership_status' && !memberships.includes(value)) throw new Error('membership');
+          values[key] = value || null;
+        }
+      }
+      return values;
+    }
+    function onboarding(needed) {
+      if (!autoOnboard) return;
+      pendingOnboarding = { needed: needed, token: epoch };
+      // The account script may finish before index.html installs its router.
+      // Recheck the latest account/navigation state after all parser scripts run.
+      if (doc.readyState === 'loading') {
+        if (!waitingForDocument) {
+          waitingForDocument = true;
+          doc.addEventListener('DOMContentLoaded', function () {
+            waitingForDocument = false; var pending = pendingOnboarding; pendingOnboarding = null;
+            if (pending && current(pending.token)) onboarding(pending.needed);
+          }, { once: true });
+        }
+        return;
+      }
+      pendingOnboarding = null; autoOnboard = false; win.CREEK_PROFILE_ENTRY = false;
+      if (needed) win.dispatchEvent(new win.CustomEvent('creek:open-profile'));
+    }
+    win.addEventListener('creek:navigation', function () { autoOnboard = false; });
+    win.addEventListener('popstate', function () { autoOnboard = false; });
+    win.addEventListener('hashchange', function () { autoOnboard = false; });
+    function current(token) { return !destroyed && epoch === token; }
+    function status(id, message, bad) { var nodes = id === 'availability' ? doc.querySelectorAll('[data-connection-availability]') : [el(id)]; nodes.forEach(function (node) { node.textContent = message || ''; node.hidden = !message; node.classList.toggle('error', !!bad); }); }
+    function bounded(promise) { var timer; return Promise.race([promise, new Promise(function (_, reject) { timer = win.setTimeout(function () { reject(new Error('deadline')); }, options.timeoutMs || 15000); })]).finally(function () { win.clearTimeout(timer); }); }
+    function hasDraft() { return Object.values(modes).some(function (mode) { return mode.dirty || mode.busy || mode.attempt; }); }
+    function beforeUnload(event) { if (hasDraft()) { event.preventDefault(); event.returnValue = true; } }
+    function draw() {
+      Object.values(modes).forEach(function (mode) {
+        mode.fields.disabled = !client || !!mode.attempt || mode.busy || (mode.kind === 'guest' && reading);
+        var button = el(mode.kind + '-submit');
+        button.disabled = !client || mode.busy || (!user && (authBusy || authPending || authUncertain)) || (mode.kind === 'guest' && (reading || (!!user && !loaded)));
+        button.textContent = mode.attempt && mode.attempt.started ? 'Check and retry this submission' : mode.kind === 'guest' ? 'Save my registration' : 'Send prayer request';
+        el(mode.kind + '-new').hidden = !mode.saved;
+      });
+      doc.querySelectorAll('[data-connection-account]').forEach(function (button) { button.disabled = !client; button.textContent = user ? 'Your account' : 'Create account / Sign in'; });
+      el('identity').textContent = user ? 'Signed in as ' + user.email : 'Sign in to send your details securely to the church office.';
+      el('signout').hidden = !user && !authUncertain; el('signout').disabled = signingOut;
+      el('auth-fields').hidden = !!user;
+      el('auth-fields').disabled = authBusy || authUncertain || signingOut || authPending || !client;
+      el('auth-check').hidden = !authUncertain; el('auth-check').disabled = authBusy || authPending;
+      el('retry-profile').hidden = !user || loaded; el('retry-profile').disabled = reading;
+      el('auth-submit').textContent = el('auth-mode').value === 'signup' ? (pendingSubmit ? 'Create account & send' : 'Create my account') : (pendingSubmit ? 'Sign in & send' : 'Sign in');
+      el('reset-send').disabled = !client || resetBusy; el('reset-open').hidden = !!user;
+      el('open-app').hidden = !modes.guest.saved; el('family-add').disabled = familyRows().length >= 20; el('family-limit').hidden = familyRows().length < 20; field(modes.guest.form,'birth_date').max = today();
+      win.removeEventListener('beforeunload', beforeUnload);
+      if (hasDraft()) win.addEventListener('beforeunload', beforeUnload);
+    }
     function clearPrivate() {
-      user = null; loaded = false; busy = false; profile.reset(); el('fields').disabled = false; profile.hidden = true;
-      el('account').hidden = true; el('verified-email').textContent = ''; el('retry').hidden = true; el('retry').disabled = false;
-      el('email').value = ''; emailForm.querySelector('button').disabled = false;
+      pendingSubmit = null; user = null; loaded = false; reading = false; authForm.reset(); el('remember').checked = store.remembered; el('password').autocomplete = 'new-password'; el('password').minLength = 12; el('auth-submit').textContent = 'Create my account'; authBusy = false; authUncertain = false;
+      Object.values(modes).forEach(function (mode) { mode.serial++; mode.form.reset(); mode.dirty = false; mode.busy = false; mode.attempt = null; mode.saved = null; status(mode.kind + '-status', ''); });
+      resetExtras(); status('auth-status', ''); status('profile-status', ''); status('reset-status', ''); el('reset-form').reset(); el('reset-form').hidden = true; resetBusy = false; closeDialog(); draw();
     }
-    function phoneRequired() { field('phone').required = field('preferred_contact').value !== 'email'; }
-    function showSignin(message, bad) { el('signin').hidden = false; status(message, bad); }
-    async function readProfile(token, verifiedUser) {
-      if (!current(token)) return;
-      loaded = false; busy = true; el('fields').disabled = true; el('retry').disabled = true;
-      var timeout;
+    function loseIdentity(message) { epoch++; store.clear(); clearPrivate(); status('auth-status', message || 'Your account changed. Sign in again before sending.', true); }
+    function cancelIntent(keepAttempt) {
+      var intent = pendingSubmit; pendingSubmit = null;
+      if (!keepAttempt) Object.values(modes).forEach(function (mode) { if (mode.attempt && !mode.attempt.started && !mode.busy) mode.attempt = null; });
+      draw();
+    }
+    function openDialog() { if (!client) return; if (!dialog.open) { if (dialog.showModal) dialog.showModal(); else dialog.setAttribute('open', ''); } }
+    function closeDialog() { el('password').value = ''; if (dialog.close) dialog.close(); else dialog.removeAttribute('open'); }
+    async function verify(token, owner) {
+      var result = await bounded(client.auth.getUser());
+      if (!current(token)) return null;
+      if (!result || result.error) { if (result && result.error && [401,403].includes(result.error.status)) loseIdentity('Please sign in again before sending.'); throw new Error('identity'); }
+      if (!eligible(result.data && result.data.user)) { loseIdentity('Your account is unavailable. Sign in again before sending.'); return null; }
+      var confirmed = result.data.user;
+      if ((owner && confirmed.id !== owner) || (user && confirmed.id !== user.id)) { loseIdentity(); return null; }
+      return confirmed;
+    }
+    async function readProfile(token) {
+      if (!current(token) || !user || reading || (modes.guest.attempt && modes.guest.attempt.started) || modes.guest.busy) return;
+      reading = true; loaded = false; var owner = user.id, serial = ++modes.guest.serial;
+      status('profile-status', 'Loading your saved registration…'); draw();
       try {
-        // Bound the UI wait; a timed-out RPC may still finish on the server.
-        var result = await Promise.race([client.rpc('get_my_app_connection'), new Promise(function (_, reject) {
-          timeout = win.setTimeout(function () { reject(new Error('profile timeout')); }, 15000);
-        })]);
-        if (!current(token)) return;
-        if (!result || result.error) throw new Error('profile');
-        var row = returnedRow(result.data);
-        if (row !== null && (typeof row !== 'object' || typeof row.first_name !== 'string' || row.email !== verifiedUser.email)) throw new Error('profile');
-        profile.reset();
-        if (row) ['first_name', 'last_name', 'phone', 'sunday_school'].forEach(function (name) { field(name).value = row[name] || ''; });
-        field('preferred_contact').value = row && ['email', 'phone', 'text'].includes(row.preferred_contact) ? row.preferred_contact : 'email';
-        field('contact_permission').checked = false; phoneRequired(); loaded = true; profile.hidden = false; el('retry').hidden = true;
-        status(row ? 'Your current connection details are ready to review. Updates will go back to the church team for review.' : 'Your email is verified. Add the details you want to share with our church team.');
-      } catch (_) {
-        if (!current(token)) return;
-        loaded = false; profile.hidden = true; el('retry').hidden = false;
-        status('Your details could not load. Please try again before making changes.', true);
-      } finally {
-        win.clearTimeout(timeout);
-        if (current(token)) { busy = false; el('fields').disabled = false; el('retry').disabled = false; }
-      }
+        if (!await verify(token, owner)) return;
+        var result = await bounded(client.rpc('get_my_app_connection'));
+        if (!current(token) || serial !== modes.guest.serial) return;
+        if (!result || result.error) throw new Error('read');
+        var data = row(result.data);
+        if (result.data !== null && (!data || typeof data.first_name !== 'string' || data.email !== user.email)) throw new Error('read');
+        if (data && !modes.guest.dirty) {
+          ['first_name','last_name','phone','preferred_contact','sunday_school','visit_status','first_visit_on'].forEach(function (key) { if (typeof data[key] === 'string') field(modes.guest.form, key).value = data[key]; });
+          field(modes.guest.form, 'contact_permission').checked = false;
+        }
+        if (data) extendedProfile(data);
+        loaded = true; onboarding(!data); status('profile-status', data ? (modes.guest.dirty ? 'You have a saved registration. The details you entered here are still in the form; review them before saving an update.' : 'Your saved details are ready to review. Confirm contact permission before saving an update.') : '');
+      } catch (_) { if (current(token) && serial === modes.guest.serial) status('profile-status', 'Your saved details could not be loaded. Try again before saving a registration. You can still send a prayer request.', true); }
+      finally { if (current(token) && serial === modes.guest.serial) { reading = false; draw(); } }
     }
-    async function verifyAndLoad(token) {
+    async function adopt(session, preserveDraft) {
+      var next = session && session.user;
+      if (!session || !eligible(next)) { if (user || session) loseIdentity('Please sign in with your email and password.'); return; }
+      if (user && user.id === next.id) return;
+      if (user || !preserveDraft) { epoch++; clearPrivate(); }
+      var token = epoch;
       try {
-        var result = await client.auth.getUser();
-        if (!current(token)) return;
-        if (!result || result.error || !verified(result.data && result.data.user)) throw new Error('auth');
-        user = result.data.user; el('signin').hidden = true; el('account').hidden = false; el('verified-email').textContent = user.email;
-        await readProfile(token, user);
-      } catch (_) {
-        if (!current(token)) return;
-        clearPrivate(); showSignin('We could not verify this sign-in. Request a new email link to continue.', true);
-      }
-    }
-    function adopt(session, force) {
-      if (destroyed || signingOut) return;
-      var token = session && session.access_token;
-      if (!force && token && token === activeToken) return;
-      activeToken = token || null; var revision = ++epoch; clearPrivate();
-      if (!session) { showSignin(''); return; }
-      el('signin').hidden = true; status('Checking your sign-in…');
-      // Keep Supabase calls outside its synchronous auth-event callback.
-      win.setTimeout(function () { if (current(revision)) verifyAndLoad(revision); }, 0);
+        var confirmed = await verify(token, next.id); if (!confirmed || !current(token)) return;
+        user = confirmed; authUncertain = false; status('auth-status', 'You’re signed in. Review your form, then send it when you’re ready.'); draw(); closeDialog(); await readProfile(token);
+      } catch (_) { if (current(token)) { loseIdentity('We could not confirm your account. Sign in again before sending.'); } }
     }
     async function signout() {
-      var oldClient = client; signingOut = true; ++epoch; activeToken = null; clearPrivate(); status('Your details have been cleared from this page.'); el('signin').hidden = true;
+      if (!client || signingOut) return;
+      signingOut = true; epoch++; store.clear(); clearPrivate(); var token = epoch;
+      var operation;
       try {
-        var result = await oldClient.auth.signOut({ scope: 'local' });
+        operation = Promise.resolve(client.auth.signOut({ scope: 'local' }));
+        operation.finally(function () { if (current(token)) { signingOut = false; draw(); } }).catch(function () {});
+        var result = await bounded(operation);
         if (result && result.error) throw new Error('signout');
-        if (!destroyed) { signingOut = false; showSignin('Signed out.'); }
-      } catch (_) {
-        if (!destroyed) status('Your details are cleared. Close this page to finish signing out; a new sign-in link will be needed when you return.', true);
-      }
+      } catch (_) { if (current(token)) status('auth-status', 'This page has cleared your details. Account sign-out could not be confirmed; close this page on a shared device.', true); }
     }
-    profile.addEventListener('change', function (event) { if (event.target.name === 'preferred_contact') phoneRequired(); });
-    emailForm.addEventListener('submit', async function (event) {
-      event.preventDefault(); if (!client || destroyed || busy || signingOut) return;
-      var email = el('email').value.trim(); el('email').value = email;
-      if (!emailForm.reportValidity()) return;
-      var revision = epoch; busy = true; emailForm.querySelector('button').disabled = true;
+    function payload(mode) {
+      var get = function (key) { return field(mode.form, key).value.trim(); };
+      if (!mode.form.reportValidity()) return null;
+      if (mode.kind === 'prayer') return get('request_text') ? { display_name: get('display_name'), request_text: get('request_text'), contact_text: get('contact_text') } : null;
+      var preferred = get('preferred_contact'), visit = get('visit_status'), date = get('first_visit_on');
+      if (!get('first_name') || !field(mode.form, 'contact_permission').checked || !['email','phone','text'].includes(preferred) || (preferred !== 'email' && !get('phone')) || !['not_yet','first_visit','returning'].includes(visit)) return null;
+      if (date && (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(Date.parse(date + 'T12:00:00Z')) || new Date(date + 'T12:00:00Z').toISOString().slice(0,10) !== date)) return null;
+      if (visit === 'not_yet' && date) { status('guest-status', 'Leave the first-visit date blank if you have not visited yet.', true); return null; }
+      try { return Object.assign({ first_name: get('first_name'), last_name: get('last_name'), phone: get('phone'), preferred_contact: preferred, contact_permission: true, sunday_school: get('sunday_school'), visit_status: visit, first_visit_on: date || null }, extraPayload()); }
+      catch (_) { status('guest-status', 'Check the family names, relationships, and birthdays. Birthdays cannot be in the future.', true); return null; }
+    }
+    async function dispatch(token, mode, saved, serial) {
       try {
-        var result = await client.auth.signInWithOtp({ email: email, options: { shouldCreateUser: true, emailRedirectTo: config.redirect } });
-        if (!current(revision)) return;
-        if (!result || result.error) throw new Error('otp');
-        status('Check your inbox for a sign-in link. Your connection details have not been submitted yet.');
-      } catch (_) { if (current(revision)) status('We could not send a sign-in link. Please try again, or use the email connection form below.', true); }
-      finally { if (current(revision)) { busy = false; emailForm.querySelector('button').disabled = false; } }
-    });
-    profile.addEventListener('submit', async function (event) {
-      event.preventDefault(); if (!client || !user || !loaded || busy || destroyed || signingOut) return;
-      ['first_name', 'last_name', 'phone', 'sunday_school'].forEach(function (name) { field(name).value = field(name).value.trim(); });
-      phoneRequired(); if (!profile.reportValidity()) return;
-      var revision = epoch, accountId = user.id;
-      var payload = { p_first_name: field('first_name').value, p_last_name: field('last_name').value, p_phone: field('phone').value || null,
-        p_preferred_contact: field('preferred_contact').value, p_contact_permission: field('contact_permission').checked, p_sunday_school: field('sunday_school').value || null };
-      if (!payload.p_first_name || !payload.p_contact_permission || !['email', 'phone', 'text'].includes(payload.p_preferred_contact) || (payload.p_preferred_contact !== 'email' && !payload.p_phone)) return;
-      busy = true; el('fields').disabled = true; status('Submitting your details…');
+        if (!await verify(token, user && user.id)) return;
+        var result = await bounded(client.functions.invoke('welcome-dispatch', { body: {} }));
+        if (!current(token) || mode.serial !== serial || mode.saved !== saved) return;
+        if (mode.kind === 'prayer') return;
+        if (!result || result.error || !result.data || result.data.status !== 'processed' || !['sent','queued','needs_attention'].every(function (key) { return Number.isSafeInteger(result.data[key]) && result.data[key] >= 0; })) throw new Error('welcome');
+        status('guest-status', 'Registration saved. Your details are in the private guest register. The welcome email was requested; delivery is not confirmed.');
+      } catch (_) { if (mode.kind === 'guest' && current(token) && mode.serial === serial && mode.saved === saved) status('guest-status', 'Registration saved. Your details are in the private guest register. The welcome email could not be confirmed; you do not need to register again.'); }
+    }
+    async function submit(mode) {
+      if (!client || destroyed || mode.busy) return;
+      if (!user) {
+        if (authBusy || authPending || authUncertain) return;
+        var captured = mode.attempt ? mode.attempt.payload : payload(mode); if (!captured) return;
+        if (pendingSubmit && pendingSubmit.mode !== mode) cancelIntent(false);
+        if (!mode.attempt) mode.attempt = { id: win.crypto.randomUUID(), payload: captured, owner: null, started: false };
+        pendingSubmit = { mode: mode, attempt: mode.attempt }; mode.dirty = true;
+        draw(); openDialog(); status('auth-status', 'Create an account or sign in to send this ' + (mode.kind === 'guest' ? 'registration' : 'prayer request') + '.'); return;
+      }
+      if (mode.kind === 'guest' && (!loaded || reading)) return;
+      var body = mode.attempt ? mode.attempt.payload : payload(mode); if (!body) return;
+      var token = epoch, owner = user.id, serial = ++mode.serial;
+      if (!mode.attempt) mode.attempt = { id: win.crypto.randomUUID(), payload: body, owner: owner, started: false };
+      var attempt = mode.attempt; if (attempt.owner === null && !attempt.started) attempt.owner = owner;
+      if (pendingSubmit && pendingSubmit.attempt === attempt) pendingSubmit = null;
+      if (attempt.owner !== owner) { loseIdentity(); return; }
+      mode.busy = true; mode.dirty = true; mode.saved = null; status(mode.kind + '-status', 'Sending securely to the church office…'); draw();
       try {
-        var check = await client.auth.getUser();
-        if (!current(revision)) return;
-        if (!check || check.error || !verified(check.data && check.data.user) || check.data.user.id !== accountId || check.data.user.email !== user.email) {
-          ++epoch; activeToken = null; clearPrivate(); showSignin('Your sign-in needs to be verified again. Request a new email link to continue.', true); return;
+        if (!await verify(token, owner)) return;
+        var parameters = { p_request_id: attempt.id }; parameters[mode.kind === 'guest' ? 'p_profile' : 'p_request'] = attempt.payload;
+        attempt.started = true; draw();
+        var result = await bounded(client.rpc(mode.kind === 'guest' ? 'register_app_guest' : 'submit_app_prayer', parameters));
+        if (!current(token) || serial !== mode.serial || mode.attempt !== attempt) return;
+        var saved = !result.error && receipt(result.data, mode.kind); if (!saved) throw new Error('receipt');
+        mode.saved = saved; mode.attempt = null; mode.dirty = false;
+        if (mode.kind === 'guest') {
+          field(mode.form, 'contact_permission').checked = false; mode.extraTouched.clear();
+          status('guest-status', 'Registration saved. Your details are in the private guest register. This does not make you a church member or subscribe you to group messages.');
+          // A registration receipt is durable even if this separate mail request fails.
+          void dispatch(token, mode, saved, serial);
+        } else {
+          mode.form.reset(); status('prayer-status', 'Prayer request received by the church office. It is saved privately for our church team. Your prayer text is not published or emailed.');
+          void dispatch(token, mode, saved, serial);
         }
-        var result = await client.rpc('save_app_connection', payload);
-        if (!current(revision)) return;
-        var saved = result && returnedRow(result.data);
-        if (!result || result.error || !saved || typeof saved.id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(saved.id) || !Number.isSafeInteger(saved.version) || saved.version < 1) throw new Error('save');
-        field('contact_permission').checked = false;
-        status('Your details were submitted for staff review. This confirms receipt; it does not mean someone has contacted you yet. You can update your details here.');
-      } catch (_) { if (current(revision)) { el('retry').hidden = false; status('We could not confirm your submission. Your entries remain here. Try loading your saved details before submitting again if the connection was interrupted.', true); } }
-      finally { if (current(revision)) { busy = false; el('fields').disabled = false; } }
+      } catch (_) { if (current(token) && serial === mode.serial) status(mode.kind + '-status', 'We could not confirm a receipt. Your form is kept here. Use “Check and retry” to resend the same request safely; do not start a second submission.', true); }
+      finally { if (current(token) && serial === mode.serial) { mode.busy = false; draw(); } }
+    }
+    Object.values(modes).forEach(function (mode) {
+      mode.form.addEventListener('submit', function (event) { event.preventDefault(); void submit(mode); });
+      mode.form.addEventListener('input', function (event) { if (mode.kind === 'guest' && !mode.attempt) { var key = event.target.closest('[data-family-row]') ? 'family_members' : event.target.name; if (extraKeys.includes(key)) mode.extraTouched.add(key); } if (!mode.attempt) { mode.dirty = true; mode.saved = null; mode.serial++; } draw(); });
+      mode.form.addEventListener('change', function (event) { if (mode.kind === 'guest' && !mode.attempt) { var key = event.target.closest('[data-family-row]') ? 'family_members' : event.target.name; if (extraKeys.includes(key)) mode.extraTouched.add(key); } if (!mode.attempt) { mode.dirty = true; mode.saved = null; } field(modes.guest.form, 'phone').required = field(modes.guest.form, 'preferred_contact').value !== 'email'; draw(); });
+      el(mode.kind + '-new').addEventListener('click', function () { if (!mode.busy && !mode.attempt) { mode.form.reset(); if (mode.kind === 'guest') resetExtras(); mode.saved = null; mode.dirty = false; mode.serial++; status(mode.kind + '-status', ''); draw(); } });
     });
-    el('signout').addEventListener('click', signout);
-    el('retry').addEventListener('click', function () { if (user && !busy) { var revision = ++epoch; status('Loading your connection details…'); readProfile(revision, user); } });
-    function destroy() { destroyed = true; ++epoch; clearPrivate(); status(''); if (subscription) subscription.unsubscribe(); if (client) client.auth.stopAutoRefresh(); client = null; }
+    el('family-add').addEventListener('click', function () { if (!client || modes.guest.attempt || modes.guest.busy || reading) return; addFamily(null, true); });
+    doc.querySelectorAll('[data-connection-account]').forEach(function (button) { button.addEventListener('click', openDialog); });
+    el('close').addEventListener('click', function () { cancelIntent(false); closeDialog(); });
+    dialog.addEventListener('cancel', function () { cancelIntent(false); });
+    el('signout').addEventListener('click', function () { void signout(); });
+    el('retry-profile').addEventListener('click', function () { void readProfile(epoch); });
+    el('reset-open').addEventListener('click', function () { el('reset-form').hidden = !el('reset-form').hidden; });
+    el('reset-form').addEventListener('submit', async function (event) {
+      event.preventDefault(); if (!client || destroyed || resetBusy || !el('reset-form').reportValidity()) return;
+      var token = epoch; resetBusy = true; draw();
+      try { await bounded(client.auth.resetPasswordForEmail(el('reset-email').value.trim(), {redirectTo:config.redirect})); } catch (_) {}
+      if (!current(token)) return;
+      el('reset-email').value = ''; resetBusy = false;
+      status('reset-status', 'If a reset link can be sent for that address, check your inbox. If none arrives, try again later or ask the church office for help.'); draw();
+    });
+    el('auth-mode').addEventListener('change', function () { el('password').autocomplete = el('auth-mode').value === 'signup' ? 'new-password' : 'current-password'; el('password').minLength = el('auth-mode').value === 'signup' ? 12 : 1; draw(); });
+    authForm.addEventListener('submit', async function (event) {
+      event.preventDefault(); if (!client || destroyed || authBusy || authUncertain || signingOut || authPending || !authForm.reportValidity()) return;
+      if (el('auth-mode').value === 'signup' && el('password').value.length < 12) { status('auth-status', 'Choose a password with at least 12 characters.', true); return; }
+      authBusy = true; authPending = true; var token = epoch, intent = pendingSubmit; store.choose(el('remember').checked); draw();
+      var credentials = { email: el('email').value.trim(), password: el('password').value };
+      var operation;
+      try {
+        operation = Promise.resolve(el('auth-mode').value === 'signup' ? client.auth.signUp(credentials) : client.auth.signInWithPassword(credentials));
+        operation.finally(function () { authPending = false; if (!destroyed) draw(); }).catch(function () {});
+        var result = await bounded(operation);
+        if (!current(token)) return;
+        if (!result || result.error || !result.data || !result.data.session) { status('auth-status', 'We could not sign you in. Check your email and password, or contact the office if creating an account is unavailable. Your form has not been sent.', true); return; }
+        await adopt(result.data.session, true);
+        // Resume only the exact Send intent that this successful password action began.
+        // Auth events, late/uncertain responses and later profile retries never trigger it.
+        if (current(token) && user && intent && pendingSubmit === intent && intent.mode.attempt === intent.attempt) {
+          pendingSubmit = null; intent.attempt.owner = user.id;
+          if (intent.mode.kind !== 'guest' || loaded) await submit(intent.mode);
+          else status('guest-status', 'You’re signed in. Load your saved registration, then select Save my registration to send these details.', true);
+        }
+      } catch (_) { if (current(token)) { cancelIntent(true); authUncertain = true; status('auth-status', 'The account response could not be confirmed. When the request finishes, use Check sign-in before trying again. Your form has not been sent.', true); } }
+      finally { credentials.password = ''; if (current(token)) { el('password').value = ''; authBusy = false; draw(); } }
+    });
+    el('auth-check').addEventListener('click', async function () {
+      if (!client || authPending || authBusy || !authUncertain) return;
+      authBusy = true; var token = epoch; draw();
+      try { var result = await bounded(client.auth.getSession()); if (!current(token)) return; if (result.error) throw new Error('session'); authUncertain = false; if (result.data.session) await adopt(result.data.session, true); else status('auth-status', 'No sign-in was confirmed. You can try your email and password again.', true); }
+      catch (_) { if (current(token)) status('auth-status', 'Sign-in is still unavailable. Your form has not been sent.', true); }
+      finally { if (current(token)) { authBusy = false; draw(); } }
+    });
+    function onAuth(event, session) {
+      if (destroyed || signingOut || event === 'INITIAL_SESSION') return;
+      if (event === 'SIGNED_OUT' || !session) { epoch++; store.clear(); clearPrivate(); return; }
+      if (user && (!session.user || session.user.id !== user.id)) { epoch++; clearPrivate(); }
+      if (authBusy || authUncertain || authPending || (user && session.user.id === user.id)) return;
+      var token = epoch; win.setTimeout(function () { if (current(token)) void adopt(session, !user); }, 0);
+    }
+    function destroy() { if (destroyed) return; epoch++; clearPrivate(); destroyed = true; win.removeEventListener('beforeunload', beforeUnload); if (subscription) subscription.unsubscribe(); if (client && client.auth.stopAutoRefresh) client.auth.stopAutoRefresh(); }
     win.addEventListener('pagehide', destroy);
     win.addEventListener('pageshow', function (event) { if (event.persisted) win.location.reload(); });
+    draw();
     var ready = (async function () {
-      if (!config) return;
-      el('unavailable').hidden = true; status('Preparing secure sign-in…');
+      if (!config) { status('availability', 'Online registration and prayer submission are not connected yet. Please contact the office or speak with us at church. Nothing entered here will be sent.', true); return; }
       try {
-        var createClient = options.createClient || await loadSdk(doc);
-        if (destroyed) return;
-        client = createClient(config.url, config.key, { auth: { storageKey: 'creek-app-connection-v1', persistSession: false, autoRefreshToken: true, detectSessionInUrl: false, flowType: 'implicit' } });
-        subscription = client.auth.onAuthStateChange(function (event, session) {
-          if (event === 'TOKEN_REFRESHED' && user && session && session.user && session.user.id === user.id) { activeToken = session.access_token; return; }
-          adopt(session, event === 'USER_UPDATED');
-        }).data.subscription;
-        var revision = epoch, invalidLink = redirect && redirect.error;
-        var response = redirect && !redirect.error ? await client.auth.setSession(redirect) : await client.auth.getSession();
-        redirect = null;
-        if (!current(revision)) return;
-        if (!response || response.error) throw new Error('auth');
-        adopt(response.data && response.data.session);
-        if (invalidLink) status('This sign-in link could not be used. Request a new email link to continue.', true);
-      } catch (_) { redirect = null; if (!destroyed) showSignin('Sign-in could not be prepared. Please reload this page or use the email connection form below.', true); }
+        var create = options.createClient || await loadSdk(doc); if (destroyed) return;
+        client = create(config.url, config.key, { auth: { storageKey: SESSION_KEY, storage: store.storage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, flowType: 'implicit' } });
+        subscription = client.auth.onAuthStateChange(onAuth).data.subscription;
+        status('availability', ''); draw();
+        var token = epoch, result = await bounded(client.auth.getSession()); if (!current(token)) return;
+        if (result.error) throw new Error('session'); if (result.data.session) await adopt(result.data.session, true); else onboarding(true);
+      } catch (_) { if (!destroyed) { status('availability', 'Account services could not be reached. Your information has not been sent. Please reload to try again.', true); client = null; draw(); } }
     })();
     return { ready: ready, destroy: destroy };
   }
-  return { initialize: initialize, settings: settings, consumeRedirect: consumeRedirect };
+  return { initialize: initialize, settings: settings, consumeRedirect: consumeRedirect, sessionStore: sessionStore };
 });

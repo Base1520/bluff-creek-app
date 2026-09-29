@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script>window.CREEK_PROFILE_ENTRY = !location.hash && (location.pathname === '/' || location.pathname === '/index.html');</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>the Creek — Bluff Creek Baptist Church</title>
 <meta name="description" content="Home @ the Creek — Bluff Creek Baptist Church, 1706 Highway 63, Clinton, Louisiana. Connect, pray, follow the sermon series, explore reading and music, see what's happening, and give.">
@@ -16,6 +17,7 @@
 <link rel="preload" href="assets/fonts/bitter-latin-normal-v42.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/grow.css">
+<link rel="stylesheet" href="css/connection.css">
 <link rel="stylesheet" href="css/app-status.css">
 <style>
   :root{
@@ -210,6 +212,7 @@
           <button class="qa gold" data-go="give"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-7M2 8h20v4H2zM12 8v12M12 8S10.5 3 7.5 3 5 8 12 8zM12 8s1.5-5 4.5-5S19 8 12 8z"/></svg></span><span>Give</span></button>
           <a class="qa blue" id="watchBtn" href="https://www.youtube.com/channel/UC75FUMm1TckzTRpfYHd_ILQ/live" target="_blank" rel="noopener"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></span><span>Watch</span></a>
         </div>
+        <p class="note"><a href="#new" data-go="new">My account &amp; profile →</a></p>
         <p class="note watch-note">No service live? <a id="watchArchive" href="https://www.youtube.com/channel/UC75FUMm1TckzTRpfYHd_ILQ" target="_blank" rel="noopener">Browse our YouTube channel ↗</a></p>
       </div>
 
@@ -251,28 +254,42 @@
 
     <!-- I'M NEW / CONNECT -->
     <section class="screen" data-screen="new">
-      <button class="back" data-go="home">‹ Home</button>
+      <button class="back" data-go="home">‹ Browse the app first</button>
       <div class="byline" style="margin-bottom:8px"><span>First stop on the 63</span></div>
       <h2 class="page">Connect with us.</h2>
-      <p class="lead">Tell us who you are so we can welcome you well. We’ll prepare a message for you to review and send in your email app.</p>
-      <div class="panel">
-        <form id="joinForm" aria-describedby="joinNote" hidden>
-          <div class="row2">
-            <div class="field"><label for="jf">First name</label><input id="jf" name="first" required autocomplete="given-name"></div>
-            <div class="field"><label for="jl">Last name</label><input id="jl" name="last" autocomplete="family-name"></div>
-          </div>
-          <div class="field"><label for="je">Email</label><input id="je" name="email" type="email" required autocomplete="email" inputmode="email" placeholder="you@email.com"></div>
-          <div class="field"><label for="jp">Mobile (optional)</label><input id="jp" name="phone" type="tel" autocomplete="tel" inputmode="tel" placeholder="(225) 000-0000"></div>
-          <label class="check"><input type="checkbox" name="guest"> This was my first visit</label>
-          <label class="check"><input type="checkbox" name="texts"> I’m interested in text updates</label>
-          <label class="check"><input type="checkbox" name="the63"> I’m interested in future church email updates</label>
-          <div class="field"><label for="jq">Anything we can pray for? (optional)</label><textarea id="jq" name="prayer" placeholder="Share as much or as little as you'd like…"></textarea></div>
-          <button class="btn" type="submit">Open email draft</button>
-        </form>
-        <p class="form-status" id="joinStatus" role="status" aria-live="polite" hidden></p>
-      </div>
-      <p class="note" id="joinNote">Review and send in your email app. Update preferences are an inquiry to the office; this form does not enroll you in a mailing or texting list. Your entries stay on this page until you leave. <a class="direct-email">Email the church office directly</a>.</p>
-      <div class="card"><h3>Prefer an online connection?</h3><p>View the church’s online connection options. If they’re unavailable, you can use the email form above.</p><a class="btn pine" href="connection.html">Online connection options</a></div>
+      <p class="lead">A familiar face starts with a hello. Share a little about yourself so we can welcome you well.</p>
+      <p id="connection-availability" data-connection-availability class="connection-status" role="status" aria-live="polite">Online registration and prayer submission are not connected yet. Nothing entered here will be sent.</p>
+<div class="connection-card connection-intake">
+  <div class="connection-account-head"><h3>Your profile at the Creek</h3><button type="button" class="connection-quiet" data-connection-account>Create account / Sign in</button></div>
+  <p class="connection-fine">Tell us a little about yourself so our church team can welcome you and help with your next step.</p>
+  <p id="connection-profile-status" class="connection-status" role="status" aria-live="polite" hidden></p><button id="connection-retry-profile" class="connection-quiet" type="button" hidden>Try loading my registration again</button>
+  <form id="connection-guest-form" autocomplete="off"><fieldset disabled><legend class="sr-only">Guest registration</legend>
+    <div class="connection-grid"><label>First name<input name="first_name" required maxlength="100" autocomplete="given-name"></label><label>Last name <span>(optional)</span><input name="last_name" maxlength="100" autocomplete="family-name"></label></div>
+    <label>How would you like us to contact you?<select name="preferred_contact"><option value="email">Email</option><option value="phone">Phone call</option><option value="text">Text message</option></select></label>
+    <label>Phone number <span>(optional for email contact)</span><input name="phone" type="tel" maxlength="32" autocomplete="tel"></label>
+    <label>Your connection to the Creek<select name="membership_status"><option value="unsure">I’m not sure yet</option><option value="member">I’m a member</option><option value="regular_attender">I attend regularly</option><option value="guest">I’m a guest</option><option value="exploring">I’m getting to know the church</option></select></label>
+    <details class="connection-details"><summary>A little more about you <span>(optional)</span></summary>
+      <label>Your birthday<input type="date" name="birth_date" autocomplete="bday"></label>
+      <p class="connection-fine">You can save the basics now and add these details whenever you’re ready.</p>
+    </details>
+    <details class="connection-details"><summary>Your address <span>(optional)</span></summary>
+      <label>Street address<input name="address_line1" maxlength="160" autocomplete="address-line1"></label>
+      <label>Apartment, unit, or other address line<input name="address_line2" maxlength="160" autocomplete="address-line2"></label>
+      <div class="connection-grid"><label>City<input name="city" maxlength="100" autocomplete="address-level2"></label><label>State or region<input name="state_region" maxlength="100" autocomplete="address-level1"></label></div>
+      <label>ZIP or postal code<input name="postal_code" maxlength="20" autocomplete="postal-code"></label>
+    </details>
+    <details class="connection-details"><summary>Your family &amp; household <span>(optional)</span></summary>
+      <p class="connection-fine">Add the family members you’d like our church team to know and care for. Names and birthdays are shared privately with the office.</p>
+      <div id="connection-family-rows"></div><button id="connection-family-add" class="connection-quiet" type="button">Add a family member</button><p id="connection-family-limit" class="connection-fine" hidden>Up to 20 family members can be added here.</p>
+    </details>
+    <label>Sunday school class <span>(optional)</span><input name="sunday_school" maxlength="160" placeholder="Your class, or leave blank if you’re exploring"></label>
+    <label>Your visits to the Creek<select name="visit_status"><option value="not_yet">I haven’t visited yet</option><option value="first_visit">This is my first visit</option><option value="returning">I’ve visited before</option></select></label>
+    <label>Date of your first visit <span>(optional)</span><input type="date" name="first_visit_on"></label>
+    <label class="connection-consent"><input type="checkbox" name="contact_permission" required><span>I give the church team permission to contact me personally using these details and send a welcome email.</span></label>
+  </fieldset><button id="connection-guest-submit" type="submit" disabled>Save my registration</button></form>
+  <p id="connection-guest-status" class="connection-status" role="status" aria-live="polite" hidden></p><button id="connection-open-app" class="connection-button" type="button" data-go="home" hidden>Open the app</button> <button id="connection-guest-new" class="connection-quiet" type="button" hidden>Clear this form</button>
+</div>
+      <p class="note">Your unfinished forms stay in this page’s memory. Keep this page open until you receive a receipt. <a class="direct-email">Email the office instead</a>.</p>
       <h3>What to expect on Sunday</h3>
       <div class="card plain">
         <ul>
@@ -287,22 +304,18 @@
     <!-- PRAYER -->
     <section class="screen" data-screen="prayer">
       <h2 class="page">Prayer @ the Creek</h2>
-      <div class="card">
-        <h3 style="margin-top:0">How can we pray for you?</h3>
-        <p class="lead" style="margin:0">Share a request with the church office in an email draft. You choose what to include and when to send it.</p>
-      </div>
-      <div class="panel" style="margin-top:14px">
-        <div class="eye">Send a request</div>
-        <form id="prayForm" aria-describedby="prayNote" style="margin-top:8px" hidden>
-          <div class="field"><label for="pn">Your name (optional)</label><input id="pn" name="name" autocomplete="name" placeholder="Your name, if you’d like to share it"></div>
-          <div class="field"><label for="pc">How can we reach you? (optional)</label><input id="pc" name="contact" placeholder="Phone or email"></div>
-          <div class="field"><label for="pr">How can we pray?</label><textarea id="pr" name="req" required placeholder="Share your request…"></textarea></div>
-          <label class="check"><input type="checkbox" name="private" checked> Please keep this within the pastor &amp; prayer team</label>
-          <button class="btn" type="submit">Open email draft</button>
-        </form>
-        <p class="form-status" id="prayStatus" role="status" aria-live="polite" hidden></p>
-      </div>
-      <p class="note" id="prayNote">Choose what to include, then review and send in your email app. <a class="direct-email">Email the church office directly</a>.</p>
+<div class="connection-card connection-intake">
+  <div class="connection-account-head"><h3>How can we pray for you?</h3><button type="button" class="connection-quiet" data-connection-account>Create account / Sign in</button></div>
+  <p class="connection-fine">Shared privately with our church team. Your request won’t be published or included in notification emails.</p>
+  <p data-connection-availability class="connection-status" role="status" aria-live="polite">Online prayer submission is not connected yet. Nothing entered here will be sent.</p>
+  <form id="connection-prayer-form" autocomplete="off"><fieldset disabled><legend class="sr-only">Private prayer request</legend>
+    <label>Your name <span>(optional)</span><input name="display_name" maxlength="100" autocomplete="name"></label>
+    <label>How can we reach you? <span>(optional)</span><input name="contact_text" maxlength="320" placeholder="Phone or email"></label>
+    <label>How can we pray?<textarea name="request_text" required maxlength="10000" rows="6" placeholder="Share as much or as little as you’d like…"></textarea></label>
+  </fieldset><button id="connection-prayer-submit" type="submit" disabled>Send prayer request</button></form>
+  <p id="connection-prayer-status" class="connection-status" role="status" aria-live="polite" hidden></p><button id="connection-prayer-new" class="connection-quiet" type="button" hidden>Write another request</button>
+</div>
+      <p class="note">Sign in from this form without leaving the app. Keep this page open until you receive a receipt. If online submission is unavailable, please speak with the office.</p>
       <div class="sec"><div class="sec-h"><h2 style="font-size:15px">Lifting up together</h2></div>
         <div class="card" id="prayerWall"></div>
       </div>
@@ -409,7 +422,7 @@
         <button data-go="ministries"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/></svg></span>Ministries @ the Creek<span class="ch">›</span></button>
         <button data-go="policies"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg></span>Policies &amp; safety<span class="ch">›</span></button>
         <button data-go="contact"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>Find us · contact<span class="ch">›</span></button>
-        <a href="connection.html"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a7 7 0 0 1 14 0v2M20 8v6m-3-3h6"/></svg></span>Online connection options<span class="ch">›</span></a>
+        <a href="#new" data-go="new"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a7 7 0 0 1 14 0v2M20 8v6m-3-3h6"/></svg></span>My account & profile<span class="ch">›</span></a>
         <a href="admin/"><span class="mi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>Staff sign in<span class="ch">›</span></a>
       </div>
       <div class="install" id="installCard2"></div>
@@ -521,9 +534,26 @@
   </nav>
 </div>
 
+<section id="connection-recovery" class="connection-card connection-recovery" hidden aria-labelledby="connection-recovery-title"><h2 id="connection-recovery-title">Reset your app password</h2><p id="connection-recovery-status" role="status" aria-live="polite">Checking your password link…</p><form id="connection-recovery-form"><fieldset id="connection-recovery-fields" hidden><legend class="sr-only">New app password</legend><label>New password<input id="connection-new-password" type="password" required minlength="12" maxlength="128" autocomplete="new-password"></label><label>Confirm new password<input id="connection-confirm-password" type="password" required minlength="12" maxlength="128" autocomplete="new-password"></label><button type="submit">Save new password</button></fieldset></form><button id="connection-recovery-cancel" class="connection-quiet" type="button">Cancel password setup</button><a id="connection-recovery-return" class="connection-button" href="connection.html" hidden>Return to app sign in</a></section>
+<dialog id="connection-dialog" class="connection-dialog" aria-labelledby="connection-auth-title">
+<div class="connection-card"><div class="connection-account-head"><h2 id="connection-auth-title">Home @ the Creek</h2><button id="connection-close" class="connection-quiet" type="button" aria-label="Close account panel">Close</button></div>
+<p id="connection-identity" class="connection-fine"></p><p id="connection-auth-status" class="connection-status" role="status" aria-live="polite" hidden></p>
+<form id="connection-auth-form"><fieldset id="connection-auth-fields"><legend class="sr-only">Your app account</legend>
+<label>I’d like to<select id="connection-auth-mode"><option value="signup">Create an account</option><option value="signin">Sign in to my account</option></select></label>
+<label>Email address<input id="connection-email" type="email" required maxlength="254" autocomplete="username" inputmode="email"></label>
+<label>Password<input id="connection-password" type="password" required minlength="12" maxlength="128" autocomplete="new-password"></label>
+<p class="connection-fine">Use at least 12 characters. No email verification step. Double-check your email so we can reach you.</p>
+<label class="connection-consent"><input id="connection-remember" type="checkbox"><span>Keep me signed in on this personal device.</span></label>
+<p class="connection-fine">Leave this off on a shared device.</p>
+<button id="connection-auth-submit" type="submit">Create my account</button></fieldset></form>
+<button id="connection-reset-open" class="connection-quiet" type="button">Forgot your password?</button><form id="connection-reset-form" hidden><label>Email for password reset<input id="connection-reset-email" type="email" required maxlength="254" autocomplete="email"></label><button id="connection-reset-send" type="submit">Request a reset link</button><p id="connection-reset-status" class="connection-status" role="status" aria-live="polite" hidden></p></form>
+<button id="connection-auth-check" type="button" hidden>Check sign-in</button><button id="connection-signout" class="connection-quiet" type="button" hidden>Sign out and clear my forms</button>
+</div></dialog>
+
 <script src="js/calendar-config.js"></script>
 <script src="js/calendar-feed.js"></script>
-<script src="js/app-forms.js"></script>
+<script src="js/connection-config.js"></script>
+<script src="js/connection.js"></script>
 <script src="js/grow-content.js"></script>
 <script src="js/grow.js"></script>
 <script src="js/app-status.js"></script>
@@ -532,7 +562,7 @@
    Public app settings. Shared calendar rules live in events.json.
    ========================================================================= */
 var CONFIG = {
-  CHURCH_EMAIL: "bluffcreekbaptist@gmail.com",   // sign-ups & prayer requests are emailed here
+  CHURCH_EMAIL: "bluffcreekbaptist@gmail.com",   // explicit office email alternative only
   CHURCH_PHONE: "(225) 218-7902",   // Pastor Cole — shows a Call button
   GIVE_URL: "https://buy.stripe.com/9B600j6Q68IFgK8h13bo400", // Stripe: Give @ the Creek (customer chooses amount)
   RECURRING_URL: "",           // optional recurring-giving link
@@ -568,11 +598,14 @@ var CONFIG = {
     window.scrollTo({top:0,behavior:'auto'});
     try{if(location.hash!=='#'+name)history[push?'pushState':'replaceState'](null,'','#'+name)}catch(e){}
     if(focusHeading){var heading=target.querySelector('h1,h2');if(heading){heading.tabIndex=-1;heading.focus({preventScroll:true})}}
+    if(push){window.CREEK_PROFILE_ENTRY=false;window.dispatchEvent(new CustomEvent('creek:navigation',{detail:{screen:name}}));}
     if(push&&name==='calendar')refreshCalendar();
   }
   tabs.forEach(function(tab){tab.addEventListener('click',function(){show(tab.dataset.tab,true,true)})});
   $$('[data-go]').forEach(function(button){button.addEventListener('click',function(event){event.preventDefault();show(button.dataset.go,true,true)})});
-  window.addEventListener('popstate',function(){show((location.hash||'#home').slice(1),false,true)});
+  window.addEventListener('creek:open-profile',function(){show('new',false,true)});
+  window.addEventListener('hashchange',function(){window.CREEK_PROFILE_ENTRY=false});
+  window.addEventListener('popstate',function(){window.CREEK_PROFILE_ENTRY=false;show((location.hash||'#home').slice(1),false,true)});
   show((location.hash||'#home').slice(1),false,false);
 
   // content
@@ -634,9 +667,8 @@ var CONFIG = {
   // toast
   var toast=$('#toast'),tm=$('#toastMsg'),tt; function ping(m){tm.textContent=m;toast.classList.add('on');clearTimeout(tt);tt=setTimeout(function(){toast.classList.remove('on')},2600)}
 
-  // Each form opens an email draft; this page never asserts delivery.
+  // Office email remains an explicit alternative; direct intake uses separate authenticated RPCs.
   $$('.direct-email').forEach(function(link){if(CONFIG.CHURCH_EMAIL)link.href='mailto:'+CONFIG.CHURCH_EMAIL;else link.hidden=true});
-  CreekForms.initialize(document,{email:CONFIG.CHURCH_EMAIL});
 
   // install to home screen
   var deferred=null, standalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;

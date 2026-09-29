@@ -1,0 +1,42 @@
+{
+  "format_version": 1,
+  "purpose": "Exact source alignment to already applied direct-intake SQL; no replay or hosted history repair",
+  "verified_on": "2026-09-10",
+  "schema_revision": "20260907174301",
+  "previous_history_map": "tools/office-preflight/account-guard-hosted-history-2026-09-09.json",
+  "historical_eight_manifest": "tools/office-preflight/history/manifest-eight-2026-09-09.json",
+  "historical_eight_manifest_sha256": "572c8a631c293c1c2d322670b8f295de95e3baeb2fa59a82f2ae641e28812c68",
+  "mappings": [
+    {
+      "reviewed_path": "tools/direct-intake/migrations/20260909212646_direct_app_intake.sql",
+      "reviewed_version": "20260909212646",
+      "actual_version": "20260910152017",
+      "name": "direct_app_intake",
+      "sha256": "2d4a268bb6bb2c0d87ae7f4d2b238ee79180e862ea5ba026a9f625498955b405",
+      "recommended_active_path": "supabase/migrations/20260910152017_direct_app_intake.sql",
+      "copy_exact_bytes": true,
+      "source_copy_performed": true
+    },
+    {
+      "reviewed_path": "tools/direct-intake/migrations/20260909215330_direct_intake_dispatch_extensions.sql",
+      "reviewed_version": "20260909215330",
+      "actual_version": "20260910152030",
+      "name": "direct_intake_dispatch_extensions",
+      "sha256": "bfbd4b7e1410a2e80508866e0fbd2029130dce435e5cb7f9ca0c1d9ad0bce6d0",
+      "recommended_active_path": "supabase/migrations/20260910152030_direct_intake_dispatch_extensions.sql",
+      "copy_exact_bytes": true,
+      "source_copy_performed": true
+    }
+  ],
+  "original_migration_hashes_unchanged": 8,
+  "recorded_versions_after_application": 10,
+  "post_schema_checks_passed": 18,
+  "function_source_bodies_verified": 60,
+  "security_advisor_errors": 0,
+  "security_advisor_warnings": 1,
+  "expected_private_table_info_findings": 6,
+  "source_alignment_performed_hosted_calls": false,
+  "remote_history_repair_performed": false,
+  "static_release_files_changed": false,
+  "sql_comments_preserved_as_historical_provenance": true
+}

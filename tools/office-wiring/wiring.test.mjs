@@ -92,12 +92,14 @@ test('staff-only browser packet keeps public config blank and passes real office
   assert.deepEqual(packet.report.redirect_allowlist_for_review,[origin+'/admin/recovery.html']);
 });
 
-test('separate public UI staging uses the same project/key and only the exact callback origin', () => {
+test('historical public UI staging preserves its origin but cannot enable the current direct-intake client', () => {
   const packet=createArtifacts(fixture({publicSignupEnabled:true}));
   const office=configFrom(packet.files['admin/config.js'],'CREEK_OFFICE_CONFIG'),publicConfig=configFrom(packet.files['js/connection-config.js'],'CREEK_CONNECTION_CONFIG');
   assert.equal(publicConfig.supabaseUrl,office.supabaseUrl);assert.equal(publicConfig.publishableKey,office.publishableKey);
   assert.deepEqual(publicConfig.allowedOrigins,[origin]);
-  assert.deepEqual(connection.settings(publicConfig,{href:origin+'/connection.html'}),{url:fixture().supabaseUrl,key,redirect:origin+'/connection.html'});
+  assert.equal(connection.settings(publicConfig,{href:origin+'/connection.html'}),null);
+  assert.equal(packet.report.direct_intake_activation_supported,false);
+  assert.equal(packet.report.database_baseline_manifest,'tools/office-preflight/history/manifest-eight-2026-09-09.json');
   for(const href of ['https://other.riverparish.org/connection.html',origin+'/admin/',origin+'/connection.html/'])assert.equal(connection.settings(publicConfig,{href}),null);
   assert.deepEqual(packet.report.redirect_allowlist_for_review,[origin+'/admin/recovery.html',origin+'/connection.html']);
   assert.equal(packet.report.hosted_auth_signup_posture,'unverified');
@@ -115,7 +117,7 @@ test('report/checklist redact key values and preserve pending ownership/signup/s
     assert.match(redacted,/does not disable Auth signup or email sending/);
     assert.match(redacted,/allow-new-signups/);assert.match(redacted,/Do not copy the local rehearsal setting auth.enable_signup=true/);
     assert.match(redacted,/does not disable backend Auth signup or RPCs/);
-    assert.match(redacted,/staff_roles/);assert.match(redacted,/eight-file migration manifest/);
+    assert.match(redacted,/staff_roles/);assert.match(redacted,/frozen eight-file staff-first baseline/);
     assert.doesNotMatch(redacted,/supabase db push|supabase migration up|psql |INSERT INTO|curl /i);
   }
 });

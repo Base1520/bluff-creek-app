@@ -8,7 +8,9 @@ import { createArtifacts } from './index.mjs';
 const require = createRequire(new URL('../../admin/tests/package.json', import.meta.url));
 const { PGlite } = require('@electric-sql/pglite');
 const { pgcrypto } = require('@electric-sql/pglite/contrib/pgcrypto');
-const manifest = JSON.parse(await readFile(new URL('../office-preflight/manifest.json', import.meta.url), 'utf8'));
+const manifestBytes = await readFile(new URL('../office-preflight/history/manifest-eight-2026-09-09.json', import.meta.url));
+assert.equal(createHash('sha256').update(manifestBytes).digest('hex'), '572c8a631c293c1c2d322670b8f295de95e3baeb2fa59a82f2ae641e28812c68');
+const manifest = JSON.parse(manifestBytes);
 const ids = {
   primary: '00000000-0000-4000-8000-000000000001',
   backup: '00000000-0000-4000-8000-000000000002',
