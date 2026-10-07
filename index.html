@@ -237,7 +237,7 @@
         </a>
       </div>
 
-      <div class="sec">
+      <div class="sec" data-expires="2026-10-09T03:00:00Z">
         <div class="card notice">
           <div class="eye notice-eye">Thursday night &middot; 7:00 PM</div>
           <h3 class="notice-h">Watch Pastor Cole teach, live.</h3>
@@ -246,7 +246,7 @@
           <a class="btn" href="https://www.youtube.com/live/DizWOXc-lVs" target="_blank" rel="noopener">Watch live on YouTube &#8599;</a>
         </div>
       </div>
-      <div class="sec">
+      <div class="sec" data-expires="2026-10-19T00:00:00Z">
         <div class="card notice">
           <div class="eye notice-eye">Church family</div>
           <h3 class="notice-h">Pumpkin Party &mdash; Sunday, October&nbsp;18</h3>
@@ -263,6 +263,22 @@
           <p class="notice-links"><a href="https://www.amazon.com/dp/B0HKG8MH8C" target="_blank" rel="noopener">Paperback &#8599;</a><a href="https://www.amazon.com/dp/B0H1WMGRVD" target="_blank" rel="noopener">Kindle &#8599;</a></p>
         </div>
       </div>
+<script>
+/* Dated announcements remove themselves once they are over, so the home
+   screen never advertises something that already happened. Add
+   data-expires="<ISO 8601 UTC>" to any block to have it disappear after
+   that moment. Runs before paint, so an expired card never flashes. */
+(function () {
+  var now = Date.now();
+  var blocks = document.querySelectorAll('[data-expires]');
+  for (var i = 0; i < blocks.length; i++) {
+    var when = Date.parse(blocks[i].getAttribute('data-expires'));
+    if (!isNaN(when) && now >= when && blocks[i].parentNode) {
+      blocks[i].parentNode.removeChild(blocks[i]);
+    }
+  }
+})();
+</script>
       <div class="sec">
         <a class="grow-entry" href="#grow" data-go="grow">
           <span class="eye">In the Word together</span>
