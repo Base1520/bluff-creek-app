@@ -96,9 +96,9 @@
       var error=dialog.querySelector('[role=alert]');if(draft.conflict)error.textContent='This record changed. Your draft is retained; close and reopen the current record before editing.';else if(!ready||!current(draft.epoch,draft.owner))error.textContent='The intake workspace is unavailable. Your draft is retained; refresh before saving.';
     }
     function open(mode,id){
-      var c=context(),epoch=c.epoch,owner=c.userId;if(mounted&&(mountedOwner!==owner||mountedEpoch!==epoch)){clear();return;}if(!current(epoch,owner)||!ready||mode==='route'&&c.role!=='admin')return;
-      var collection=mode==='route'?settings.routes:rows,item=collection.find(function(r){return (mode==='route'?r.kind:r.id)===id;});if(!item||!close())return;
-      if(!current(epoch,owner)||!ready||mode==='route'&&context().role!=='admin')return;collection=mode==='route'?settings.routes:rows;item=collection.find(function(r){return (mode==='route'?r.kind:r.id)===id;});if(!item)return;
+      var c=context(),epoch=c.epoch,owner=c.userId;if(mounted&&(mountedOwner!==owner||mountedEpoch!==epoch)){clear();return false;}if(!current(epoch,owner)||!ready||mode==='route'&&c.role!=='admin')return false;
+      var collection=mode==='route'?settings.routes:rows,item=collection.find(function(r){return (mode==='route'?r.kind:r.id)===id;});if(!item||!close())return false;
+      if(!current(epoch,owner)||!ready||mode==='route'&&context().role!=='admin')return false;collection=mode==='route'?settings.routes:rows;item=collection.find(function(r){return (mode==='route'?r.kind:r.id)===id;});if(!item)return false;
       var token=formId,state=draft={mode:mode,id:id,version:item.version,epoch:epoch,owner:owner,busy:false,pending:0,revision:0,payload:null,requiresRefresh:false,conflict:false};
       dialog=doc.createElement('dialog');dialog.className='intake-dialog';dialog.setAttribute('aria-labelledby','intake-editor-title');
       dialog.innerHTML='<form><header><h2 id="intake-editor-title">'+(mode==='route'?'Default route · '+safe(kinds[id]):'Update '+safe(kinds[item.kind]).toLowerCase())+'</h2><button type="button" class="quiet" data-intake-close>Close</button></header><p class="intake-note">'+(mode==='route'?'This selects an approved staff recipient for future submissions only. Existing actions keep their own owner.':'Record ownership and progress for this action. Completed dates are recorded by the server. Staff email status is tracked separately; source registration or prayer fields are not changed.')+'</p><label>Assigned to<select name="assigned_staff_user_id"><option value="">Office queue</option></select></label>'+(mode==='task'?'<label>Due date (Central)<input name="due_on" type="date" required></label><label>Status<select name="status"><option value="new">New</option><option value="in_progress">In progress</option><option value="completed">Completed</option></select></label>':'')+'<p role="alert"></p><button type="button" class="quiet" data-intake-retry>Refresh records</button><footer><button type="button" class="quiet" data-intake-close>Cancel</button><button type="submit">Save '+(mode==='route'?'default':'action')+'</button></footer></form>';
@@ -121,7 +121,7 @@
         }catch(_){if(identity(epoch,owner)&&draft===state&&token===formId){state.requiresRefresh=true;error.textContent='The save could not be confirmed. Keep this draft and refresh after the request settles before retrying.';}}
         finally{if(identity(epoch,owner)&&draft===state&&token===formId){state.busy=false;syncEditor();}}
       };
-      state.initial=fingerprint();doc.body.appendChild(dialog);dialog.showModal();syncEditor();
+      state.initial=fingerprint();doc.body.appendChild(dialog);dialog.showModal();syncEditor();return true;
     }
     function showFilter(value){if(!['open','new','due','completed','all'].includes(value))return;var c=context();if(!current(c.epoch,c.userId))return;filter=value;mount();host.querySelector('[data-intake-filter]').value=value;render();}
     function taskForSource(kind,id){
@@ -129,7 +129,7 @@
       var task=rows.find(function(r){return r.kind===kind&&sourceId(r)===id;});
       return task?{id:task.id,due_on:task.due_on,status:task.status,owner:staffLabel(task.assigned_staff_user_id),notification_status:task.notification_status}:null;
     }
-    return {load:load,render:render,clear:clear,showFilter:showFilter,taskForSource:taskForSource,openTask:function(id){open('task',id);},openRoute:function(kind){open('route',kind);}};
+    return {load:load,render:render,clear:clear,showFilter:showFilter,taskForSource:taskForSource,openTask:function(id){return open('task',id);},openRoute:function(kind){open('route',kind);}};
   }
   root.CreekIntakeTasks={create:create};
 }(typeof window!=='undefined'?window:globalThis));
