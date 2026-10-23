@@ -415,14 +415,6 @@
     },
     {
       "when": "2026-10-25",
-      "time": "8:00a",
-      "title": "Sunday morning prayer",
-      "where": "Check with the church for location",
-      "tag": "Weekly",
-      "endsAt": "2026-10-25T14:00:00.000Z"
-    },
-    {
-      "when": "2026-10-25",
       "time": "9:00a",
       "title": "Homecoming — Sunday School & Morning Worship",
       "where": "Check with the church for location",
@@ -471,14 +463,6 @@
     },
     {
       "when": "2026-11-01",
-      "time": "8:00a",
-      "title": "Sunday morning prayer",
-      "where": "Check with the church for location",
-      "tag": "Weekly",
-      "endsAt": "2026-11-01T15:00:00.000Z"
-    },
-    {
-      "when": "2026-11-01",
       "time": "9:00a",
       "title": "Sunday School & Morning Worship",
       "where": "Check with the church for location",
@@ -524,14 +508,6 @@
       "where": "Check with the church for location",
       "tag": "Weekly",
       "endsAt": "2026-11-05T22:30:00.000Z"
-    },
-    {
-      "when": "2026-11-08",
-      "time": "8:00a",
-      "title": "Sunday morning prayer",
-      "where": "Check with the church for location",
-      "tag": "Weekly",
-      "endsAt": "2026-11-08T15:00:00.000Z"
     },
     {
       "when": "2026-11-08",
@@ -588,14 +564,6 @@
       "where": "Check with the church for location",
       "tag": "Weekly",
       "endsAt": "2026-11-12T22:30:00.000Z"
-    },
-    {
-      "when": "2026-11-15",
-      "time": "8:00a",
-      "title": "Sunday morning prayer",
-      "where": "Check with the church for location",
-      "tag": "Weekly",
-      "endsAt": "2026-11-15T15:00:00.000Z"
     },
     {
       "when": "2026-11-15",
@@ -664,14 +632,6 @@
     },
     {
       "when": "2026-11-22",
-      "time": "8:00a",
-      "title": "Sunday morning prayer",
-      "where": "Check with the church for location",
-      "tag": "Weekly",
-      "endsAt": "2026-11-22T15:00:00.000Z"
-    },
-    {
-      "when": "2026-11-22",
       "time": "9:00a",
       "title": "Sunday School & Morning Worship",
       "where": "Check with the church for location",
@@ -709,14 +669,6 @@
       "where": "Check with the church for location",
       "tag": "Weekly",
       "endsAt": "2026-11-26T22:30:00.000Z"
-    },
-    {
-      "when": "2026-11-29",
-      "time": "8:00a",
-      "title": "Sunday morning prayer",
-      "where": "Check with the church for location",
-      "tag": "Weekly",
-      "endsAt": "2026-11-29T15:00:00.000Z"
     },
     {
       "when": "2026-11-29",
