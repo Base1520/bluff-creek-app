@@ -424,10 +424,18 @@
     {
       "when": "2026-10-25",
       "time": "9:00a",
-      "title": "Sunday School & Morning Worship",
+      "title": "Homecoming — Sunday School & Morning Worship",
       "where": "Check with the church for location",
       "tag": "Weekly",
       "endsAt": "2026-10-25T16:30:00.000Z"
+    },
+    {
+      "when": "2026-10-25",
+      "time": "11:30a",
+      "title": "Dinner on the grounds — Homecoming",
+      "where": "Bluff Creek Baptist Church",
+      "tag": "Special",
+      "endsAt": "2026-10-25T18:30:00.000Z"
     },
     {
       "when": "2026-10-25",
