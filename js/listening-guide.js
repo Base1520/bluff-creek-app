@@ -3,7 +3,7 @@
   'use strict';
   var guide = document.getElementById('listening-guide');
   if (!guide) return;
-  var key = 'creek-listening-habakkuk-2-2-5-2026-10-11-v1';
+  var key = 'creek-listening-habakkuk-3-1-16-2026-11-08-v1';
   var fields = Array.from(guide.querySelectorAll('[data-guide-field]'));
   var status = document.getElementById('guide-save-status');
   var timer;

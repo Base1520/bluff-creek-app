@@ -1,13 +1,13 @@
 /* Public, pastor-reviewed selections only. See docs/grow-maintenance.md.
    Leave unconfirmed links, books and weekly passages empty. No credentials here. */
 var CREEK_GROW_CONTENT = {
-  updated: '2026-09-23',
+  updated: '2026-11-07',
   series: {
     title: 'Habakkuk',
     subtitle: 'Bringing our questions before God.',
     introduction: 'Over the coming months, we’re walking through Habakkuk—bringing honest questions to God and learning to trust Him as we wait.',
-    currentPassage: { reference: 'Habakkuk 1:2–4', date: '2026-09-20' },
-    nextPassage: { reference: 'Habakkuk 1:5–11', date: '2026-09-27' },
+    currentPassage: { reference: 'Habakkuk 3:1–16', date: '2026-11-08' },
+    nextPassage: null,
     pause: null
   },
   spotify: {
