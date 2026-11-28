@@ -1,13 +1,13 @@
 /* Public, pastor-reviewed selections only. See docs/grow-maintenance.md.
    Leave unconfirmed links, books and weekly passages empty. No credentials here. */
 var CREEK_GROW_CONTENT = {
-  updated: '2026-11-07',
+  updated: '2026-11-28',
   series: {
-    title: 'Habakkuk',
-    subtitle: 'Bringing our questions before God.',
-    introduction: 'Over the coming months, we’re walking through Habakkuk—bringing honest questions to God and learning to trust Him as we wait.',
-    currentPassage: { reference: 'Habakkuk 3:1–16', date: '2026-11-08' },
-    nextPassage: null,
+    title: 'Promises Kept',
+    subtitle: 'An Advent series · November 29 – December 27',
+    introduction: 'This Advent we’re going back to the promises God made before Bethlehem and watching Him keep His word, from Abraham to the manger to the nations.',
+    currentPassage: { reference: 'Genesis 12:1–3', date: '2026-11-29' },
+    nextPassage: { reference: 'Genesis 12:1–3', date: '2026-11-29' },
     pause: null
   },
   spotify: {
@@ -289,7 +289,7 @@ var CREEK_GROW_CONTENT = {
       "category": "Bible background and overview",
       "note": "Provides background, structure, and reading guidance for each biblical book, helping readers follow its message within Scripture’s larger story.",
       "reader": "Bible readers wanting context and Sunday school teachers",
-      "context": "A reading companion covering all 66 books, including Habakkuk. It supplies book context rather than a full verse-by-verse commentary. Audiobook narrator Trevor Thompson is not a print-book coauthor.",
+      "context": "A reading companion covering all 66 books. It supplies book context rather than a full verse-by-verse commentary. Audiobook narrator Trevor Thompson is not a print-book coauthor.",
       "url": "https://zondervanacademic.com/products/how-to-read-the-bible-book-by-book",
       "edition": "2014 softcover publisher listing"
     }
